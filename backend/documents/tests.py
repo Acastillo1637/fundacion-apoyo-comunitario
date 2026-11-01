@@ -122,8 +122,8 @@ class DocumentTests(TestCase):
         self.assertIn('attachment;', response['Content-Disposition'])
         self.assertIn('no-store', response['Cache-Control'])
         self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+        # El cliente de Django cierra el stream sin cerrar la transacción de TestCase.
         self.assertTrue(b''.join(response.streaming_content).startswith(b'\x89PNG'))
-        response.close()
 
     def test_other_user_cannot_download_or_see_document(self):
         data = self.upload().json()
@@ -150,7 +150,7 @@ class DocumentTests(TestCase):
         self.assertEqual(queue['total'], 1)
         response = self.client.get(data['download_url'])
         self.assertEqual(response.status_code, 200)
-        response.close()
+        self.assertTrue(b''.join(response.streaming_content))
         response = self.review(data['id'])
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['status'], 'validated')
