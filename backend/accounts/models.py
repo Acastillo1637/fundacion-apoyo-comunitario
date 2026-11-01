@@ -69,6 +69,19 @@ class VolunteerProfile(models.Model):
     availability_revision = models.PositiveIntegerField(default=0)
 
 
+class RequesterProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='requester_profile')
+    requester_type = models.CharField(max_length=20, choices=[('person', 'Persona'), ('company', 'Empresa'), ('institution', 'Institución')])
+    organization = models.CharField(max_length=150, blank=True)
+    phone = models.CharField(max_length=20)
+    commune = models.CharField(max_length=80, blank=True)
+    privacy_accepted_at = models.DateTimeField()
+    adult_confirmed_at = models.DateTimeField()
+    representative_confirmed_at = models.DateTimeField(null=True, blank=True)
+    notice_version = models.CharField(max_length=30, default='development-1')
+    revision = models.PositiveIntegerField(default=0)
+
+
 class AuditEvent(models.Model):
     actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=80)

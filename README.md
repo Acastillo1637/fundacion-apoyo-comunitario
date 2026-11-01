@@ -19,11 +19,23 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Revisión administrativa, eventos en borrador, publicación y cancelación.
 - Cupos por función, requisitos y listado público sin datos de contacto o dirección exacta.
 - Administración de usuarios desde React: altas por invitación, búsqueda, roles, estado e historial.
-- 137 pruebas del backend, incluidas tres de concurrencia que requieren PostgreSQL, y 5 del cliente API.
+- Espacios separados para voluntariado, solicitantes, secretaría y administración, con selector para cuentas con varios roles.
+- Perfil de solicitante para persona natural, empresa o institución; nueva solicitud y seguimiento desde su cuenta.
+- 150 pruebas del backend, incluidas tres de concurrencia que requieren PostgreSQL, y 5 del cliente API.
 
 **Por implementar:** matching, postulaciones, invitaciones, participantes, respaldos y notificaciones internas. WhatsApp será manual asistido, sin API pagada.
 
 ## Cómo abrirlo en tu computador
+
+### Tipos de cuenta
+
+Al registrarte puedes elegir **Voluntario** (habilidades, disponibilidad, documentos y oportunidades) o **Solicitante** (datos de contacto, empresa o institución y solicitudes propias). También puedes abrir **Solicitar apoyo → Crear cuenta de solicitante**. Las entidades deben indicar un contacto mayor de edad y declarar que está autorizado para representarlas. Una cuenta representa a una persona o entidad.
+
+Los roles **Secretaría** y **Administrador general** se asignan desde la administración de usuarios. Secretaría gestiona solicitudes, eventos y revisión documental; administración gestiona cuentas y catálogos. Si tienes varios roles, usa **Cambiar de espacio** en el menú lateral. Tener un registro de perfil antiguo no concede por sí solo acceso al espacio de voluntariado.
+
+Las solicitudes enviadas desde una cuenta de solicitante usan sus datos guardados y su correo verificado. Las solicitudes públicas previas no se vinculan automáticamente por coincidencia de correo. El seguimiento muestra estados y fechas; las notas internas no se muestran al solicitante.
+
+Después de actualizar el código, reinicia el backend con `scripts/start-backend.ps1` para aplicar las migraciones y crear el nuevo rol **Solicitante**. El administrador puede asignarlo a una cuenta existente; el titular completa sus datos y consentimientos al ingresar.
 
 Instrucciones para **Windows y PowerShell**. Necesitas Python 3.13 y Node.js 22.12 o superior.
 

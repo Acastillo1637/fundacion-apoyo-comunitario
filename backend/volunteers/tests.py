@@ -16,6 +16,7 @@ from .models import AvailabilitySlot, DocumentType, Profession, Skill, Unavailab
 
 def make_profile(email):
     user = User.objects.create_user(email=email, first_name='Persona de prueba')
+    user.groups.add(Group.objects.get_or_create(name='Voluntario')[0])
     now = timezone.now()
     return VolunteerProfile.objects.create(user=user, adult_confirmed_at=now, privacy_accepted_at=now)
 
@@ -56,6 +57,7 @@ class VolunteerTests(TestCase):
 
     def test_no_profile_returns_not_found_without_creating_one(self):
         user = User.objects.create_user('administrador@example.org')
+        user.groups.add(Group.objects.get_or_create(name='Voluntario')[0])
         self.client.force_login(user)
         self.assertEqual(self.client.get('/api/volunteer/qualifications/').status_code, 404)
         self.assertFalse(VolunteerProfile.objects.filter(user=user).exists())

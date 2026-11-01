@@ -11,6 +11,7 @@ from rest_framework.response import Response
 
 from accounts.models import AuditEvent, VolunteerProfile
 from accounts.views import limited
+from accounts.portals import is_volunteer
 from volunteers.models import DocumentType
 from .models import VolunteerDocument
 from .serializers import ReviewSerializer, UploadSerializer
@@ -29,6 +30,8 @@ def requirements(profile):
 @api_view(['GET', 'POST'])
 @parser_classes([MultiPartParser, FormParser])
 def documents(request):
+    if not is_volunteer(request.user):
+        raise PermissionDenied('La carga documental pertenece al espacio de voluntario.')
     profile = get_object_or_404(VolunteerProfile, user=request.user)
     if request.method == 'GET':
         history = profile.documents.select_related('document_type').all()

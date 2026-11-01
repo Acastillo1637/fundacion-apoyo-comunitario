@@ -1,14 +1,14 @@
 from rest_framework import serializers
 from volunteers.serializers import StrictSerializer
 
-ROLE_NAMES = ['Voluntario', 'Secretaría', 'Administrador general']
+ROLE_NAMES = ['Voluntario', 'Solicitante', 'Secretaría', 'Administrador general']
 
 
 class CreateAccountSerializer(StrictSerializer):
     email = serializers.EmailField(max_length=254)
     first_name = serializers.CharField(max_length=80)
     last_name = serializers.CharField(max_length=80)
-    roles = serializers.ListField(child=serializers.ChoiceField(choices=ROLE_NAMES), min_length=1, max_length=3)
+    roles = serializers.ListField(child=serializers.ChoiceField(choices=ROLE_NAMES), min_length=1, max_length=4)
     reason = serializers.CharField(min_length=8, max_length=1000)
 
     def validate_roles(self, value):
@@ -22,7 +22,7 @@ class UpdateAccountSerializer(StrictSerializer):
     first_name = serializers.CharField(max_length=80, required=False)
     last_name = serializers.CharField(max_length=80, required=False)
     is_active = serializers.BooleanField(required=False)
-    roles = serializers.ListField(child=serializers.ChoiceField(choices=ROLE_NAMES), min_length=1, max_length=3, required=False)
+    roles = serializers.ListField(child=serializers.ChoiceField(choices=ROLE_NAMES), min_length=1, max_length=4, required=False)
     reason = serializers.CharField(min_length=8, max_length=1000)
 
     def validate(self, attrs):

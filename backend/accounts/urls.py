@@ -1,8 +1,12 @@
 from django.urls import path
 from . import views
 from . import account_management
+from . import requesters
 
 urlpatterns = [
+    path('requester/profile/', requesters.profile),
+    path('requester/requests/', requesters.requests),
+    path('requester/requests/<uuid:request_id>/', requesters.request_detail),
     path('session/', views.session_info),
     path('register/', views.register),
     path('login/', views.sign_in),

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, HeartHandshake, Send } from 'lucide-react';
 import { api } from '../api';
 
-export default function PublicRequest({ navigate }) {
+export default function PublicRequest({ navigate, requester }) {
   const [options, setOptions] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -20,21 +20,24 @@ export default function PublicRequest({ navigate }) {
     body.quantity = Number(form.get('quantity'));
     body.privacy = form.has('privacy');
     setBusy(true); setError('');
-    try { setMessage((await api('activities/requests/', { method: 'POST', body: JSON.stringify(body) })).detail); }
+    try { setMessage((await api(requester ? 'requester/requests/' : 'activities/requests/', { method: 'POST', body: JSON.stringify(body) })).detail); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
 
   return <section className="wrap request-page">
-    <button className="text-button" onClick={() => navigate('home')}><ArrowLeft size={16}/> Volver al inicio</button>
+    <button className="text-button" onClick={() => navigate('home')}><ArrowLeft size={16}/> {requester ? 'Volver a mis solicitudes' : 'Volver al inicio'}</button>
+    {!requester && <div className="notice"><p>¿Representas a una empresa o institución? Crea una cuenta de solicitante para guardar tus datos y seguir tus solicitudes.</p><button className="button secondary" onClick={() => navigate('register-requester')}>Crear cuenta de solicitante</button></div>}
     <div className="request-header"><span className="eyebrow">JUNTOS PODEMOS HACER MÁS</span><h1>Solicita apoyo de voluntariado</h1><p>Cuéntanos tu necesidad. El equipo revisará los antecedentes y evaluará cómo ayudar; enviar el formulario no garantiza la aprobación.</p></div>
     <div className="panel public-request-panel">
       {error && <p role="alert" className="error">{error}</p>}
-      {message ? <div role="status" className="success"><Check size={26}/><h2>Recibimos tu solicitud</h2><p>{message}</p>{options?.console_email && <p><strong>Entorno de desarrollo:</strong> el mensaje aparece en la terminal de Django, no llega a Gmail. Copia el enlace completo, incluido lo que viene después de <code>#confirm-request=</code>.</p>}<button className="button secondary" onClick={() => navigate('home')}>Volver al inicio</button></div> : !options ? <p role="status">Cargando formulario…</p> : <form onSubmit={submit}><fieldset className="form-fieldset" disabled={busy}>
+      {message ? <div role="status" className="success"><Check size={26}/><h2>Recibimos tu solicitud</h2><p>{message}</p>{!requester && options?.console_email && <p><strong>Entorno de desarrollo:</strong> el mensaje aparece en la terminal de Django, no llega a Gmail. Copia el enlace completo, incluido lo que viene después de <code>#confirm-request=</code>.</p>}<button className="button secondary" onClick={() => navigate('home')}>{requester ? 'Ver mis solicitudes' : 'Volver al inicio'}</button></div> : !options ? <p role="status">Cargando formulario…</p> : <form onSubmit={submit}><fieldset className="form-fieldset" disabled={busy}>
+        {requester ? <div className="notice">Solicitas como <strong>{requester.organization || `${requester.first_name} ${requester.last_name}`}</strong>. Usaremos los datos de tu perfil y tu correo verificado.</div> : <>
         <h2><HeartHandshake size={22}/> ¿Quién solicita el apoyo?</h2>
         <div className="form-row"><label className="field">Tipo de solicitante<select name="requester_type" value={type} onChange={event => setType(event.target.value)}><option value="person">Persona natural</option><option value="company">Empresa</option><option value="institution">Institución</option></select></label><label className="field">Nombre de contacto<input name="contact_name" autoComplete="name" maxLength={120} required/></label></div>
         <label className="field">Organización {type === 'person' ? '(opcional)' : ''}<input name="organization" maxLength={150} required={type !== 'person'}/></label>
         <div className="form-row"><label className="field">Correo electrónico<input type="email" name="email" autoComplete="email" maxLength={254} required/></label><label className="field">Teléfono<input name="phone" type="tel" autoComplete="tel" maxLength={20} required/></label></div>
+        </>}
         <h2 className="form-section-title">¿Qué necesitas?</h2>
         <label className="field">Descripción de la necesidad<textarea name="description" minLength={20} maxLength={3000} rows={5} required/></label>
         <p className="help">No incluyas nombres, documentos ni información sensible de beneficiarios.</p>
@@ -48,7 +51,7 @@ export default function PublicRequest({ navigate }) {
         <div className="honeypot" aria-hidden="true"><label>Deja este campo vacío<input name="website" tabIndex={-1} autoComplete="off"/></label></div>
         <label className="checkbox"><input name="privacy" type="checkbox" required/>Acepto que la fundación use estos datos para evaluar y coordinar mi solicitud.</label>
         <p className="help">Versión de desarrollo: usa datos ficticios. El aviso institucional definitivo está pendiente.</p>
-        {options.console_email && <div className="notice"><p>En desarrollo, el enlace para confirmar el correo se imprime en la terminal donde ejecutas Django.</p></div>}
+        {!requester && options.console_email && <div className="notice"><p>En desarrollo, el enlace para confirmar el correo se imprime en la terminal donde ejecutas Django.</p></div>}
         <button className="button primary" disabled={busy}>{busy ? 'Enviando…' : 'Enviar solicitud'}<Send size={17}/></button>
       </fieldset></form>}
     </div>

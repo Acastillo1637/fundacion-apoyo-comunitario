@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Mail, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { api } from '../api';
 
-const roles = ['Voluntario', 'Secretaría', 'Administrador general'];
+const roles = ['Voluntario', 'Solicitante', 'Secretaría', 'Administrador general'];
 const actions = { created_by_admin: 'Cuenta creada', updated_by_admin: 'Cuenta actualizada', access_email_sent: 'Enlace de acceso solicitado', access_email_failed: 'Falló el envío del enlace' };
 const date = value => value ? new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago' }) : 'Sin registros';
 

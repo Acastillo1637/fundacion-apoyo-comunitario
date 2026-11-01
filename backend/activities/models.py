@@ -14,6 +14,7 @@ class ServiceRequest(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     submission_id = models.UUIDField(unique=True)
+    requester = models.ForeignKey('accounts.RequesterProfile', on_delete=models.PROTECT, null=True, blank=True, related_name='requests')
     requester_type = models.CharField(max_length=20, choices=[('person', 'Persona'), ('company', 'Empresa'), ('institution', 'Institución')])
     contact_name = models.CharField(max_length=120)
     organization = models.CharField(max_length=150, blank=True)

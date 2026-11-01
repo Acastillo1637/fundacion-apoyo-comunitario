@@ -1,7 +1,7 @@
 import json
 import re
 from allauth.account.models import EmailAddress
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Group, Permission
 from django.core import mail
 from django.test import Client, TestCase, override_settings
 from django.utils import timezone
@@ -12,6 +12,7 @@ from .models import User, VolunteerProfile
 class AccountTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('ana@example.org', 'A-strong-example-password-592!', first_name='Ana')
+        self.user.groups.add(Group.objects.get_or_create(name='Voluntario')[0])
         VolunteerProfile.objects.create(user=self.user, adult_confirmed_at=timezone.now(), privacy_accepted_at=timezone.now())
 
     def post(self, endpoint, data, client=None):

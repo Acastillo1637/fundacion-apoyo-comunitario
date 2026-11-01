@@ -7,11 +7,15 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from accounts.models import AuditEvent, VolunteerProfile
+from accounts.portals import is_volunteer
 from .models import AvailabilitySlot, Profession, Skill, UnavailableDate, VolunteerProfession, VolunteerSkill
 from .serializers import AvailabilitySerializer, QualificationsSerializer, SlotSerializer
 
 
 def own_profile(request, lock=False):
+    if not is_volunteer(request.user):
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied('Esta función pertenece al espacio de voluntario.')
     profiles = VolunteerProfile.objects.select_for_update() if lock else VolunteerProfile.objects
     return get_object_or_404(profiles, user=request.user)
 

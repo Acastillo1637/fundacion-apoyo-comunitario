@@ -6,7 +6,9 @@ La sección React **Usuarios** permite listar, buscar por nombre/correo, filtrar
 
 Se muestran datos básicos y estado de correo/MFA; no se devuelven hashes, contraseñas, tokens, documentos, teléfonos ni domicilios. La lista pagina de 20 en 20 y limita la búsqueda a 100 caracteres. El historial muestra los 30 cambios administrativos más recientes.
 
-Roles asignables: Voluntario, Secretaría y Administrador general. Se admiten combinaciones. El API no acepta is_superuser, is_staff, permisos arbitrarios, contraseñas ni modificación del correo. is_staff se deriva de la pertenencia a Administrador general cuando se asignan roles; la secretaría usa las vistas operativas de React, sin requerir acceso al panel de Django.
+Roles asignables: Voluntario, Solicitante, Secretaría y Administrador general. Se admiten combinaciones y el titular cambia explícitamente de espacio en React. El API no acepta is_superuser, is_staff, permisos arbitrarios, contraseñas ni modificación del correo. is_staff se deriva de la pertenencia a Administrador general cuando se asignan roles; la secretaría usa las vistas operativas de React, sin requerir acceso al panel de Django.
+
+Solicitante dispone de un perfil independiente para persona, empresa o institución. No obtiene acceso al perfil, habilidades, disponibilidad o carga documental de voluntario. Si también participa como voluntario, se le asignan ambos roles. Las cuentas invitadas completan personalmente el perfil del espacio correspondiente; no se inventan consentimientos.
 
 ## Altas por invitación
 
@@ -52,6 +54,11 @@ No hay borrado definitivo ni edición administrativa del correo en esta etapa. L
 | GET/PATCH | /api/management/users/<uuid>/ | Permiso, MFA, revisión, protecciones de cuenta |
 | POST | /api/management/users/<uuid>/access-email/ | Permiso, MFA, motivo, destinatario acotado |
 | POST | /api/profile/onboarding/ | Titular autenticado, correo verificado y consentimientos |
+| GET/PUT | /api/requester/profile/ | Rol Solicitante, correo verificado, revisión y consentimientos |
+| GET/POST | /api/requester/requests/ | Rol Solicitante, perfil propio y correo verificado |
+| GET | /api/requester/requests/<uuid>/ | Solicitud asociada al titular; 404 para otra cuenta |
+
+Las solicitudes autenticadas toman contacto y entidad del perfil, conservan una instantánea y tienen una clave de envío idempotente. No se admite enviar propietario, correo, estado o datos de otra entidad. Una clave que corresponde a otra cuenta o a una solicitud pública devuelve 409. Las solicitudes públicas previas no se reclaman por coincidencia de correo. El historial del solicitante solo expone estados y fechas, sin actores ni motivos internos.
 
 ## Pruebas
 

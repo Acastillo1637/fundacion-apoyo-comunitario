@@ -16,7 +16,8 @@ from django.views.decorators.http import require_GET, require_POST
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import AuditEvent, RateBucket, VolunteerProfile
+from .models import AuditEvent, RateBucket, RequesterProfile, VolunteerProfile
+from .portals import is_volunteer, portal_access
 from .serializers import ProfileSerializer, RegistrationSerializer
 
 
@@ -38,6 +39,8 @@ def user_data(user):
             'can_manage_activities': user.has_perm('activities.manage_operations'),
             'can_manage_users': user.has_perm('accounts.manage_accounts'),
             'has_volunteer_profile': VolunteerProfile.objects.filter(user=user).exists(),
+            'has_requester_profile': RequesterProfile.objects.filter(user=user).exists(),
+            'available_portals': portal_access(user),
             'can_manage_catalogs': user.is_staff and any(
                 user.has_perm(f'volunteers.change_{model}')
                 for model in ['skill', 'profession', 'documenttype']
@@ -89,11 +92,17 @@ def register(request):
     try:
         with transaction.atomic():
             user = get_user_model().objects.create_user(email=email, password=data['password'], first_name=data['first_name'], last_name=data['last_name'])
-            group, _ = Group.objects.get_or_create(name='Voluntario')
+            group, _ = Group.objects.get_or_create(name='Solicitante' if data['account_type'] == 'requester' else 'Voluntario')
             user.groups.add(group)
             now = timezone.now()
-            VolunteerProfile.objects.create(user=user, adult_confirmed_at=now, privacy_accepted_at=now,
-                                            whatsapp_opt_in_at=now if data['whatsapp'] else None)
+            if data['account_type'] == 'volunteer':
+                VolunteerProfile.objects.create(user=user, adult_confirmed_at=now, privacy_accepted_at=now,
+                                                whatsapp_opt_in_at=now if data['whatsapp'] else None)
+            else:
+                RequesterProfile.objects.create(user=user, requester_type=data['requester_type'],
+                    organization=data['organization'] if data['requester_type'] != 'person' else '',
+                    phone=data['phone'], commune=data['commune'], privacy_accepted_at=now,
+                    adult_confirmed_at=now, representative_confirmed_at=now if data['requester_type'] != 'person' else None)
             address = EmailAddress.objects.create(user=user, email=email, primary=True, verified=False)
             AuditEvent.objects.create(actor=user, action='account.registered')
     except IntegrityError:
@@ -131,6 +140,8 @@ def sign_out(request):
 
 @api_view(['GET', 'PATCH'])
 def profile(request):
+    if not is_volunteer(request.user):
+        return Response({'detail': 'Esta función pertenece al espacio de voluntario.'}, status=403)
     instance = VolunteerProfile.objects.filter(user=request.user).first()
     if not instance:
         return Response({'detail': 'Esta cuenta no tiene perfil de voluntario.'}, status=404)
@@ -155,6 +166,8 @@ def profile(request):
 
 @api_view(['POST'])
 def onboarding(request):
+    if not is_volunteer(request.user):
+        return Response({'detail': 'Tu cuenta no tiene el rol de voluntario.'}, status=403)
     from .management_serializers import OnboardingSerializer
     serializer = OnboardingSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

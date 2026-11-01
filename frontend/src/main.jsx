@@ -38,9 +38,9 @@ function App() {
     {error && <div role="alert" className="error global-error">{error}</div>}
     <main id="main">
       {view === 'home' && <Landing brand={brand} ready={status === 'ready'} navigate={navigate}/>}
-      {(view === 'login' || view === 'register') && <Auth mode={view} brand={brand} navigate={navigate} onLogin={user => { setSession(old => ({ ...old, user })); navigate('dashboard'); }}/>}
+      {['login', 'register', 'register-requester'].includes(view) && <Auth key={view} mode={view === 'login' ? 'login' : 'register'} initialType={view === 'register-requester' ? 'requester' : 'volunteer'} brand={brand} navigate={navigate} onLogin={user => { setSession(old => ({ ...old, user })); navigate('dashboard'); }}/>}
       {view === 'dashboard' && session?.user && <Dashboard user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/>}
-      {view === 'request' && <PublicRequest navigate={navigate}/>}
+      {view === 'request' && (session?.user?.available_portals?.includes('requester') ? <Dashboard initialPortal="requester" initialTab="new-request" user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/> : <PublicRequest navigate={navigate}/>)}
       {view === 'verify-request' && <RequestVerification ready={status === 'ready'} navigate={navigate}/>}
     </main>
     <footer><span>© {new Date().getFullYear()} {brand}</span><span>Personas que se unen. Comunidades que crecen.</span></footer>
@@ -60,26 +60,30 @@ function Landing({ ready, navigate }) {
   </>;
 }
 
-function Auth({ mode, navigate, onLogin, brand }) {
+function Auth({ mode, navigate, onLogin, brand, initialType }) {
   const register = mode === 'register';
+  const [accountType, setAccountType] = useState(initialType || 'volunteer');
+  const [requesterType, setRequesterType] = useState('person');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [success, setSuccess] = useState(''), [continueUrl, setContinueUrl] = useState('');
   useEffect(() => { setError(''); setSuccess(''); setContinueUrl(''); }, [mode]);
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');
     const form = new FormData(event.currentTarget);
     const payload = Object.fromEntries(form);
-    if (register) { payload.adult = form.has('adult'); payload.privacy = form.has('privacy'); payload.whatsapp = form.has('whatsapp'); }
+    if (register) { payload.adult = form.has('adult'); payload.privacy = form.has('privacy'); payload.whatsapp = form.has('whatsapp'); payload.authorized_representative = form.has('authorized_representative'); }
     try {
       const result = await api(register ? 'register/' : 'login/', { method: 'POST', body: JSON.stringify(payload) });
       if (register) setSuccess(result.detail); else onLogin(result.user);
     } catch (err) { setError(err.message); setContinueUrl(err.continueUrl || ''); }
     finally { setBusy(false); }
   }
-  return <section className="auth-layout wrap"><aside className="auth-story"><span className="eyebrow">BIENVENIDO A {brand.toUpperCase()}</span><h1>{register ? 'Tu próxima gran contribución empieza aquí.' : 'Qué bueno tenerte de vuelta.'}</h1><p>Un espacio para conectar tu tiempo y tus habilidades con oportunidades de ayudar.</p><div className="story-mark"><HeartHandshake size={100} strokeWidth={1}/></div><div className="story-foot"><ShieldCheck size={20}/><span>Tu información se comparte únicamente según los permisos y necesidades de coordinación.</span></div></aside><div className="auth-form"><span className="eyebrow">PORTAL DEL VOLUNTARIO</span><h2>{register ? 'Crea tu cuenta' : 'Inicia sesión'}</h2><p>{register ? 'Nos alegra que quieras ser parte de la comunidad.' : 'Ingresa para continuar con tu participación.'}</p>{success ? <div role="status" className="success"><Check/><p>{success}</p><button className="button secondary" onClick={() => navigate('login')}>Ir a iniciar sesión</button></div> : <form onSubmit={submit} key={mode}>
-      {register && <div className="form-row"><Field label="Nombre" name="first_name" autoComplete="given-name" maxLength={80}/><Field label="Apellido" name="last_name" autoComplete="family-name" maxLength={80}/></div>}
+  return <section className="auth-layout wrap"><aside className="auth-story"><span className="eyebrow">BIENVENIDO A {brand.toUpperCase()}</span><h1>{register ? 'Tu próxima gran contribución empieza aquí.' : 'Qué bueno tenerte de vuelta.'}</h1><p>Un espacio para conectar tu tiempo y tus habilidades con oportunidades de ayudar.</p><div className="story-mark"><HeartHandshake size={100} strokeWidth={1}/></div><div className="story-foot"><ShieldCheck size={20}/><span>Tu información se comparte únicamente según los permisos y necesidades de coordinación.</span></div></aside><div className="auth-form"><span className="eyebrow">PORTAL DE LA COMUNIDAD</span><h2>{register ? 'Crea tu cuenta' : 'Inicia sesión'}</h2><p>{register ? 'Nos alegra que quieras ser parte de la comunidad.' : 'Ingresa para continuar con tu participación.'}</p>{success ? <div role="status" className="success"><Check/><p>{success}</p><button className="button secondary" onClick={() => navigate('login')}>Ir a iniciar sesión</button></div> : <form onSubmit={submit} key={mode}>
+      {register && <><label className="field">¿Cómo quieres participar?<select name="account_type" value={accountType} onChange={event => setAccountType(event.target.value)}><option value="volunteer">Voluntario: quiero ayudar</option><option value="requester">Solicitante: necesito apoyo para mí o una entidad</option></select></label><div className="form-row"><Field label="Nombre del contacto" name="first_name" autoComplete="given-name" maxLength={80}/><Field label="Apellido" name="last_name" autoComplete="family-name" maxLength={80}/></div>
+        {accountType === 'requester' && <><label className="field">Tipo de solicitante<select name="requester_type" value={requesterType} onChange={event => setRequesterType(event.target.value)}><option value="person">Persona natural</option><option value="company">Empresa</option><option value="institution">Institución</option></select></label>{requesterType !== 'person' && <><Field label="Nombre de la empresa o institución" name="organization" maxLength={150}/><label className="checkbox"><input type="checkbox" name="authorized_representative" required/>Estoy autorizado para representar a esta entidad.</label></>}<Field label="Teléfono de contacto" name="phone" type="tel" maxLength={20}/><label className="field">Comuna<input name="commune" maxLength={80}/></label></>}
+      </>}
       <Field label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="tu@correo.cl" maxLength={254}/>
       <Field label="Contraseña" name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={register ? 12 : undefined} maxLength={256}/>
-      {register ? <><small className="help">Usa al menos 12 caracteres. Evita datos personales y contraseñas comunes.</small><label className="checkbox"><input type="checkbox" name="adult" required/>Confirmo que tengo 18 años o más.</label><label className="checkbox"><input type="checkbox" name="privacy" required/>Acepto el tratamiento de mis datos para gestionar mi cuenta y participación. <span className="help">Entorno de desarrollo: el aviso institucional definitivo está pendiente. Usa datos ficticios.</span></label><label className="checkbox"><input type="checkbox" name="whatsapp"/>Quiero recibir invitaciones por WhatsApp mediante contacto del equipo. Es opcional.</label></> : <a className="forgot" href="/accounts/password/reset/">¿Olvidaste tu contraseña?</a>}
+      {register ? <><small className="help">Usa al menos 12 caracteres. Evita datos personales y contraseñas comunes.</small><label className="checkbox"><input type="checkbox" name="adult" required/>Confirmo que tengo 18 años o más.</label><label className="checkbox"><input type="checkbox" name="privacy" required/>Acepto el tratamiento de mis datos para gestionar mi cuenta y participación. <span className="help">Entorno de desarrollo: el aviso institucional definitivo está pendiente. Usa datos ficticios.</span></label>{accountType === 'volunteer' && <label className="checkbox"><input type="checkbox" name="whatsapp"/>Quiero recibir invitaciones por WhatsApp mediante contacto del equipo. Es opcional.</label>}</> : <a className="forgot" href="/accounts/password/reset/">¿Olvidaste tu contraseña?</a>}
       {error && <div className="error" role="alert">{error}{continueUrl && <p><a href={continueUrl}>Continuar con acceso protegido</a></p>}</div>}
       <button className="button primary full" disabled={busy}>{busy ? 'Procesando…' : register ? 'Crear mi cuenta' : 'Ingresar a mi espacio'}<ArrowRight size={18}/></button>
     </form>}

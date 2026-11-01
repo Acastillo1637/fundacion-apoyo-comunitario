@@ -9,6 +9,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         Group.objects.get_or_create(name='Voluntario')
+        Group.objects.get_or_create(name='Solicitante')
         permission = Permission.objects.get(content_type__app_label='accounts', codename='view_volunteerprofile')
         for name in ['Secretaría', 'Administrador general']:
             group, _ = Group.objects.get_or_create(name=name)
