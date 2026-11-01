@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import Permission
 from django.core import mail, signing
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, connections
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
@@ -377,7 +377,7 @@ class ConcurrentEventTests(TransactionTestCase):
                 barrier.wait(timeout=10)
                 return client.post(f'/api/activities/operations/events/{event.pk}/transition/', {'revision': 0, 'status': 'open', 'reason': ''}, content_type='application/json').status_code
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             responses = list(executor.map(publish, [0, 1]))

@@ -5,7 +5,7 @@ from unittest import skipUnless
 
 from django.contrib.auth.models import Group, Permission
 from django.core.management import call_command
-from django.db import IntegrityError, close_old_connections, connection, transaction
+from django.db import IntegrityError, close_old_connections, connection, connections, transaction
 from django.test import Client, TestCase, TransactionTestCase
 from django.test import override_settings
 from django.utils import timezone
@@ -264,7 +264,7 @@ class ConcurrentAvailabilityTests(TransactionTestCase):
                     'unavailable_dates': [],
                 }, content_type='application/json').status_code
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             responses = list(executor.map(update, ['09:00', '10:00']))
