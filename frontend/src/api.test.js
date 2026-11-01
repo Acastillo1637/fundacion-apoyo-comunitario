@@ -5,6 +5,11 @@ import { api } from './api.js';
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 
+test('el desafío MFA se muestra en el acceso de la web', async () => {
+  globalThis.fetch = async () => Response.json({ detail: 'Ingresa tu código.', mfa_required: true }, { status: 409 });
+  await assert.rejects(api('login/'), error => error.mfaRequired === true && !error.continueUrl);
+});
+
 test('explica un rechazo CSRF cuando el proxy devuelve HTML', async () => {
   globalThis.fetch = async () => new Response('<html>Forbidden</html>', { status: 403 });
   await assert.rejects(api('register/', { method: 'POST' }), /seguridad de la sesión/);

@@ -9,6 +9,8 @@ import PublicEvents from '../activities/PublicEvents';
 import UserManagement, { VolunteerOnboarding } from '../accounts/UserManagement';
 import '../accounts/styles.css';
 import RequesterPortal from '../accounts/RequesterPortal';
+import Participants, { MyParticipations, Notifications } from '../activities/Participation';
+import { Catalogs, StaffProfile, VolunteerDirectory, WorkspaceSummary } from '../accounts/Workspace';
 
 const tabs = [
   { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
@@ -17,6 +19,7 @@ const tabs = [
   { id: 'availability', label: 'Disponibilidad', icon: Clock3 },
   { id: 'documents', label: 'Mis documentos', icon: FileCheck2 },
   { id: 'opportunities', label: 'Oportunidades', icon: CalendarDays },
+  { id: 'participations', label: 'Mis participaciones', icon: Users },
 ];
 
 const portalNames = { administration: 'Administración general', operations: 'Secretaría y operaciones', volunteer: 'Voluntariado', requester: 'Solicitante de apoyo' };
@@ -26,17 +29,21 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab }) 
   const [selectedPortal, setPortal] = useState(initialPortal || portals[0]);
   const portal = portals.includes(selectedPortal) ? selectedPortal : portals[0];
   const [selectedTab, setTab] = useState(initialTab || '');
-  const navigation = portal === 'volunteer' ? (user.has_volunteer_profile ? tabs : [{ id: 'onboarding', label: 'Incorporación como voluntario', icon: UserRound }])
+  const baseNavigation = portal === 'volunteer' ? (user.has_volunteer_profile ? tabs : [{ id: 'onboarding', label: 'Incorporación como voluntario', icon: UserRound }])
     : portal === 'requester' ? [
       { id: 'requester-overview', label: 'Resumen del solicitante', icon: LayoutDashboard },
       { id: 'requester-profile', label: 'Persona o entidad', icon: UserRound },
       ...(user.has_requester_profile ? [{ id: 'my-requests', label: 'Mis solicitudes', icon: FileCheck2 }, { id: 'new-request', label: 'Nueva solicitud', icon: CalendarDays }] : []),
     ] : [
-      { id: 'staff-overview', label: 'Mi cuenta y funciones', icon: UserRound },
+      { id: 'staff-overview', label: 'Resumen', icon: LayoutDashboard },
+      { id: 'staff-profile', label: 'Mi cuenta', icon: UserRound },
       ...(portal === 'administration' && user.can_manage_users ? [{ id: 'users', label: 'Administrar usuarios', icon: Users }] : []),
       ...(portal === 'operations' && user.can_manage_activities ? [{ id: 'operations', label: 'Solicitudes y eventos', icon: CalendarDays }] : []),
+      ...(portal === 'operations' && user.can_manage_activities ? [{ id: 'participants', label: 'Participantes y asistencia', icon: Users }, { id: 'directory', label: 'Voluntarios', icon: UserRound }] : []),
+      ...(portal === 'administration' && user.can_manage_catalogs ? [{ id: 'catalogs', label: 'Catálogos', icon: Award }] : []),
       ...(portal === 'operations' && user.can_review_documents ? [{ id: 'document-review', label: 'Revisión documental', icon: FileCheck2 }] : []),
     ];
+  const navigation = [...baseNavigation, { id: 'notifications', label: 'Notificaciones', icon: FileCheck2 }];
   const tab = navigation.some(item => item.id === selectedTab) ? selectedTab : navigation[0]?.id;
   if (!portal) return <section className="wrap panel"><h1>Cuenta sin espacio asignado</h1><p>Solicita al administrador que revise tus roles de acceso.</p></section>;
   return <div className="app-layout"><aside className="sidebar">
@@ -44,21 +51,26 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab }) 
     {portals.length > 1 && <label className="field">Cambiar de espacio<select value={portal} onChange={event => { setPortal(event.target.value); setTab(''); }}>{portals.map(value => <option key={value} value={value}>{portalNames[value]}</option>)}</select></label>}
     {navigation.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-item ${tab === id ? 'active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon size={18}/>{label}</button>)}
     <div className="sidebar-note"><HeartHandshake size={25}/><strong>{portalNames[portal]}</strong><p>{portal === 'volunteer' ? 'Comparte tus habilidades y disponibilidad.' : portal === 'requester' ? 'Gestiona las necesidades de tu persona o entidad.' : 'Coordina la comunidad con los permisos de tu cuenta.'}</p></div>
-    {portal === 'administration' && user.can_manage_catalogs && <a className="nav-item" href="/admin/volunteers/"><Award size={18}/>Administrar catálogos</a>}
     <a className="nav-item" href="/accounts/2fa/"><Settings2 size={18}/>Seguridad de cuenta</a>
   </aside><section className="dashboard">
     <div className="breadcrumb">{portalNames[portal]} <ChevronRight size={14}/>{navigation.find(item => item.id === tab)?.label}</div>
     <div className="dashboard-heading"><div><span className="eyebrow">{portalNames[portal]}</span><h1>Hola, {user.first_name || 'bienvenido'}</h1></div></div>
-    {portal === 'requester' && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={setTab}/>}
-    {tab === 'staff-overview' && <section className="panel"><h2>{portalNames[portal]}</h2><p>{user.first_name} {user.last_name}</p><p>{user.email}</p><p>Roles asignados: {user.roles.join(', ')}</p><p>{portal === 'administration' ? 'Administra cuentas, roles y catálogos. Cambia al espacio de operaciones para coordinar solicitudes y revisar documentos.' : 'Revisa solicitudes de apoyo, coordina eventos y valida los antecedentes documentales según tus permisos.'}</p></section>}
+    {portal === 'requester' && tab !== 'notifications' && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={setTab}/>}
+    {tab === 'staff-overview' && <><WorkspaceSummary portal={portal} navigate={setTab}/><section className="panel"><h2>{portalNames[portal]}</h2><p>{portal === 'administration' ? 'Administra cuentas y catálogos desde este espacio. Usa el selector para entrar a operaciones.' : 'Revisa solicitudes y documentos, coordina participantes y registra la asistencia.'}</p></section></>}
+    {tab === 'staff-profile' && <StaffProfile user={user} setUser={setUser}/>}
+    {tab === 'notifications' && <Notifications/>}
+    {tab === 'catalogs' && user.can_manage_catalogs && <Catalogs/>}
+    {tab === 'participants' && user.can_manage_activities && <Participants/>}
+    {tab === 'directory' && user.can_manage_activities && <VolunteerDirectory/>}
     {portal === 'volunteer' && <>
-      {tab === 'overview' && <Overview navigate={setTab}/>}
+      {tab === 'overview' && <><WorkspaceSummary portal="volunteer" navigate={setTab}/><Overview navigate={setTab}/></>}
       {tab === 'onboarding' && <VolunteerOnboarding onComplete={updated => { setUser(updated); setTab('overview'); }}/>}
       {tab === 'profile' && <Profile setUser={setUser}/>}
       {tab === 'qualifications' && <Qualifications/>}
       {tab === 'availability' && <Availability/>}
       {tab === 'documents' && <Documents/>}
-      {tab === 'opportunities' && <PublicEvents/>}
+      {tab === 'opportunities' && <PublicEvents canApply/>}
+      {tab === 'participations' && <MyParticipations/>}
     </>}
     {tab === 'document-review' && user.can_review_documents && <DocumentReviewQueue/>}
     {tab === 'operations' && user.can_manage_activities && <Operations/>}
@@ -87,7 +99,7 @@ function Overview({ navigate }) {
       <SummaryCard icon={<Clock3/>} title="Disponibilidad semanal" value={`${data.availability.slots.length} franjas registradas`} text={`${data.availability.unavailable_dates.length} fechas no disponibles. Horarios de Santiago.`} onClick={() => navigate('availability')}/>
       <SummaryCard icon={<MapPin/>} title="Tu comunidad" value={data.profile.commune || 'Agrega tu comuna'} text="Solo necesitamos tu zona aproximada para coordinar." onClick={() => navigate('profile')}/>
     </div>}
-    <section className="panel"><h2>Explora las actividades abiertas</h2><p className="section-description">Consulta fechas, funciones y requisitos. Las postulaciones e invitaciones se incorporarán en el próximo módulo.</p><button className="button secondary" onClick={() => navigate('opportunities')}>Ver oportunidades <ArrowRight size={16}/></button></section>
+    <section className="panel"><h2>Explora las actividades abiertas</h2><p className="section-description">Consulta fechas, funciones y requisitos, postula y sigue tus invitaciones en Mis participaciones.</p><button className="button secondary" onClick={() => navigate('opportunities')}>Ver oportunidades <ArrowRight size={16}/></button></section>
   </>;
 }
 

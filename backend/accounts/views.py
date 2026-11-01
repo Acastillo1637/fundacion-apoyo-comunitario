@@ -3,7 +3,7 @@ import json
 from datetime import timedelta
 
 from allauth.account.models import EmailAddress
-from allauth.account.internal.flows.login import get_authentication_records
+from allauth.account.internal.flows.login import record_authentication
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
@@ -41,6 +41,7 @@ def user_data(user):
             'has_volunteer_profile': VolunteerProfile.objects.filter(user=user).exists(),
             'has_requester_profile': RequesterProfile.objects.filter(user=user).exists(),
             'available_portals': portal_access(user),
+            'management_revision': user.management_revision,
             'can_manage_catalogs': user.is_staff and any(
                 user.has_perm(f'volunteers.change_{model}')
                 for model in ['skill', 'profession', 'documenttype']
@@ -123,10 +124,28 @@ def sign_in(request):
     user = authenticate(request, username=email.strip().lower(), password=password)
     if user is None or not EmailAddress.objects.filter(user=user, verified=True).exists():
         return JsonResponse({'detail': 'No pudimos iniciar sesión. Revisa tus datos y verifica tu correo.'}, status=400)
-    # No se permite omitir un factor configurado mediante este endpoint.
-    if user.is_staff or user.is_superuser or user.get_all_permissions() or user.authenticator_set.exists():
-        return JsonResponse({'detail': 'Continúa mediante el acceso protegido.', 'continue_url': '/accounts/login/'}, status=409)
+    factor = user.authenticator_set.filter(type='totp').first()
+    verified_factor = None
+    if user.authenticator_set.exists():
+        code = data.get('code', '')
+        if not isinstance(code, str) or len(code) > 20:
+            return JsonResponse({'detail': 'Código no válido.'}, status=400)
+        if not code:
+            return JsonResponse({'detail': 'Ingresa el código de tu aplicación de autenticación.', 'mfa_required': True}, status=409)
+        from allauth.mfa.totp.internal.auth import TOTP
+        if factor and TOTP(factor).validate_code(code):
+            verified_factor = factor
+        else:
+            recovery = user.authenticator_set.filter(type='recovery_codes').first()
+            from allauth.mfa.recovery_codes.internal.auth import RecoveryCodes
+            if recovery and RecoveryCodes(recovery).validate_code(code):
+                verified_factor = recovery
+        if verified_factor is None:
+            return JsonResponse({'detail': 'El código no es válido o ya fue utilizado.', 'mfa_required': True}, status=400)
     login(request, user)
+    record_authentication(request, user, method='password')
+    if verified_factor:
+        record_authentication(request, user, method='mfa', type=verified_factor.type, id=verified_factor.pk)
     AuditEvent.objects.create(actor=user, action='account.login')
     return JsonResponse({'user': user_data(user), 'csrf_token': get_token(request)})
 
@@ -189,7 +208,7 @@ def onboarding(request):
 def operations(request):
     if not request.user.has_perm('accounts.view_volunteerprofile'):
         return Response({'detail': 'No tienes permiso para consultar esta información.'}, status=403)
-    methods = get_authentication_records(request, request.user)
-    if not any(method.get('method') == 'mfa' for method in methods):
-        return Response({'detail': 'Se requiere MFA para operaciones administrativas.'}, status=403)
+    from .security import portal_authenticated
+    if not portal_authenticated(request):
+        return Response({'detail': 'Inicia sesión nuevamente para continuar.'}, status=403)
     return Response({'volunteers': VolunteerProfile.objects.count()})

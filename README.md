@@ -13,7 +13,7 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Selección de habilidades, profesiones y oficios desde catálogos administrables.
 - Franjas semanales y fechas completas no disponibles, con validación de superposiciones.
 - Catálogos con activación/desactivación y asociación de requisitos documentales.
-- Permisos backend y control de segundo factor para operaciones administrativas.
+- Permisos backend y acceso unificado; segundo factor en la misma pantalla si está configurado.
 - Carga privada de PDF, JPEG y PNG, con versiones, descarga autorizada y revisión documental.
 - Formulario público de solicitud y verificación de correo del solicitante.
 - Revisión administrativa, eventos en borrador, publicación y cancelación.
@@ -21,9 +21,11 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Administración de usuarios desde React: altas por invitación, búsqueda, roles, estado e historial.
 - Espacios separados para voluntariado, solicitantes, secretaría y administración, con selector para cuentas con varios roles.
 - Perfil de solicitante para persona natural, empresa o institución; nueva solicitud y seguimiento desde su cuenta.
-- 150 pruebas del backend, incluidas tres de concurrencia que requieren PostgreSQL, y 5 del cliente API.
+- Dashboards con cantidades reales, postulaciones, candidatos, invitaciones, lista de espera, participantes, asistencia y notificaciones.
+- Catálogos y restricciones administrables desde React.
+- 182 pruebas del backend, incluidas cuatro de concurrencia que requieren PostgreSQL, y 12 del frontend.
 
-**Por implementar:** matching, postulaciones, invitaciones, participantes, respaldos y notificaciones internas. WhatsApp será manual asistido, sin API pagada.
+**Para producción:** configurar SMTP, HTTPS, respaldos externos y monitoreo; completar la revisión visual/móvil. WhatsApp es manual asistido, sin API pagada. Consulta el [circuito de participación y los dashboards](docs/PARTICIPACION.md).
 
 ## Cómo abrirlo en tu computador
 
@@ -172,11 +174,11 @@ El script aplica las migraciones y asigna el permiso documental a los grupos adm
 1. Entra como voluntario y abre **Mis documentos**.
 2. Elige un tipo documental y carga un **PDF o imagen ficticia** de hasta 10 MB.
 3. Comprueba el estado pendiente, el historial y la descarga.
-4. Para revisar, entra con **otra cuenta** que tenga permiso documental y MFA, y abre **Revisión documental**. Un administrador no puede revisar sus propios archivos.
+4. Para revisar, entra con **otra cuenta** que tenga permiso documental, y abre **Revisión documental**. Un administrador no puede revisar sus propios archivos.
 5. Descarga el archivo, valida o rechaza e indica observación y vencimiento cuando corresponda. El rechazo exige un motivo.
 6. Vuelve a la cuenta del voluntario para consultar la decisión. Cargar otra versión no borra el historial y exige una nueva revisión.
 
-Cada voluntario tiene una cuota inicial de 50 MB incluyendo versiones históricas, y un máximo de 100 versiones. El documento vence al terminar su fecha de validez en Santiago de Chile. Las habilidades y profesiones todavía no se marcan automáticamente como acreditadas; esa evaluación se incorporará con el matching.
+Cada voluntario tiene una cuota inicial de 50 MB incluyendo versiones históricas, y un máximo de 100 versiones. El documento vence al terminar su fecha de validez en Santiago de Chile. Las habilidades y profesiones todavía no se marcan automáticamente como acreditadas; el circuito de participación evalúa los documentos vigentes exigidos por cada función.
 
 Los archivos se guardan en `backend/private_media/documents/`, fuera de las rutas públicas y excluidos de Git. No publiques esa carpeta ni la configures como `/media/` público.
 
@@ -190,20 +192,20 @@ Reinicia Django con el script del paso 3 para aplicar las migraciones y permisos
 2. Completa el formulario con datos ficticios, una fecha futura y horarios dentro del mismo día.
 3. Envía la solicitud y revisa el mensaje en la **terminal de Django**. No llega a Gmail en este entorno.
 4. Copia el enlace completo, incluido el fragmento `#confirm-request=...`, ábrelo y pulsa **Confirmar mi correo**. Esa verificación no aprueba la solicitud.
-5. Entra con una cuenta administrativa mediante `/accounts/login/`, completa MFA y abre **Solicitudes y eventos**.
+5. Entra desde **Iniciar sesión** con una cuenta de coordinación y abre **Solicitudes y eventos**. Si activaste segundo factor, introduce su código en la misma pantalla.
 6. Abre la solicitud, pulsa **Comenzar revisión** y después aprueba o rechaza. Rechazar exige una justificación; aprobar exige correo verificado.
 7. Desde una solicitud aprobada pulsa **Crear evento**. Revisa fecha/dirección y redacta una descripción pública sin información personal.
 8. Define una o varias funciones, sus cupos y requisitos; guarda como borrador.
 9. En **Eventos**, abre el borrador y pulsa **Abrir convocatoria**.
 10. Comprueba la publicación en **Oportunidades** o en la página de inicio: se muestran comuna y requisitos, pero no dirección exacta ni contacto del solicitante.
 
-Una solicitud puede generar varios eventos. Los borradores se pueden editar; los abiertos no se editan en esta etapa hasta implementar el flujo de comunicación de cambios. Se puede cancelar con motivo; finalizar exige que haya terminado el horario. Todavía no hay postulaciones ni asignación automática de participantes.
+Una solicitud puede generar varios eventos. Los borradores se pueden editar; los abiertos no se editan en esta etapa hasta implementar el flujo de comunicación de cambios. Se puede cancelar con motivo; finalizar exige que haya terminado el horario. Los voluntarios pueden postular; la coordinación puede confirmar postulaciones e invitar candidatos desde **Participantes y asistencia**. Los cupos se asignan al confirmar, con lista de espera si están completos.
 
 Para producción se necesita `PUBLIC_APP_URL` con el dominio HTTPS real, además de un servicio de correo configurado. No uses una dirección enviada por el visitante para construir enlaces. Más detalles en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
 
 ## Cómo administrar usuarios desde la web
 
-Reinicia Django con el script de inicio para aplicar las migraciones y permisos. Entra por `/accounts/login/` con tu cuenta técnica o una cuenta del grupo **Administrador general**, completa MFA y recarga el portal.
+Reinicia Django con el script de inicio para aplicar las migraciones y permisos. Entra desde **Iniciar sesión** con una cuenta del grupo **Administrador general**. Si tiene segundo factor configurado, introduce el código en la misma pantalla.
 
 1. Abre **Usuarios** en el menú lateral.
 2. Busca por nombre o correo y filtra por rol o estado.

@@ -62,10 +62,11 @@ function Landing({ ready, navigate }) {
 
 function Auth({ mode, navigate, onLogin, brand, initialType }) {
   const register = mode === 'register';
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [accountType, setAccountType] = useState(initialType || 'volunteer');
   const [requesterType, setRequesterType] = useState('person');
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [success, setSuccess] = useState(''), [continueUrl, setContinueUrl] = useState('');
-  useEffect(() => { setError(''); setSuccess(''); setContinueUrl(''); }, [mode]);
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [success, setSuccess] = useState('');
+  useEffect(() => { setError(''); setSuccess(''); }, [mode]);
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');
     const form = new FormData(event.currentTarget);
@@ -74,7 +75,7 @@ function Auth({ mode, navigate, onLogin, brand, initialType }) {
     try {
       const result = await api(register ? 'register/' : 'login/', { method: 'POST', body: JSON.stringify(payload) });
       if (register) setSuccess(result.detail); else onLogin(result.user);
-    } catch (err) { setError(err.message); setContinueUrl(err.continueUrl || ''); }
+    } catch (err) { setError(err.message); setMfaRequired(Boolean(err.mfaRequired)); }
     finally { setBusy(false); }
   }
   return <section className="auth-layout wrap"><aside className="auth-story"><span className="eyebrow">BIENVENIDO A {brand.toUpperCase()}</span><h1>{register ? 'Tu próxima gran contribución empieza aquí.' : 'Qué bueno tenerte de vuelta.'}</h1><p>Un espacio para conectar tu tiempo y tus habilidades con oportunidades de ayudar.</p><div className="story-mark"><HeartHandshake size={100} strokeWidth={1}/></div><div className="story-foot"><ShieldCheck size={20}/><span>Tu información se comparte únicamente según los permisos y necesidades de coordinación.</span></div></aside><div className="auth-form"><span className="eyebrow">PORTAL DE LA COMUNIDAD</span><h2>{register ? 'Crea tu cuenta' : 'Inicia sesión'}</h2><p>{register ? 'Nos alegra que quieras ser parte de la comunidad.' : 'Ingresa para continuar con tu participación.'}</p>{success ? <div role="status" className="success"><Check/><p>{success}</p><button className="button secondary" onClick={() => navigate('login')}>Ir a iniciar sesión</button></div> : <form onSubmit={submit} key={mode}>
@@ -83,11 +84,12 @@ function Auth({ mode, navigate, onLogin, brand, initialType }) {
       </>}
       <Field label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="tu@correo.cl" maxLength={254}/>
       <Field label="Contraseña" name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={register ? 12 : undefined} maxLength={256}/>
+      {!register && mfaRequired && <Field label="Código de autenticación o recuperación" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={20}/>}
       {register ? <><small className="help">Usa al menos 12 caracteres. Evita datos personales y contraseñas comunes.</small><label className="checkbox"><input type="checkbox" name="adult" required/>Confirmo que tengo 18 años o más.</label><label className="checkbox"><input type="checkbox" name="privacy" required/>Acepto el tratamiento de mis datos para gestionar mi cuenta y participación. <span className="help">Entorno de desarrollo: el aviso institucional definitivo está pendiente. Usa datos ficticios.</span></label>{accountType === 'volunteer' && <label className="checkbox"><input type="checkbox" name="whatsapp"/>Quiero recibir invitaciones por WhatsApp mediante contacto del equipo. Es opcional.</label>}</> : <a className="forgot" href="/accounts/password/reset/">¿Olvidaste tu contraseña?</a>}
-      {error && <div className="error" role="alert">{error}{continueUrl && <p><a href={continueUrl}>Continuar con acceso protegido</a></p>}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
       <button className="button primary full" disabled={busy}>{busy ? 'Procesando…' : register ? 'Crear mi cuenta' : 'Ingresar a mi espacio'}<ArrowRight size={18}/></button>
     </form>}
-    <p className="switch">{register ? '¿Ya tienes una cuenta?' : '¿Aún no eres parte?'} <button className="text-button" onClick={() => navigate(register ? 'login' : 'register')}>{register ? 'Inicia sesión' : 'Regístrate'}</button></p><div className="form-footer"><ShieldCheck size={15}/> Acceso administrativo con segundo factor en <a href="/accounts/login/">acceso protegido</a>.</div></div></section>;
+    <p className="switch">{register ? '¿Ya tienes una cuenta?' : '¿Aún no eres parte?'} <button className="text-button" onClick={() => navigate(register ? 'login' : 'register')}>{register ? 'Inicia sesión' : 'Regístrate'}</button></p><div className="form-footer"><ShieldCheck size={15}/> Un solo acceso para todos los perfiles. Si activaste segundo factor, ingresa tu código aquí.</div></div></section>;
 }
 
 function Field({ label, ...props }) {

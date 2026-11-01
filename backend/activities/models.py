@@ -107,3 +107,30 @@ class EventTransition(models.Model):
 
     class Meta:
         ordering = ['created_at', 'pk']
+
+
+class Participation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='participations')
+    position = models.ForeignKey(EventPosition, on_delete=models.PROTECT, related_name='participations')
+    profile = models.ForeignKey('accounts.VolunteerProfile', on_delete=models.PROTECT, related_name='participations')
+    status = models.CharField(max_length=20, choices=[(value, value) for value in ['applied', 'invited', 'confirmed', 'waitlisted', 'declined', 'cancelled', 'rejected']], default='applied')
+    expires_at = models.DateTimeField(null=True, blank=True)
+    attendance = models.CharField(max_length=12, choices=[('', 'Pendiente'), ('present', 'Presente'), ('absent', 'Ausente')], blank=True)
+    revision = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at', 'pk']
+        constraints = [models.UniqueConstraint(fields=['event', 'profile'], name='one_participation_per_event')]
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    message = models.CharField(max_length=300)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']

@@ -1,22 +1,20 @@
-from allauth.account.internal.flows.login import get_authentication_records
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
 from accounts.models import AuditEvent, VolunteerProfile
+from accounts.security import portal_authenticated
 from .models import VolunteerDocument
 
 
 def can_review(request):
-    return request.user.has_perm('documents.review_volunteerdocument') and any(
-        method.get('method') == 'mfa' for method in get_authentication_records(request, request.user)
-    )
+    return request.user.has_perm('documents.review_volunteerdocument') and portal_authenticated(request)
 
 
 def require_reviewer(request):
     if not can_review(request):
-        raise PermissionDenied('La revisión documental requiere permiso específico y MFA.')
+        raise PermissionDenied('La revisión documental requiere permiso específico y una sesión vigente.')
 
 
 def document_data(document):

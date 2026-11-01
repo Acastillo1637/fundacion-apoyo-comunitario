@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import PublicRequest from '../activities/PublicRequest';
+import { WorkspaceSummary } from './Workspace';
 
 const types = { person: 'Persona natural', company: 'Empresa', institution: 'Institución' };
 const statuses = { pending: 'Pendiente', in_review: 'En revisión', approved: 'Aprobada', rejected: 'Rechazada' };
@@ -27,7 +28,7 @@ export default function RequesterPortal({ tab, user, setUser, navigate }) {
   if (profile === undefined) return <p role={error ? 'alert' : 'status'}>{error || 'Cargando perfil de solicitante…'}</p>;
   if (profile && tab === 'new-request') return <PublicRequest requester={profile} navigate={() => navigate('my-requests')}/>;
   if (profile && tab === 'my-requests') return <OwnedRequests/>;
-  if (profile && tab === 'requester-overview') return <section className="panel"><span className="eyebrow">{types[profile.requester_type]}</span><h2>{profile.organization || user.first_name}</h2><p>Representante o contacto: {profile.first_name} {profile.last_name}</p><p>Envía necesidades de apoyo y consulta su estado. La fundación evalúa cada solicitud antes de aprobarla.</p><div className="actions"><button className="button primary" onClick={() => navigate('new-request')}>Nueva solicitud</button><button className="button secondary" onClick={() => navigate('my-requests')}>Mis solicitudes</button></div></section>;
+  if (profile && tab === 'requester-overview') return <><WorkspaceSummary portal="requester" navigate={navigate}/><section className="panel"><span className="eyebrow">{types[profile.requester_type]}</span><h2>{profile.organization || user.first_name}</h2><p>Representante o contacto: {profile.first_name} {profile.last_name}</p><p>Envía necesidades de apoyo y consulta su estado. La fundación evalúa cada solicitud antes de aprobarla.</p><div className="actions"><button className="button primary" onClick={() => navigate('new-request')}>Nueva solicitud</button><button className="button secondary" onClick={() => navigate('my-requests')}>Mis solicitudes</button></div></section></>;
   return <section className="panel profile-panel"><h2>{profile ? 'Perfil del solicitante' : 'Completa tu perfil de solicitante'}</h2><p>Registra tus datos de contacto y la entidad que representas. Cada cuenta representa a una persona o entidad.</p>
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}
     <form onSubmit={save}><fieldset className="form-fieldset" disabled={busy}>

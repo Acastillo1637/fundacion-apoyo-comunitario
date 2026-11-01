@@ -1,7 +1,6 @@
 from smtplib import SMTPException
 
 from allauth.account.internal.flows.password_reset import request_password_reset
-from allauth.account.internal.flows.login import get_authentication_records
 from allauth.account.models import EmailAddress
 from django.contrib.auth.models import Group
 from django.db import IntegrityError, transaction
@@ -16,13 +15,12 @@ from activities.services import Conflict
 from .management_serializers import AccessEmailSerializer, CreateAccountSerializer, ROLE_NAMES, UpdateAccountSerializer
 from .models import AccountChange, AccountManagementGuard, AuditEvent, User
 from .views import limited
+from .security import portal_authenticated
 
 
 def require_account_manager(request):
-    if not request.user.has_perm('accounts.manage_accounts') or not any(
-        record.get('method') == 'mfa' for record in get_authentication_records(request, request.user)
-    ):
-        raise PermissionDenied('La administración de cuentas requiere permiso de administrador general y MFA.')
+    if not request.user.has_perm('accounts.manage_accounts') or not portal_authenticated(request):
+        raise PermissionDenied('La administración de cuentas requiere permiso de administrador general y una sesión vigente.')
 
 
 def lock_actor(request):

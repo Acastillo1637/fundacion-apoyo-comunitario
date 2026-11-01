@@ -45,6 +45,7 @@ export async function api(path, options = {}) {
   if (!response.ok) {
     const error = new Error(data.detail || describeError(data) || 'No fue posible completar la solicitud.');
     error.continueUrl = data.continue_url;
+    error.mfaRequired = data.mfa_required;
     throw error;
   }
   return data;

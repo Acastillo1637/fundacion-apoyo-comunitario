@@ -75,13 +75,13 @@ class AccountTests(TestCase):
         session.save()
         self.assertEqual(self.client.get('/api/operations/').status_code, 200)
 
-    def test_staff_cannot_bypass_mfa_via_json_login(self):
+    def test_staff_without_enrolled_factor_uses_unified_login(self):
         self.user.is_staff = True
         self.user.save()
         EmailAddress.objects.create(user=self.user, email=self.user.email, verified=True, primary=True)
         response = self.post('/api/login/', {'email': self.user.email, 'password': 'A-strong-example-password-592!'})
-        self.assertEqual(response.status_code, 409)
-        self.assertNotIn('_auth_user_id', self.client.session)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('_auth_user_id', self.client.session)
 
     def test_login_is_rate_limited(self):
         for _ in range(10):

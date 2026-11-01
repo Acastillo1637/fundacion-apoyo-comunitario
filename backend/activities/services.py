@@ -1,14 +1,14 @@
-from allauth.account.internal.flows.login import get_authentication_records
 from django.conf import settings
 from django.core import signing
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 
 from accounts.models import AuditEvent
-from .models import Event, EventPosition, EventTransition, RequestTransition, ServiceRequest
+from accounts.security import portal_authenticated
+from .models import Event, EventPosition, EventTransition, RequestTransition, ServiceRequest, Notification
 
 
 class Conflict(APIException):
@@ -17,10 +17,8 @@ class Conflict(APIException):
 
 
 def require_operator(request):
-    if not request.user.has_perm('activities.manage_operations') or not any(
-        method.get('method') == 'mfa' for method in get_authentication_records(request, request.user)
-    ):
-        raise PermissionDenied('La operación requiere permiso de gestión de actividades y MFA.')
+    if not request.user.has_perm('activities.manage_operations') or not portal_authenticated(request):
+        raise PermissionDenied('La operación requiere permiso de gestión de actividades y una sesión vigente.')
 
 
 def schedule_data(item):
@@ -109,6 +107,8 @@ def transition_request(request, request_id, data):
     item.revision += 1
     item.save(update_fields=['status', 'revision'])
     AuditEvent.objects.create(actor=request.user, action=f'request.{target}', resource=f'request:{item.pk}')
+    if item.requester_id:
+        Notification.objects.create(user=item.requester.user, message=f'Solicitud actualizada: {item.get_status_display()}. Revisa Mis solicitudes.')
     return item
 
 
@@ -168,4 +168,8 @@ def transition_event(request, event_id, data):
     item.revision += 1
     item.save(update_fields=['status', 'revision'])
     AuditEvent.objects.create(actor=request.user, action=f'event.{target}', resource=f'event:{item.pk}')
+    if target == 'cancelled':
+        for participation in item.participations.filter(status__in=['applied', 'invited', 'confirmed', 'waitlisted']).select_related('profile'):
+            Notification.objects.create(user_id=participation.profile.user_id, message=f'Actividad cancelada: {item.title}.')
+        item.participations.filter(status__in=['applied', 'invited', 'confirmed', 'waitlisted']).update(status='cancelled', revision=models.F('revision') + 1)
     return item

@@ -2,8 +2,13 @@ from django.urls import path
 from . import views
 from . import account_management
 from . import requesters
+from . import workspaces
 
 urlpatterns = [
+    path('workspace-summary/', workspaces.summary),
+    path('account-profile/', workspaces.account_profile),
+    path('management/catalogs/<str:kind>/', workspaces.catalogs),
+    path('operations/volunteers/', workspaces.volunteers),
     path('requester/profile/', requesters.profile),
     path('requester/requests/', requesters.requests),
     path('requester/requests/<uuid:request_id>/', requesters.request_detail),

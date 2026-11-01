@@ -1,7 +1,13 @@
 from django.urls import path
 from . import views
+from . import participation
 
 urlpatterns = [
+    path('participations/', participation.mine),
+    path('participations/<uuid:participation_id>/decision/', participation.decision),
+    path('notifications/', participation.notifications),
+    path('operations/events/<uuid:event_id>/participants/', participation.event_participants),
+    path('operations/events/<uuid:event_id>/positions/<int:position_id>/candidates/', participation.candidates),
     path('public-options/', views.public_options),
     path('requests/', views.submit_request),
     path('request-verification/', views.verify_request),

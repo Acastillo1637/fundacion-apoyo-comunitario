@@ -1,5 +1,7 @@
 # Administración de usuarios desde el portal
 
+> Actualización de acceso y funciones: el portal usa un inicio de sesión único para todos los roles. Las cuentas sin MFA configurado entran con contraseña; las que lo activaron validan el código en la misma pantalla. Django Admin conserva su requisito MFA. Los controles de roles y propiedad siguen vigentes. Consulta [dashboards y participación](PARTICIPACION.md) para el comportamiento actual, que reemplaza las referencias anteriores a redirección obligatoria y módulos de participación pendientes.
+
 ## Funciones y permisos
 
 La sección React **Usuarios** permite listar, buscar por nombre/correo, filtrar, consultar detalle, invitar cuentas, modificar nombre/apellido, asignar roles, activar/desactivar y enviar recuperación. Requiere el permiso accounts.manage_accounts y MFA vinculado al usuario de la sesión. setup_roles lo concede únicamente al grupo Administrador general; el superusuario técnico también lo posee por definición de Django.

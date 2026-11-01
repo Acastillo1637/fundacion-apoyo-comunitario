@@ -1,5 +1,7 @@
 # Gestión documental privada
 
+> Actualización de acceso y funciones: el portal usa un inicio de sesión único para todos los roles. Las cuentas sin MFA configurado entran con contraseña; las que lo activaron validan el código en la misma pantalla. Django Admin conserva su requisito MFA. Los controles de roles y propiedad siguen vigentes. Consulta [dashboards y participación](PARTICIPACION.md) para el comportamiento actual, que reemplaza las referencias anteriores a redirección obligatoria y módulos de participación pendientes.
+
 ## Flujo y modelo
 
 `VolunteerDocument` representa una versión inmutable del archivo, con propietario, tipo, número de versión, clave privada aleatoria, tamaño, MIME, SHA-256, resultado antimalware y fecha de carga. No se persiste el nombre original, evitando almacenar datos personales incrustados en nombres.
