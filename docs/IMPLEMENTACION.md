@@ -31,14 +31,18 @@ Estado: desarrollo local. No habilitar datos reales todavía.
 ## Pendientes antes de producción
 
 - Aviso institucional y política de retención; consentimiento actual es para pruebas con datos ficticios.
-- Dominio, SMTP real, nombre y logo oficiales.
+- Dominio, SMTP real y logo oficial.
 - Probar MFA y recuperación completos en navegador, y política de recuperación de administradores.
-- Pruebas con PostgreSQL, CI y configuración Nginx/HTTPS antes de publicar.
+- Ejecutar la suite actualizada con PostgreSQL y completar Nginx/HTTPS antes de publicar.
 - Endurecer límites por cuenta/red y evaluar diferencias temporales de respuestas para enumeración.
 - Completar auditoría de cambios de privilegios y fallos de acceso; la actual registra solo acciones del primer bloque.
 - Configurar inactividad, CSP, monitoreo, copias externas y restauración.
-- Implementar documentos privados, eventos, disponibilidad, matching, invitaciones y demás módulos comprometidos.
+- Implementar documentos privados, eventos, matching, invitaciones y demás módulos comprometidos.
 
 ## Límite del primer bloque
 
 El dashboard muestra estado real de la cuenta y perfil. No existen todavía métricas de eventos o documentos. No hay usuarios de demostración con contraseñas públicas ni creación automática de superusuarios.
+
+## Segundo bloque
+
+Se incorporan catálogos administrables, habilidades/profesiones declaradas, franjas semanales y fechas no disponibles. El dashboard usa sus cantidades reales. Consulta [modelo, endpoints, permisos y limitaciones](VOLUNTARIOS.md).

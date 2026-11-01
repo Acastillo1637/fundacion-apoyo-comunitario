@@ -43,11 +43,14 @@ class VolunteerProfile(models.Model):
     privacy_accepted_at = models.DateTimeField()
     notice_version = models.CharField(max_length=30, default='development-1')
     whatsapp_opt_in_at = models.DateTimeField(null=True, blank=True)
+    qualifications_revision = models.PositiveIntegerField(default=0)
+    availability_revision = models.PositiveIntegerField(default=0)
 
 
 class AuditEvent(models.Model):
     actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=80)
+    resource = models.CharField(max_length=128, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

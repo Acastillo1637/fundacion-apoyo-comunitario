@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { HeartHandshake, LayoutDashboard, Users, CalendarDays, FileCheck2, ArrowRight, ArrowUpRight, ShieldCheck, Clock3, LogOut, Menu, X, Check, UserRound, MapPin, Mail, ChevronRight, Settings2 } from 'lucide-react';
+import { HeartHandshake, Users, ArrowRight, ArrowUpRight, ShieldCheck, Clock3, LogOut, Menu, X, Check } from 'lucide-react';
 import { api } from './api';
+import Dashboard from './volunteers/Dashboard';
 import './styles.css';
+import './volunteers/styles.css';
 
 const steps = ['Crea tu cuenta', 'Completa tu perfil', 'Participa en una actividad'];
 
@@ -80,22 +82,5 @@ function Auth({ mode, navigate, onLogin, brand }) {
 function Field({ label, ...props }) {
   return <label className="field">{label}<input required {...props}/></label>;
 }
-
-function Dashboard({ user, setUser }) {
-  const [tab, setTab] = useState('overview');
-  const [profile, setProfile] = useState(null), [message, setMessage] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
-  useEffect(() => { api('profile/').then(setProfile).catch(err => setError(err.message)); }, []);
-  async function save(event) {
-    event.preventDefault(); setBusy(true); setMessage(''); setError('');
-    try { const result = await api('profile/', { method: 'PATCH', body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) }); setProfile(result); setUser(result); setMessage('Tu perfil se actualizó correctamente.'); }
-    catch (err) { setError(err.message); } finally { setBusy(false); }
-  }
-  return <div className="app-layout"><aside className="sidebar"><span className="eyebrow">MI VOLUNTARIADO</span><button className={tab === 'overview' ? 'nav-item active' : 'nav-item'} onClick={() => setTab('overview')}><LayoutDashboard size={18}/>Resumen</button><button className={tab === 'profile' ? 'nav-item active' : 'nav-item'} onClick={() => setTab('profile')}><UserRound size={18}/>Mi perfil</button><div className="sidebar-note"><HeartHandshake size={25}/><strong>Tu aporte importa</strong><p>Completa tus datos para que el equipo pueda conocerte.</p></div><a className="nav-item" href="/accounts/2fa/"><Settings2 size={18}/>Seguridad de cuenta</a></aside><section className="dashboard"><div className="breadcrumb">Mi espacio <ChevronRight size={14}/>{tab === 'overview' ? 'Resumen' : 'Mi perfil'}</div><div className="dashboard-heading"><div><span className="eyebrow">TU ESPACIO EN LA COMUNIDAD</span><h1>Hola, {user.first_name} <span className="wave">✦</span></h1><p>Todo empieza con las ganas de ayudar.</p></div><span className="pill"><Check size={14}/> Correo verificado</span></div>
-      {error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}
-      {tab === 'profile' ? <section className="panel profile-panel"><h2>Tu información</h2><p>Mantén tus datos actualizados para facilitar la coordinación.</p>{profile && <form onSubmit={save}><div className="form-row"><Field label="Nombre" name="first_name" defaultValue={profile.first_name} maxLength={80}/><Field label="Apellido" name="last_name" defaultValue={profile.last_name} maxLength={80}/></div><label className="field">Teléfono<input name="phone" autoComplete="tel" placeholder="+56 9 1234 5678" defaultValue={profile.phone} maxLength={20}/></label><label className="field">Comuna<input name="commune" defaultValue={profile.commune} maxLength={80}/></label><button className="button primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios'}<Check size={17}/></button></form>}</section> : <><div className="welcome-banner"><div><span className="eyebrow">EL PRIMER PASO YA LO DISTE</span><h2>Queremos conocerte un poco más.</h2><p>Agrega tu teléfono y comuna para facilitar el contacto del equipo.</p><button className="button primary" onClick={() => setTab('profile')}>Completar mi perfil <ArrowRight size={17}/></button></div><HeartHandshake className="banner-icon" size={105} strokeWidth={1}/></div><div className="dashboard-cards"><InfoCard icon={<UserRound/>} title="Tu perfil" value={profile?.phone && profile?.commune ? 'Datos de contacto completos' : 'Por completar'} text="Puedes actualizar tu información cuando lo necesites."/><InfoCard icon={<Mail/>} title="Tu cuenta" value="Correo verificado" text="Tu correo es el medio de acceso a la plataforma."/><InfoCard icon={<MapPin/>} title="Tu comunidad" value={profile?.commune || 'Agrega tu comuna'} text="Usaremos una ubicación aproximada para coordinar."/></div><section className="panel"><div className="panel-heading"><h2>Lo que viene</h2><span className="tag">En desarrollo</span></div><div className="upcoming"><CalendarDays size={32}/><div><h3>Estamos preparando las oportunidades</h3><p>La gestión de actividades, disponibilidad y documentos se incorporará en los próximos módulos.</p></div></div></section><div className="roadmap-note"><FileCheck2 size={18}/><p>Esta primera versión permite registro, verificación, acceso y edición de perfil. No muestra actividades ni métricas ficticias.</p></div></>}
-    </section></div>;
-}
-
-function InfoCard({ icon, title, value, text }) { return <article className="panel info-card"><div className="info-label"><span>{title}</span>{icon}</div><h3>{value}</h3><p>{text}</p></article>; }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);

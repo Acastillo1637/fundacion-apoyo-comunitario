@@ -13,7 +13,7 @@ FOUNDATION_NAME = os.environ.get('FOUNDATION_NAME', 'Fundación Apoyo Comunitari
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
-    'rest_framework', 'allauth', 'allauth.account', 'allauth.mfa', 'accounts',
+    'rest_framework', 'allauth', 'allauth.account', 'allauth.mfa', 'accounts', 'volunteers',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
