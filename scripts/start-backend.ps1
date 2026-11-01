@@ -1,5 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
+if (Test-Path -LiteralPath (Join-Path $projectRoot '.env.shared')) {
+    & (Join-Path $PSScriptRoot 'start-shared-backend.ps1')
+    exit $LASTEXITCODE
+}
 $env:DJANGO_DEBUG = 'true'
 $env:DATABASE_ENGINE = 'sqlite'
 if (-not $env:DJANGO_SECRET_KEY) {

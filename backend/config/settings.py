@@ -59,6 +59,7 @@ else:
         'HOST': os.environ.get('POSTGRES_HOST', '127.0.0.1'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         'CONN_MAX_AGE': 60,
+        'OPTIONS': {'sslmode': os.environ.get('POSTGRES_SSLMODE', 'prefer'), 'connect_timeout': 10},
     }}
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend', 'allauth.account.auth_backends.AuthenticationBackend']

@@ -29,6 +29,8 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 
 ## Cómo abrirlo en tu computador
 
+**Para compartir datos con Almendra:** sigue [la configuración de PostgreSQL compartido](docs/BASE_COMPARTIDA.md). `start-backend.ps1` usa Supabase si encuentra `.env.shared`; sin ese archivo mantiene SQLite local. `manage-shared.ps1` administra la base compartida y `manage-local.ps1` conserva el modo local aislado.
+
 ### Tipos de cuenta
 
 Al registrarte puedes elegir **Voluntario** (habilidades, disponibilidad, documentos y oportunidades) o **Solicitante** (datos de contacto, empresa o institución y solicitudes propias). También puedes abrir **Solicitar apoyo → Crear cuenta de solicitante**. Las entidades deben indicar un contacto mayor de edad y declarar que está autorizado para representarlas. Una cuenta representa a una persona o entidad.
