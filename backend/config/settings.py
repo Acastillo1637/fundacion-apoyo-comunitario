@@ -28,6 +28,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.SessionVersionMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'accounts.middleware.AdminMfaMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

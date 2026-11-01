@@ -18,7 +18,8 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Formulario público de solicitud y verificación de correo del solicitante.
 - Revisión administrativa, eventos en borrador, publicación y cancelación.
 - Cupos por función, requisitos y listado público sin datos de contacto o dirección exacta.
-- 110 pruebas del backend, incluidas dos de concurrencia que requieren PostgreSQL, y 5 del cliente API.
+- Administración de usuarios desde React: altas por invitación, búsqueda, roles, estado e historial.
+- 137 pruebas del backend, incluidas tres de concurrencia que requieren PostgreSQL, y 5 del cliente API.
 
 **Por implementar:** matching, postulaciones, invitaciones, participantes, respaldos y notificaciones internas. WhatsApp será manual asistido, sin API pagada.
 
@@ -188,6 +189,23 @@ Una solicitud puede generar varios eventos. Los borradores se pueden editar; los
 
 Para producción se necesita `PUBLIC_APP_URL` con el dominio HTTPS real, además de un servicio de correo configurado. No uses una dirección enviada por el visitante para construir enlaces. Más detalles en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
 
+## Cómo administrar usuarios desde la web
+
+Reinicia Django con el script de inicio para aplicar las migraciones y permisos. Entra por `/accounts/login/` con tu cuenta técnica o una cuenta del grupo **Administrador general**, completa MFA y recarga el portal.
+
+1. Abre **Usuarios** en el menú lateral.
+2. Busca por nombre o correo y filtra por rol o estado.
+3. Pulsa **Administrar** para editar nombre/apellido, activar o desactivar y asignar los roles aprobados.
+4. Indica un motivo y confirma los cambios. Los cambios de acceso y roles invalidan las sesiones anteriores del titular.
+5. **Crear cuenta** envía un enlace para que el destinatario elija su contraseña. Nunca escribes una contraseña por él. En desarrollo el mensaje aparece en la terminal de Django.
+6. El botón **Enviar enlace de acceso** permite reintentar el envío o ayudar a recuperar acceso; no cambia la contraseña automáticamente.
+
+Los enlaces nuevos usan el dominio o puerto configurado para el portal. El destinatario todavía debe verificar el correo. Si será voluntario, verá **Mi incorporación** para confirmar personalmente su mayoría de edad y los consentimientos antes de crear su perfil.
+
+No puedes cambiar tus propios roles/estado ni modificar otras cuentas técnicas desde esta sección. La secretaría y los voluntarios no tienen acceso a este módulo. El correo de una cuenta existente no se edita aquí, ya que requiere un flujo de reverificación. Se usa desactivación y no borrado definitivo para conservar la trazabilidad.
+
+Consulta [controles y endpoints de administración](docs/USUARIOS.md).
+
 ## Base de datos
 
 - **Desarrollo local:** SQLite, un archivo que el script crea automáticamente. Así puedes comenzar sin instalar PostgreSQL.
@@ -231,7 +249,7 @@ No subas `.env`, contraseñas, claves privadas, bases de datos, documentos perso
 
 ## Pendientes importantes
 
-- Las pruebas locales usan SQLite. Las dos de concurrencia real se ejecutan únicamente con PostgreSQL, mediante el workflow de GitHub.
+- Las pruebas locales usan SQLite. Las tres de concurrencia real se ejecutan únicamente con PostgreSQL, mediante el workflow de GitHub.
 - Completar la revisión visual en navegador; el frontend ya compila.
 - Verificar el recorrido administrativo completo de MFA antes de producción.
 - Incorporar módulos operativos, hardening, backups y restauración.

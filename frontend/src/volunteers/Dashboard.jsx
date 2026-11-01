@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Award, CalendarDays, Check, ChevronRight, Clock3, FileCheck2, HeartHandshake, LayoutDashboard, MapPin, Settings2, UserRound } from 'lucide-react';
+import { ArrowRight, Award, CalendarDays, Check, ChevronRight, Clock3, FileCheck2, HeartHandshake, LayoutDashboard, MapPin, Settings2, UserRound, Users } from 'lucide-react';
 import { api } from '../api';
 import Qualifications from './Qualifications';
 import Availability from './Availability';
 import Documents, { DocumentReviewQueue } from './Documents';
 import Operations from '../activities/Operations';
 import PublicEvents from '../activities/PublicEvents';
+import UserManagement, { VolunteerOnboarding } from '../accounts/UserManagement';
+import '../accounts/styles.css';
 
 const tabs = [
   { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
@@ -17,11 +19,17 @@ const tabs = [
 ];
 
 export default function Dashboard({ user, setUser }) {
-  const [tab, setTab] = useState(user.can_manage_activities ? 'operations' : user.can_review_documents ? 'document-review' : 'overview');
+  const [tab, setTab] = useState(user.can_manage_users ? 'users' : user.can_manage_activities ? 'operations' : user.can_review_documents ? 'document-review' : 'overview');
+  const personalTabs = user.has_volunteer_profile === false ? [{ id: 'onboarding', label: 'Mi incorporación', icon: UserRound }, { id: 'opportunities', label: 'Oportunidades', icon: CalendarDays }] : tabs;
+  const navigation = [...personalTabs,
+    ...(user.can_manage_users ? [{ id: 'users', label: 'Usuarios', icon: Users }] : []),
+    ...(user.can_review_documents ? [{ id: 'document-review', label: 'Revisión documental', icon: FileCheck2 }] : []),
+    ...(user.can_manage_activities ? [{ id: 'operations', label: 'Solicitudes y eventos', icon: CalendarDays }] : []),
+  ];
   return <div className="app-layout">
     <aside className="sidebar">
       <span className="eyebrow">MI VOLUNTARIADO</span>
-      {[...tabs, ...(user.can_review_documents ? [{ id: 'document-review', label: 'Revisión documental', icon: FileCheck2 }] : []), ...(user.can_manage_activities ? [{ id: 'operations', label: 'Solicitudes y eventos', icon: CalendarDays }] : [])].map(({ id, label, icon: Icon }) => <button
+      {navigation.map(({ id, label, icon: Icon }) => <button
         key={id} className={`nav-item ${tab === id ? 'active' : ''}`}
         aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}
       ><Icon size={18}/>{label}</button>)}
@@ -30,12 +38,13 @@ export default function Dashboard({ user, setUser }) {
       <a className="nav-item" href="/accounts/2fa/"><Settings2 size={18}/>Seguridad de cuenta</a>
     </aside>
     <section className="dashboard">
-      <div className="breadcrumb">Mi espacio <ChevronRight size={14}/>{tabs.find(item => item.id === tab)?.label || (tab === 'operations' ? 'Solicitudes y eventos' : 'Revisión documental')}</div>
+      <div className="breadcrumb">Mi espacio <ChevronRight size={14}/>{navigation.find(item => item.id === tab)?.label || 'Mi incorporación'}</div>
       <div className="dashboard-heading">
         <div><span className="eyebrow">TU ESPACIO EN LA COMUNIDAD</span><h1>Hola, {user.first_name || 'bienvenido'} <span className="wave">✦</span></h1><p>Todo empieza con las ganas de ayudar.</p></div>
         <span className="pill"><Check size={14}/> Correo verificado</span>
       </div>
-      {tab === 'overview' && <Overview navigate={setTab}/>}
+      {tab === 'overview' && user.has_volunteer_profile !== false && <Overview navigate={setTab}/>}
+      {(tab === 'onboarding' || (tab === 'overview' && user.has_volunteer_profile === false)) && <VolunteerOnboarding onComplete={updated => { setUser(updated); setTab('overview'); }}/>}
       {tab === 'profile' && <Profile setUser={setUser}/>}
       {tab === 'qualifications' && <Qualifications/>}
       {tab === 'availability' && <Availability/>}
@@ -43,6 +52,7 @@ export default function Dashboard({ user, setUser }) {
       {tab === 'document-review' && user.can_review_documents && <DocumentReviewQueue/>}
       {tab === 'operations' && user.can_manage_activities && <Operations/>}
       {tab === 'opportunities' && <PublicEvents/>}
+      {tab === 'users' && user.can_manage_users && <UserManagement onSelfChanged={setUser}/>}
     </section>
   </div>;
 }

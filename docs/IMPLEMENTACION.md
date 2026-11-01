@@ -54,3 +54,7 @@ Se incorporan carga privada y versiones documentales, requisitos por perfil, des
 ## Cuarto bloque
 
 Se incorporan solicitudes públicas verificadas, decisiones administrativas, eventos con funciones/cupos y publicación con datos mínimos. Consulta [modelo, workflows, permisos y limitaciones](ACTIVIDADES.md).
+
+## Administración de usuarios
+
+Se incorpora la sección Usuarios en React, con invitaciones, roles acotados, activación/desactivación, auditoría e invalidación de sesiones. Consulta [controles y límites](USUARIOS.md).

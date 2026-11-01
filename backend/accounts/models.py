@@ -30,9 +30,31 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
     objects = UserManager()
+    management_revision = models.PositiveIntegerField(default=0)
+    session_version = models.PositiveIntegerField(default=0)
 
     class Meta:
+        permissions = [('manage_accounts', 'Puede administrar cuentas desde el portal')]
         constraints = [models.UniqueConstraint(Lower('email'), name='unique_user_email_casefold')]
+
+
+class AccountManagementGuard(models.Model):
+    # Un único bloqueo serializa decisiones de acceso y protección del último administrador.
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+
+class AccountChange(models.Model):
+    actor = models.ForeignKey(User, on_delete=models.PROTECT, related_name='account_changes_made')
+    target = models.ForeignKey(User, on_delete=models.PROTECT, related_name='account_changes_received')
+    action = models.CharField(max_length=40)
+    reason = models.CharField(max_length=1000)
+    fields_changed = models.JSONField(default=list)
+    before_access = models.JSONField(default=dict)
+    after_access = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
 
 
 class VolunteerProfile(models.Model):

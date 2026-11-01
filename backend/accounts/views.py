@@ -36,6 +36,8 @@ def user_data(user):
             'can_manage_volunteers': user.has_perm('accounts.view_volunteerprofile'),
             'can_review_documents': user.has_perm('documents.review_volunteerdocument'),
             'can_manage_activities': user.has_perm('activities.manage_operations'),
+            'can_manage_users': user.has_perm('accounts.manage_accounts'),
+            'has_volunteer_profile': VolunteerProfile.objects.filter(user=user).exists(),
             'can_manage_catalogs': user.is_staff and any(
                 user.has_perm(f'volunteers.change_{model}')
                 for model in ['skill', 'profession', 'documenttype']
@@ -140,12 +142,34 @@ def profile(request):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         with transaction.atomic():
-            request.user.first_name, request.user.last_name = data['first_name'], data['last_name']
-            request.user.save(update_fields=['first_name', 'last_name'])
+            locked_user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            locked_user.first_name, locked_user.last_name = data['first_name'], data['last_name']
+            locked_user.management_revision += 1
+            locked_user.save(update_fields=['first_name', 'last_name', 'management_revision'])
+            request.user.first_name, request.user.last_name = locked_user.first_name, locked_user.last_name
             instance.phone, instance.commune = data['phone'], data['commune']
             instance.save(update_fields=['phone', 'commune'])
             AuditEvent.objects.create(actor=request.user, action='profile.updated')
     return Response({**user_data(request.user), 'phone': instance.phone, 'commune': instance.commune})
+
+
+@api_view(['POST'])
+def onboarding(request):
+    from .management_serializers import OnboardingSerializer
+    serializer = OnboardingSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    if not EmailAddress.objects.filter(user=request.user, verified=True).exists():
+        return Response({'detail': 'Verifica tu correo antes de completar el perfil.'}, status=403)
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+        now = timezone.now()
+        profile, created = VolunteerProfile.objects.get_or_create(user=request.user, defaults={
+            'adult_confirmed_at': now, 'privacy_accepted_at': now,
+            'whatsapp_opt_in_at': now if serializer.validated_data['whatsapp'] else None,
+        })
+        if created:
+            AuditEvent.objects.create(actor=request.user, action='profile.onboarded', resource=f'profile:{profile.pk}')
+    return Response(user_data(request.user), status=201 if created else 200)
 
 
 @api_view(['GET'])
