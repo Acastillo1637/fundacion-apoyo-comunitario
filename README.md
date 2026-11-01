@@ -14,7 +14,7 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Franjas semanales y fechas completas no disponibles, con validación de superposiciones.
 - Catálogos con activación/desactivación y asociación de requisitos documentales.
 - Permisos backend y control de segundo factor para operaciones administrativas.
-- 46 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL, y 4 del cliente API.
+- 49 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL, y 4 del cliente API.
 
 **Por implementar:** carga y revisión de documentos privados, solicitudes, eventos, matching, invitaciones, participantes y respaldos. WhatsApp será manual asistido, sin API pagada.
 

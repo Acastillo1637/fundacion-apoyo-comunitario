@@ -106,6 +106,36 @@ class AccountTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_full_password_recovery_changes_password_and_rejects_reused_link(self):
+        EmailAddress.objects.create(user=self.user, email=self.user.email, verified=True, primary=True)
+        self.client.post('/accounts/password/reset/', {'email': self.user.email})
+        link = re.search(r'https?://[^\s]+/accounts/password/reset/key/[^\s]+', mail.outbox[0].body).group(0)
+        response = self.client.get(link)
+        self.assertEqual(response.status_code, 302)
+        form_url = response.url
+        self.assertContains(self.client.get(form_url), 'Elige una nueva contraseña')
+        password = 'Another-strong-example-password-739!'
+        response = self.client.post(form_url, {'password1': password, 'password2': password}, follow=True)
+        self.assertContains(response, 'Contraseña actualizada')
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(password))
+        self.assertFalse(self.user.check_password('A-strong-example-password-592!'))
+        self.assertEqual(self.post('/api/login/', {'email': self.user.email, 'password': password}).status_code, 200)
+        self.assertContains(Client().get(link), 'El enlace no es válido')
+
+    @override_settings(DEBUG=True, EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend')
+    def test_console_recovery_page_explains_where_to_find_link(self):
+        response = self.client.get('/accounts/password/reset/done/')
+        self.assertContains(response, 'terminal de Django')
+        self.assertContains(response, 'no enviamos mensajes')
+        self.assertNotContains(response, 'Le hemos enviado')
+
+    @override_settings(DEBUG=False, SECURE_SSL_REDIRECT=False)
+    def test_production_recovery_page_does_not_show_local_instructions(self):
+        response = self.client.get('/accounts/password/reset/done/')
+        self.assertNotContains(response, 'terminal de Django')
+        self.assertContains(response, 'Si el correo corresponde')
+
     def test_stale_mfa_for_another_user_is_rejected(self):
         self.user.user_permissions.add(Permission.objects.get(codename='view_volunteerprofile'))
         self.client.force_login(self.user)
