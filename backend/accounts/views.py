@@ -34,6 +34,7 @@ def user_data(user):
     return {'id': str(user.pk), 'email': user.email, 'first_name': user.first_name,
             'last_name': user.last_name, 'roles': list(user.groups.values_list('name', flat=True)),
             'can_manage_volunteers': user.has_perm('accounts.view_volunteerprofile'),
+            'can_review_documents': user.has_perm('documents.review_volunteerdocument'),
             'can_manage_catalogs': user.is_staff and any(
                 user.has_perm(f'volunteers.change_{model}')
                 for model in ['skill', 'profession', 'documenttype']

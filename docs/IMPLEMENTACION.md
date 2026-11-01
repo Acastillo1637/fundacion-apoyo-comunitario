@@ -37,7 +37,7 @@ Estado: desarrollo local. No habilitar datos reales todavía.
 - Endurecer límites por cuenta/red y evaluar diferencias temporales de respuestas para enumeración.
 - Completar auditoría de cambios de privilegios y fallos de acceso; la actual registra solo acciones del primer bloque.
 - Configurar inactividad, CSP, monitoreo, copias externas y restauración.
-- Implementar documentos privados, eventos, matching, invitaciones y demás módulos comprometidos.
+- Completar eventos, matching, invitaciones, notificaciones y demás módulos comprometidos.
 
 ## Límite del primer bloque
 
@@ -46,3 +46,7 @@ El dashboard muestra estado real de la cuenta y perfil. No existen todavía mét
 ## Segundo bloque
 
 Se incorporan catálogos administrables, habilidades/profesiones declaradas, franjas semanales y fechas no disponibles. El dashboard usa sus cantidades reales. Consulta [modelo, endpoints, permisos y limitaciones](VOLUNTARIOS.md).
+
+## Tercer bloque
+
+Se incorporan carga privada y versiones documentales, requisitos por perfil, descarga autorizada, cola de revisión con permiso y MFA, decisiones auditadas y vencimiento calculado. Consulta [el diseño documental y los pendientes para producción](DOCUMENTOS.md).

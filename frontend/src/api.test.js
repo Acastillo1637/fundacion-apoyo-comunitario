@@ -26,3 +26,16 @@ test('conserva el mensaje JSON del backend', async () => {
   globalThis.fetch = async () => Response.json({ detail: 'Recarga tu sesión.', code: 'csrf_failed' }, { status: 403 });
   await assert.rejects(api('register/'), /Recarga tu sesión/);
 });
+
+test('los archivos multipart conservan el boundary del navegador', async () => {
+  const body = new FormData();
+  body.append('file', new Blob(['archivo ficticio'], { type: 'application/pdf' }), 'prueba.pdf');
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, '/api/documents/');
+    assert.equal(options.body, body);
+    assert.equal(options.headers['Content-Type'], undefined);
+    assert.ok(Object.hasOwn(options.headers, 'X-CSRFToken'));
+    return Response.json({ status: 'pending' }, { status: 201 });
+  };
+  assert.equal((await api('documents/', { method: 'POST', body })).status, 'pending');
+});

@@ -21,7 +21,7 @@ export async function api(path, options = {}) {
     response = await fetch(`/api/${path}`, {
       credentials: 'same-origin',
       ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.method && options.method !== 'GET' ? { 'X-CSRFToken': csrfToken } : {}), ...options.headers },
+      headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(options.method && options.method !== 'GET' ? { 'X-CSRFToken': csrfToken } : {}), ...options.headers },
     });
   } catch {
     throw new Error('No hay conexión con el servidor. Comprueba que Django esté iniciado y vuelve a intentarlo.');

@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Un voluntario autenticado edita únicamente sus propias declaraciones y horarios. Django obtiene el perfil desde la sesión; los endpoints no aceptan propietarios enviados por el navegador. No se han implementado documentos cargados, matching ni participaciones.
+Un voluntario autenticado edita únicamente sus propias declaraciones y horarios. Django obtiene el perfil desde la sesión; los endpoints no aceptan propietarios enviados por el navegador. La gestión de archivos se documenta en [DOCUMENTOS.md](DOCUMENTOS.md); matching y participaciones siguen pendientes.
 
 ## Catálogos
 

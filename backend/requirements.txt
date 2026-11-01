@@ -2,4 +2,6 @@ Django>=5.2,<5.3
 djangorestframework>=3.16,<3.17
 django-allauth[mfa]>=65.13,<66
 psycopg[binary]>=3.2,<4
+Pillow>=12,<13
+pypdf>=6,<7
 gunicorn>=23,<24; sys_platform != 'win32'

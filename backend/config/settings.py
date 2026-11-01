@@ -20,7 +20,7 @@ CSRF_FAILURE_VIEW = 'accounts.views.csrf_failure'
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
-    'rest_framework', 'allauth', 'allauth.account', 'allauth.mfa', 'accounts', 'volunteers',
+    'rest_framework', 'allauth', 'allauth.account', 'allauth.mfa', 'accounts', 'volunteers', 'documents',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -103,6 +103,19 @@ SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+FILE_UPLOAD_HANDLERS = [
+    'documents.upload_handlers.BoundedUploadHandler',
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+PRIVATE_DOCUMENT_ROOT = Path(os.environ.get('PRIVATE_DOCUMENT_ROOT') or BASE_DIR / 'private_media' / 'documents')
+DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+DOCUMENT_USER_QUOTA_BYTES = 50 * 1024 * 1024
+DOCUMENT_MAX_VERSIONS = 100
+DOCUMENT_SCAN_REQUIRED = not DEBUG
+CLAMAV_HOST = os.environ.get('CLAMAV_HOST', '')
+CLAMAV_PORT = int(os.environ.get('CLAMAV_PORT', '3310'))
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.SessionAuthentication'],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],

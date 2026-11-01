@@ -9,5 +9,5 @@ if (-not $env:DJANGO_SECRET_KEY) {
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & "$projectRoot\.venv\Scripts\python.exe" "$projectRoot\backend\manage.py" makemigrations --check --dry-run
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& "$projectRoot\.venv\Scripts\python.exe" "$projectRoot\backend\manage.py" test accounts volunteers
+& "$projectRoot\.venv\Scripts\python.exe" "$projectRoot\backend\manage.py" test accounts volunteers documents
 exit $LASTEXITCODE

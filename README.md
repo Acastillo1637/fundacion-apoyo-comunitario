@@ -14,9 +14,10 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Franjas semanales y fechas completas no disponibles, con validación de superposiciones.
 - Catálogos con activación/desactivación y asociación de requisitos documentales.
 - Permisos backend y control de segundo factor para operaciones administrativas.
-- 49 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL, y 4 del cliente API.
+- Carga privada de PDF, JPEG y PNG, con versiones, descarga autorizada y revisión documental.
+- 78 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL, y 5 del cliente API.
 
-**Por implementar:** carga y revisión de documentos privados, solicitudes, eventos, matching, invitaciones, participantes y respaldos. WhatsApp será manual asistido, sin API pagada.
+**Por implementar:** solicitudes, eventos, matching, invitaciones, participantes, respaldos y notificaciones internas. WhatsApp será manual asistido, sin API pagada.
 
 ## Cómo abrirlo en tu computador
 
@@ -140,6 +141,30 @@ Introduce tú mismo el correo y la contraseña en la terminal. Luego:
 4. Visita **http://127.0.0.1:5173/admin/volunteers/**.
 
 El acceso administrativo requiere MFA. Los demás usuarios necesitan además los permisos específicos y habilitación de acceso al panel; pertenecer a un grupo por sí solo no concede todos los privilegios. El superusuario es una cuenta técnica de desarrollo, no la cuenta habitual de la secretaria.
+
+## Cómo probar documentos privados
+
+Si actualizaste el proyecto, instala primero las nuevas dependencias y reinicia Django:
+
+```powershell
+python -m pip --python .venv install -r backend/requirements.lock
+powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1
+```
+
+El script aplica las migraciones y asigna el permiso documental a los grupos administrativos existentes.
+
+1. Entra como voluntario y abre **Mis documentos**.
+2. Elige un tipo documental y carga un **PDF o imagen ficticia** de hasta 10 MB.
+3. Comprueba el estado pendiente, el historial y la descarga.
+4. Para revisar, entra con **otra cuenta** que tenga permiso documental y MFA, y abre **Revisión documental**. Un administrador no puede revisar sus propios archivos.
+5. Descarga el archivo, valida o rechaza e indica observación y vencimiento cuando corresponda. El rechazo exige un motivo.
+6. Vuelve a la cuenta del voluntario para consultar la decisión. Cargar otra versión no borra el historial y exige una nueva revisión.
+
+Cada voluntario tiene una cuota inicial de 50 MB incluyendo versiones históricas, y un máximo de 100 versiones. El documento vence al terminar su fecha de validez en Santiago de Chile. Las habilidades y profesiones todavía no se marcan automáticamente como acreditadas; esa evaluación se incorporará con el matching.
+
+Los archivos se guardan en `backend/private_media/documents/`, fuera de las rutas públicas y excluidos de Git. No publiques esa carpeta ni la configures como `/media/` público.
+
+**Antivirus:** ClamAV no está instalado en el entorno local. Los archivos de prueba muestran "Sin análisis antimalware". En producción las cargas exigen ClamAV disponible en una red interna; si no está configurado, se rechazan con 503. Las validaciones de estructura no garantizan ausencia de malware. Consulta [el diseño documental](docs/DOCUMENTOS.md).
 
 ## Base de datos
 

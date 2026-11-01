@@ -19,4 +19,7 @@ class Command(BaseCommand):
             codename__in=[f'{operation}_{model}' for operation in ['add', 'change', 'view'] for model in ['skill', 'profession', 'documenttype']],
         )
         Group.objects.get(name='Administrador general').permissions.add(*catalogs)
+        document_permission = Permission.objects.get(content_type__app_label='documents', codename='review_volunteerdocument')
+        for name in ['Secretaría', 'Administrador general']:
+            Group.objects.get(name=name).permissions.add(document_permission)
         self.stdout.write(self.style.SUCCESS('Roles base creados. Nuevos módulos agregarán permisos explícitos.'))
