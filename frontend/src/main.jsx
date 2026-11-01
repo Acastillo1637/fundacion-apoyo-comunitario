@@ -3,18 +3,21 @@ import { createRoot } from 'react-dom/client';
 import { HeartHandshake, Users, ArrowRight, ArrowUpRight, ShieldCheck, Clock3, LogOut, Menu, X, Check } from 'lucide-react';
 import { api } from './api';
 import Dashboard from './volunteers/Dashboard';
+import PublicRequest, { RequestVerification } from './activities/PublicRequest';
+import PublicEvents from './activities/PublicEvents';
 import './styles.css';
 import './volunteers/styles.css';
+import './activities/styles.css';
 
 const steps = ['Crea tu cuenta', 'Completa tu perfil', 'Participa en una actividad'];
 
 function App() {
   const [session, setSession] = useState(null);
-  const [view, setView] = useState('home');
+  const [view, setView] = useState(() => window.location.hash.startsWith('#confirm-request=') ? 'verify-request' : 'home');
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
   const [menu, setMenu] = useState(false);
-  useEffect(() => { api('session/').then(data => { setSession(data); setView(data.user ? 'dashboard' : 'home'); setStatus('ready'); }).catch(() => setStatus('offline')); }, []);
+  useEffect(() => { api('session/').then(data => { setSession(data); setView(window.location.hash.startsWith('#confirm-request=') ? 'verify-request' : data.user ? 'dashboard' : 'home'); setStatus('ready'); }).catch(() => setStatus('offline')); }, []);
   const brand = session?.foundation_name || 'Fundación Apoyo Comunitario';
   const navigate = next => { setView(next); setMenu(false); setError(''); window.scrollTo(0, 0); };
   async function signOut() {
@@ -27,6 +30,7 @@ function App() {
       <button className="brand" onClick={() => navigate(session?.user ? 'dashboard' : 'home')}><span className="brand-icon"><HeartHandshake size={25}/></span><span>{brand}<small>RED DE VOLUNTARIADO</small></span></button>
       <button className="mobile-menu icon-btn" aria-label={menu ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</button>
       <nav aria-label="Navegación principal" className={menu ? 'top-nav open' : 'top-nav'}>
+        <button className="text-button" disabled={status !== 'ready'} onClick={() => navigate('request')}>Solicitar apoyo</button>
         {session?.user ? <><span className="user-label">{session.user.first_name}</span><button className="text-button" onClick={() => navigate('dashboard')}>Mi espacio</button><button className="text-button" onClick={signOut}><LogOut size={16}/> Salir</button></> : <><button className="text-button" onClick={() => navigate('home')}>Nuestra comunidad</button><button className="text-button" onClick={() => navigate('login')}>Iniciar sesión</button><button className="button primary small" disabled={status !== 'ready'} onClick={() => navigate('register')}>Ser voluntario <ArrowUpRight size={16}/></button></>}
       </nav>
     </header>
@@ -36,6 +40,8 @@ function App() {
       {view === 'home' && <Landing brand={brand} ready={status === 'ready'} navigate={navigate}/>}
       {(view === 'login' || view === 'register') && <Auth mode={view} brand={brand} navigate={navigate} onLogin={user => { setSession(old => ({ ...old, user })); navigate('dashboard'); }}/>}
       {view === 'dashboard' && session?.user && <Dashboard user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/>}
+      {view === 'request' && <PublicRequest navigate={navigate}/>}
+      {view === 'verify-request' && <RequestVerification ready={status === 'ready'} navigate={navigate}/>}
     </main>
     <footer><span>© {new Date().getFullYear()} {brand}</span><span>Personas que se unen. Comunidades que crecen.</span></footer>
   </>;
@@ -50,6 +56,7 @@ function Landing({ ready, navigate }) {
     <section className="values-strip"><div className="wrap values"><div><Users/><span><strong>Una comunidad cercana</strong>Personas con ganas de aportar</span></div><div><Clock3/><span><strong>A tu ritmo</strong>Disponibilidad que tú eliges</span></div><div><ShieldCheck/><span><strong>Participación responsable</strong>Requisitos revisados por el equipo</span></div></div></section>
     <section id="como-funciona" className="wrap how"><div className="section-heading"><div><span className="eyebrow">DAR EL PRIMER PASO ES SENCILLO</span><h2>Hay muchas formas de ayudar.<br/>Encuentra la tuya.</h2></div><p>Organizamos la coordinación para que puedas enfocarte en lo que importa: aportar.</p></div><div className="step-grid">{steps.map((step, i) => <article className="step" key={step}><span className="step-number">0{i + 1}</span><h3>{step}</h3><p>{['Regístrate con tu correo y verifica tu cuenta para comenzar.', 'Cuéntanos tus habilidades y cuándo puedes participar.', 'El equipo revisará los requisitos y coordinará tu participación contigo.'][i]}</p></article>)}</div></section>
     <section className="wrap"><div className="cta"><div><span className="eyebrow">EL CAMBIO EMPIEZA CONTIGO</span><h2>Lo que sabes hacer puede hacer la diferencia.</h2></div><button className="button light" disabled={!ready} onClick={() => navigate('register')}>Sumarme a la comunidad <ArrowRight size={18}/></button></div></section>
+    <section className="wrap public-events-section"><PublicEvents/></section>
   </>;
 }
 

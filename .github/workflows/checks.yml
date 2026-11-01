@@ -29,7 +29,7 @@ jobs:
       - run: pip install -r backend/requirements.lock
       - run: python backend/manage.py check
       - run: python backend/manage.py makemigrations --check --dry-run
-      - run: python backend/manage.py test accounts volunteers documents
+      - run: python backend/manage.py test accounts volunteers documents activities
   frontend:
     runs-on: ubuntu-latest
     steps:

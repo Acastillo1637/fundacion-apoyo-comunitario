@@ -20,7 +20,7 @@ CSRF_FAILURE_VIEW = 'accounts.views.csrf_failure'
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
-    'rest_framework', 'allauth', 'allauth.account', 'allauth.mfa', 'accounts', 'volunteers', 'documents',
+    'rest_framework', 'allauth', 'allauth.account', 'allauth.mfa', 'accounts', 'volunteers', 'documents', 'activities',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -84,6 +84,8 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 10
+PUBLIC_APP_URL = (os.environ.get('PUBLIC_APP_URL') or ('http://127.0.0.1:5173' if DEBUG else '')).rstrip('/')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@localhost')
 LANGUAGE_CODE = 'es-cl'
 TIME_ZONE = 'America/Santiago'

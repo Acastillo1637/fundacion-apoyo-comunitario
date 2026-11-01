@@ -4,6 +4,8 @@ import { api } from '../api';
 import Qualifications from './Qualifications';
 import Availability from './Availability';
 import Documents, { DocumentReviewQueue } from './Documents';
+import Operations from '../activities/Operations';
+import PublicEvents from '../activities/PublicEvents';
 
 const tabs = [
   { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
@@ -11,14 +13,15 @@ const tabs = [
   { id: 'qualifications', label: 'Habilidades y profesión', icon: Award },
   { id: 'availability', label: 'Disponibilidad', icon: Clock3 },
   { id: 'documents', label: 'Mis documentos', icon: FileCheck2 },
+  { id: 'opportunities', label: 'Oportunidades', icon: CalendarDays },
 ];
 
 export default function Dashboard({ user, setUser }) {
-  const [tab, setTab] = useState(user.can_review_documents ? 'document-review' : 'overview');
+  const [tab, setTab] = useState(user.can_manage_activities ? 'operations' : user.can_review_documents ? 'document-review' : 'overview');
   return <div className="app-layout">
     <aside className="sidebar">
       <span className="eyebrow">MI VOLUNTARIADO</span>
-      {[...tabs, ...(user.can_review_documents ? [{ id: 'document-review', label: 'Revisión documental', icon: FileCheck2 }] : [])].map(({ id, label, icon: Icon }) => <button
+      {[...tabs, ...(user.can_review_documents ? [{ id: 'document-review', label: 'Revisión documental', icon: FileCheck2 }] : []), ...(user.can_manage_activities ? [{ id: 'operations', label: 'Solicitudes y eventos', icon: CalendarDays }] : [])].map(({ id, label, icon: Icon }) => <button
         key={id} className={`nav-item ${tab === id ? 'active' : ''}`}
         aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}
       ><Icon size={18}/>{label}</button>)}
@@ -27,7 +30,7 @@ export default function Dashboard({ user, setUser }) {
       <a className="nav-item" href="/accounts/2fa/"><Settings2 size={18}/>Seguridad de cuenta</a>
     </aside>
     <section className="dashboard">
-      <div className="breadcrumb">Mi espacio <ChevronRight size={14}/>{tabs.find(item => item.id === tab)?.label || 'Revisión documental'}</div>
+      <div className="breadcrumb">Mi espacio <ChevronRight size={14}/>{tabs.find(item => item.id === tab)?.label || (tab === 'operations' ? 'Solicitudes y eventos' : 'Revisión documental')}</div>
       <div className="dashboard-heading">
         <div><span className="eyebrow">TU ESPACIO EN LA COMUNIDAD</span><h1>Hola, {user.first_name || 'bienvenido'} <span className="wave">✦</span></h1><p>Todo empieza con las ganas de ayudar.</p></div>
         <span className="pill"><Check size={14}/> Correo verificado</span>
@@ -38,6 +41,8 @@ export default function Dashboard({ user, setUser }) {
       {tab === 'availability' && <Availability/>}
       {tab === 'documents' && <Documents/>}
       {tab === 'document-review' && user.can_review_documents && <DocumentReviewQueue/>}
+      {tab === 'operations' && user.can_manage_activities && <Operations/>}
+      {tab === 'opportunities' && <PublicEvents/>}
     </section>
   </div>;
 }
@@ -63,7 +68,7 @@ function Overview({ navigate }) {
       <SummaryCard icon={<Clock3/>} title="Disponibilidad semanal" value={`${data.availability.slots.length} franjas registradas`} text={`${data.availability.unavailable_dates.length} fechas no disponibles. Horarios de Santiago.`} onClick={() => navigate('availability')}/>
       <SummaryCard icon={<MapPin/>} title="Tu comunidad" value={data.profile.commune || 'Agrega tu comuna'} text="Solo necesitamos tu zona aproximada para coordinar." onClick={() => navigate('profile')}/>
     </div>}
-    <section className="panel"><div className="panel-heading"><h2>Próximas actividades</h2><span className="tag">En desarrollo</span></div><div className="upcoming"><CalendarDays size={32}/><div><h3>Estamos preparando las oportunidades</h3><p>Las actividades y las invitaciones se incorporarán en los próximos módulos.</p></div></div></section>
+    <section className="panel"><h2>Explora las actividades abiertas</h2><p className="section-description">Consulta fechas, funciones y requisitos. Las postulaciones e invitaciones se incorporarán en el próximo módulo.</p><button className="button secondary" onClick={() => navigate('opportunities')}>Ver oportunidades <ArrowRight size={16}/></button></section>
   </>;
 }
 

@@ -37,7 +37,7 @@ Estado: desarrollo local. No habilitar datos reales todavía.
 - Endurecer límites por cuenta/red y evaluar diferencias temporales de respuestas para enumeración.
 - Completar auditoría de cambios de privilegios y fallos de acceso; la actual registra solo acciones del primer bloque.
 - Configurar inactividad, CSP, monitoreo, copias externas y restauración.
-- Completar eventos, matching, invitaciones, notificaciones y demás módulos comprometidos.
+- Completar matching, postulaciones, invitaciones, notificaciones y demás módulos comprometidos.
 
 ## Límite del primer bloque
 
@@ -50,3 +50,7 @@ Se incorporan catálogos administrables, habilidades/profesiones declaradas, fra
 ## Tercer bloque
 
 Se incorporan carga privada y versiones documentales, requisitos por perfil, descarga autorizada, cola de revisión con permiso y MFA, decisiones auditadas y vencimiento calculado. Consulta [el diseño documental y los pendientes para producción](DOCUMENTOS.md).
+
+## Cuarto bloque
+
+Se incorporan solicitudes públicas verificadas, decisiones administrativas, eventos con funciones/cupos y publicación con datos mínimos. Consulta [modelo, workflows, permisos y limitaciones](ACTIVIDADES.md).

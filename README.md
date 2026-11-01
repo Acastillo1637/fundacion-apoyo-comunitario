@@ -15,9 +15,12 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Catálogos con activación/desactivación y asociación de requisitos documentales.
 - Permisos backend y control de segundo factor para operaciones administrativas.
 - Carga privada de PDF, JPEG y PNG, con versiones, descarga autorizada y revisión documental.
-- 78 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL, y 5 del cliente API.
+- Formulario público de solicitud y verificación de correo del solicitante.
+- Revisión administrativa, eventos en borrador, publicación y cancelación.
+- Cupos por función, requisitos y listado público sin datos de contacto o dirección exacta.
+- 110 pruebas del backend, incluidas dos de concurrencia que requieren PostgreSQL, y 5 del cliente API.
 
-**Por implementar:** solicitudes, eventos, matching, invitaciones, participantes, respaldos y notificaciones internas. WhatsApp será manual asistido, sin API pagada.
+**Por implementar:** matching, postulaciones, invitaciones, participantes, respaldos y notificaciones internas. WhatsApp será manual asistido, sin API pagada.
 
 ## Cómo abrirlo en tu computador
 
@@ -166,6 +169,25 @@ Los archivos se guardan en `backend/private_media/documents/`, fuera de las ruta
 
 **Antivirus:** ClamAV no está instalado en el entorno local. Los archivos de prueba muestran "Sin análisis antimalware". En producción las cargas exigen ClamAV disponible en una red interna; si no está configurado, se rechazan con 503. Las validaciones de estructura no garantizan ausencia de malware. Consulta [el diseño documental](docs/DOCUMENTOS.md).
 
+## Cómo probar solicitudes y eventos
+
+Reinicia Django con el script del paso 3 para aplicar las migraciones y permisos nuevos. Mantén React ejecutándose en la otra terminal.
+
+1. Desde el menú de la web abre **Solicitar apoyo**. No necesitas iniciar sesión.
+2. Completa el formulario con datos ficticios, una fecha futura y horarios dentro del mismo día.
+3. Envía la solicitud y revisa el mensaje en la **terminal de Django**. No llega a Gmail en este entorno.
+4. Copia el enlace completo, incluido el fragmento `#confirm-request=...`, ábrelo y pulsa **Confirmar mi correo**. Esa verificación no aprueba la solicitud.
+5. Entra con una cuenta administrativa mediante `/accounts/login/`, completa MFA y abre **Solicitudes y eventos**.
+6. Abre la solicitud, pulsa **Comenzar revisión** y después aprueba o rechaza. Rechazar exige una justificación; aprobar exige correo verificado.
+7. Desde una solicitud aprobada pulsa **Crear evento**. Revisa fecha/dirección y redacta una descripción pública sin información personal.
+8. Define una o varias funciones, sus cupos y requisitos; guarda como borrador.
+9. En **Eventos**, abre el borrador y pulsa **Abrir convocatoria**.
+10. Comprueba la publicación en **Oportunidades** o en la página de inicio: se muestran comuna y requisitos, pero no dirección exacta ni contacto del solicitante.
+
+Una solicitud puede generar varios eventos. Los borradores se pueden editar; los abiertos no se editan en esta etapa hasta implementar el flujo de comunicación de cambios. Se puede cancelar con motivo; finalizar exige que haya terminado el horario. Todavía no hay postulaciones ni asignación automática de participantes.
+
+Para producción se necesita `PUBLIC_APP_URL` con el dominio HTTPS real, además de un servicio de correo configurado. No uses una dirección enviada por el visitante para construir enlaces. Más detalles en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
+
 ## Base de datos
 
 - **Desarrollo local:** SQLite, un archivo que el script crea automáticamente. Así puedes comenzar sin instalar PostgreSQL.
@@ -209,7 +231,7 @@ No subas `.env`, contraseñas, claves privadas, bases de datos, documentos perso
 
 ## Pendientes importantes
 
-- Las pruebas locales usan SQLite. La de concurrencia real se ejecuta únicamente con PostgreSQL, mediante el workflow de GitHub.
+- Las pruebas locales usan SQLite. Las dos de concurrencia real se ejecutan únicamente con PostgreSQL, mediante el workflow de GitHub.
 - Completar la revisión visual en navegador; el frontend ya compila.
 - Verificar el recorrido administrativo completo de MFA antes de producción.
 - Incorporar módulos operativos, hardening, backups y restauración.
