@@ -383,4 +383,3 @@ class ConcurrentEventTests(TransactionTestCase):
             responses = list(executor.map(publish, [0, 1]))
         self.assertEqual(sorted(responses), [200, 409])
         self.assertEqual(EventTransition.objects.filter(event=event).count(), 1)
-
