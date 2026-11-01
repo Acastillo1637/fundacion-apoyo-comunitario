@@ -114,3 +114,33 @@ class AccountTests(TestCase):
         session['account_authentication_methods_user'] = 'another-user'
         session.save()
         self.assertEqual(self.client.get('/api/operations/').status_code, 403)
+
+    @override_settings(CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:5173', 'http://localhost:5173'])
+    def test_local_frontend_origin_can_submit_with_valid_csrf(self):
+        for origin in ['http://127.0.0.1:5173', 'http://localhost:5173']:
+            with self.subTest(origin=origin):
+                client = Client(enforce_csrf_checks=True)
+                token = client.get('/api/session/').json()['csrf_token']
+                response = client.post('/api/register/', '{}', content_type='application/json',
+                                       HTTP_ORIGIN=origin, HTTP_X_CSRFTOKEN=token)
+                # La petición alcanza el validador del registro; los datos vacíos son inválidos.
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('email', response.json())
+
+    @override_settings(CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:5173'])
+    def test_trusted_origin_still_requires_csrf_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.get('/api/session/')
+        response = client.post('/api/register/', '{}', content_type='application/json',
+                               HTTP_ORIGIN='http://127.0.0.1:5173')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'csrf_failed')
+
+    @override_settings(CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:5173'])
+    def test_other_origin_is_rejected_even_with_valid_token(self):
+        client = Client(enforce_csrf_checks=True)
+        token = client.get('/api/session/').json()['csrf_token']
+        response = client.post('/api/register/', '{}', content_type='application/json',
+                               HTTP_ORIGIN='https://otro-sitio.example', HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'csrf_failed')

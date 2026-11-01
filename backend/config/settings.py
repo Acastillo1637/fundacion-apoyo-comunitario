@@ -10,6 +10,13 @@ if not SECRET_KEY:
     raise ImproperlyConfigured('Define DJANGO_SECRET_KEY en el entorno.')
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 FOUNDATION_NAME = os.environ.get('FOUNDATION_NAME', 'Fundación Apoyo Comunitario')
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.environ.get(
+        'DJANGO_CSRF_TRUSTED_ORIGINS',
+        'http://127.0.0.1:5173,http://localhost:5173' if DEBUG else '',
+    ).split(',') if origin.strip()
+]
+CSRF_FAILURE_VIEW = 'accounts.views.csrf_failure'
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',

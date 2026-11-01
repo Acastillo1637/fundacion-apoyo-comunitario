@@ -14,7 +14,7 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Franjas semanales y fechas completas no disponibles, con validación de superposiciones.
 - Catálogos con activación/desactivación y asociación de requisitos documentales.
 - Permisos backend y control de segundo factor para operaciones administrativas.
-- 43 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL.
+- 46 pruebas del backend, incluida una de concurrencia que requiere PostgreSQL, y 4 del cliente API.
 
 **Por implementar:** carga y revisión de documentos privados, solicitudes, eventos, matching, invitaciones, participantes y respaldos. WhatsApp será manual asistido, sin API pagada.
 
@@ -94,6 +94,8 @@ En desarrollo, **los correos no se envían a Internet**: se muestran en la termi
 
 La recuperación de contraseña funciona del mismo modo. No compartas enlaces de verificación o recuperación.
 
+Si aparece un aviso de seguridad de sesión, recarga la página y vuelve a intentarlo. En desarrollo se permiten únicamente los orígenes `http://127.0.0.1:5173` y `http://localhost:5173`; todos los formularios siguen requiriendo token CSRF. Usa la misma dirección durante todo el recorrido y reinicia Django después de cambiar configuración.
+
 El aviso de privacidad definitivo y el envío de correo real se configurarán antes de producción.
 
 ## Cómo probar habilidades y disponibilidad
@@ -159,6 +161,7 @@ Para comprobar la compilación de React:
 ```powershell
 cd frontend
 npm run build
+npm test
 ```
 
 Las pruebas comprueban permisos, perfil propio, CSRF, registro sin privilegios, correo verificado, recuperación, catálogos, horarios, fechas, límites y prevención de sobrescrituras entre sesiones.

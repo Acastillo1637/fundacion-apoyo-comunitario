@@ -16,12 +16,31 @@ function describeError(value, prefix = '') {
 }
 
 export async function api(path, options = {}) {
-  const response = await fetch(`/api/${path}`, {
-    credentials: 'same-origin',
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.method && options.method !== 'GET' ? { 'X-CSRFToken': csrfToken } : {}), ...options.headers },
-  });
-  const data = await response.json().catch(() => ({ detail: 'No fue posible leer la respuesta del servidor.' }));
+  let response;
+  try {
+    response = await fetch(`/api/${path}`, {
+      credentials: 'same-origin',
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.method && options.method !== 'GET' ? { 'X-CSRFToken': csrfToken } : {}), ...options.headers },
+    });
+  } catch {
+    throw new Error('No hay conexión con el servidor. Comprueba que Django esté iniciado y vuelve a intentarlo.');
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    if (response.status === 403) {
+      throw new Error('No se pudo validar la seguridad de la sesión. Recarga la página y vuelve a intentarlo.');
+    }
+    if (response.status >= 500) {
+      throw new Error('El servidor no pudo completar la solicitud. Revisa la terminal de Django.');
+    }
+    throw new Error('El servidor devolvió una respuesta inesperada. Recarga la página y verifica que Django esté iniciado.');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('El servidor devolvió una respuesta inesperada. Recarga la página.');
+  }
   if (data.csrf_token) csrfToken = data.csrf_token;
   if (!response.ok) {
     const error = new Error(data.detail || describeError(data) || 'No fue posible completar la solicitud.');

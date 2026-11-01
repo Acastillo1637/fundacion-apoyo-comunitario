@@ -20,6 +20,16 @@ from .models import AuditEvent, RateBucket, VolunteerProfile
 from .serializers import ProfileSerializer, RegistrationSerializer
 
 
+def csrf_failure(request, reason=''):
+    if request.path.startswith('/api/'):
+        return JsonResponse({
+            'detail': 'No se pudo validar la seguridad de la sesión. Recarga la página y vuelve a intentarlo.',
+            'code': 'csrf_failed',
+        }, status=403)
+    from django.views.csrf import csrf_failure as default_failure
+    return default_failure(request, reason=reason)
+
+
 def user_data(user):
     return {'id': str(user.pk), 'email': user.email, 'first_name': user.first_name,
             'last_name': user.last_name, 'roles': list(user.groups.values_list('name', flat=True)),
