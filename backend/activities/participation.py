@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q, Prefetch, prefetch_related_objects
+from django.db.models import Count, Q, Prefetch, Window, prefetch_related_objects
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -313,7 +313,14 @@ def notifications(request):
             raise ValidationError('Solicitud no válida.')
         request.user.notifications.filter(read_at__isnull=True).update(read_at=timezone.now())
     rows = request.user.notifications.all()
-    return Response({'unread': rows.filter(read_at__isnull=True).count(), 'results': list(rows[:30].values('id', 'message', 'target', 'read_at', 'created_at'))})
+    # The window counts every unread notification before LIMIT, in the same
+    # round trip as the latest 30 rows (including when older rows are unread).
+    results = list(rows.annotate(unread_total=Window(Count('pk', filter=Q(read_at__isnull=True))))[:30].values(
+        'id', 'message', 'target', 'read_at', 'created_at', 'unread_total'))
+    unread = results[0]['unread_total'] if results else 0
+    for item in results:
+        item.pop('unread_total')
+    return Response({'unread': unread, 'results': results})
 
 
 @api_view(['GET'])

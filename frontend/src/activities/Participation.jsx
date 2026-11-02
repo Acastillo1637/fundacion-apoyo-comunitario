@@ -25,9 +25,9 @@ export function RestrictionNotice({ status }) {
   return <section className="notice" role="status"><ShieldCheck size={22}/><div><strong>Tu participación tiene una restricción vigente</strong><p>{status.reason}</p><p>{status.expires_at ? `Vigente hasta el ${new Date(status.expires_at).toLocaleDateString('es-CL', { timeZone: 'America/Santiago' })}, al finalizar el día en Santiago.` : 'El equipo debe retirar esta restricción para habilitar nuevas participaciones.'}</p><p>Mientras esté vigente, no puedes postular ni confirmar nuevos cupos.</p></div></section>;
 }
 
-export function Notifications({ onNavigate }) {
-  const [data, setData] = useState(null), [error, setError] = useState('');
-  async function load(mark = false) { setError(''); try { setData(await api('activities/notifications/', mark ? { method: 'POST', body: JSON.stringify({ read_all: true }) } : {})); } catch (err) { setError(err.message); } }
+export function Notifications({ onNavigate, initialData = null, onUpdate }) {
+  const [data, setData] = useState(initialData), [error, setError] = useState('');
+  async function load(mark = false) { setError(''); try { const result = await api('activities/notifications/', mark ? { method: 'POST', body: JSON.stringify({ read_all: true }) } : {}); setData(result); onUpdate?.(result); } catch (err) { setError(err.message); } }
   useEffect(() => { load(); }, []);
   return <section className="panel"><div className="panel-heading"><h2>Notificaciones {data ? `(${data.unread} sin leer)` : ''}</h2><div className="actions"><button className="button secondary" onClick={() => load()}>Actualizar</button><button className="button secondary" disabled={!data?.unread} onClick={() => load(true)}>Marcar leídas</button></div></div>{error && <p className="error" role="alert">{error}</p>}{!data && !error && <p role="status">Cargando…</p>}{data?.results.length === 0 && <p>No tienes notificaciones.</p>}{data?.results.map(item => <article className="panel" key={item.id}><strong>{!item.read_at ? 'Nueva · ' : ''}{item.message}</strong><p className="help">{formatDate(item.created_at)}</p>{item.target && onNavigate && <button className="button secondary small" onClick={() => onNavigate(item.target)}>Ver detalle</button>}</article>)}</section>;
 }

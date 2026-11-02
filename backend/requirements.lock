@@ -9,8 +9,10 @@ fido2==2.2.1
 pillow==12.3.0
 psycopg==3.3.6
 psycopg-binary==3.3.6
+psycopg-pool==3.3.3
 pycparser==3.12
 pypdf==6.21.4
 qrcode==8.2
 sqlparse==0.6.0
 tzdata==2026.6
+typing_extensions==4.16.0

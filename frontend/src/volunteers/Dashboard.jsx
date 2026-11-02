@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, Building2, CircleHelp, LogOut, Menu, Network, Search, ArrowRight, Award, CalendarDays, Check, ChevronRight, Clock3, FileCheck2, HeartHandshake, LayoutDashboard, MapPin, Settings2, UserRound, Users } from 'lucide-react';
 import { api } from '../api';
 import Qualifications from './Qualifications';
@@ -32,6 +32,8 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
   const [selectedPortal, setPortal] = useState(initialPortal || portals[0]);
   const portal = portals.includes(selectedPortal) ? selectedPortal : portals[0];
   const [selectedTab, setTab] = useState(initialTab || '');
+  const overviewSnapshots = useRef({});
+  const [notificationData, setNotificationData] = useState(null);
   const [mobileNav, setMobileNav] = useState(false), [sectionQuery, setSectionQuery] = useState(''), [unread, setUnread] = useState(0), [targetEvent, setTargetEvent] = useState(null);
   const baseNavigation = portal === 'volunteer' ? (user.has_volunteer_profile ? tabs : [{ id: 'onboarding', label: 'Incorporación como voluntario', icon: UserRound }])
     : portal === 'requester' ? [
@@ -49,7 +51,12 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
     ];
   const navigation = [...baseNavigation, { id: 'notifications', label: 'Notificaciones', icon: Bell }, { id: 'help', label: 'Ayuda y coordinación', icon: CircleHelp }];
   const tab = navigation.some(item => item.id === selectedTab) ? selectedTab : navigation[0]?.id;
-  useEffect(() => { api('activities/notifications/').then(data => setUnread(data.unread)).catch(() => {}); }, [selectedTab, portal]);
+  const updateNotifications = useCallback(data => { setNotificationData(data); setUnread(data.unread); }, []);
+  useEffect(() => {
+    let active = true;
+    api('activities/notifications/').then(data => { if (active) updateNotifications(data); }).catch(() => {});
+    return () => { active = false; };
+  }, [portal, user.id, updateNotifications]);
   function navigate(target, eventId = null) {
     if (['operations', 'participants', 'matching', 'document-review'].includes(target) && portal === 'administration' && portals.includes('operations')) setPortal('operations');
     if (target === 'my-requests' && portals.includes('requester')) setPortal('requester');
@@ -70,9 +77,9 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
     {!['staff-overview', 'overview'].includes(tab) && <PageHeading eyebrow={portalNames[portal]} title={navigation.find(item => item.id === tab)?.label || 'Mi espacio'} description={tab === 'matching' ? 'Encuentra personas con las habilidades, documentos y disponibilidad que necesita cada actividad.' : undefined}/>}
     {tab === 'help' && <section className="panel"><h2>Tu equipo y tu comunidad, en un mismo lugar</h2><p>Usa el menú lateral para revisar tus tareas. Si tienes varios roles, cambia de espacio para acceder a sus funciones.</p><div className="stitch-help-grid"><article><CalendarDays/><h3>Actividades e invitaciones</h3><p>Consulta fechas y requisitos. Un cupo queda confirmado cuando tu participación cambia a Confirmado.</p></article><article><FileCheck2/><h3>Documentos privados</h3><p>Carga tus antecedentes y consulta las observaciones del equipo autorizado.</p></article><article><Settings2/><h3>Acceso a tu cuenta</h3><p>Puedes recuperar tu contraseña desde Iniciar sesión y configurar un segundo factor en Seguridad de cuenta.</p></article></div></section>}
     {portal === 'requester' && !['notifications', 'help'].includes(tab) && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={setTab}/>}
-    {tab === 'staff-overview' && <OperationalOverview portal={portal} navigate={navigate} user={user}/>}
+    {tab === 'staff-overview' && <OperationalOverview portal={portal} navigate={navigate} user={user} snapshots={overviewSnapshots.current}/>}
     {tab === 'staff-profile' && <StaffProfile user={user} setUser={setUser}/>}
-    {tab === 'notifications' && <Notifications onNavigate={navigate}/>}
+    {tab === 'notifications' && <Notifications initialData={notificationData} onUpdate={updateNotifications} onNavigate={navigate}/>}
     {tab === 'catalogs' && user.can_manage_catalogs && <Catalogs/>}
     {['participants', 'matching'].includes(tab) && user.can_manage_activities && <Participants key={`${tab}-${targetEvent || ''}`} initialEventId={targetEvent} mode={tab}/>}
     {tab === 'directory' && user.can_manage_activities && <Directory/>}

@@ -43,8 +43,8 @@ function App() {
     <main id="main" className={workspace ? 'workspace-main' : 'public-main'}>
       {view === 'home' && <Landing brand={brand} ready={status === 'ready'} navigate={navigate}/>}
       {['login', 'register', 'register-requester'].includes(view) && <Auth key={view} mode={view === 'login' ? 'login' : 'register'} initialType={view === 'register-requester' ? 'requester' : 'volunteer'} brand={brand} navigate={navigate} onLogin={user => { setSession(old => ({ ...old, user })); navigate('dashboard'); }}/>}
-      {view === 'dashboard' && session?.user && <Dashboard foundation={brand} onPublic={() => navigate('home')} onSignOut={signOut} user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/>}
-      {view === 'request' && (session?.user?.available_portals?.includes('requester') ? <Dashboard foundation={brand} onPublic={() => navigate('home')} onSignOut={signOut} initialPortal="requester" initialTab="new-request" user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/> : <PublicRequest navigate={navigate}/>)}
+      {view === 'dashboard' && session?.user && <Dashboard key={session.user.id} foundation={brand} onPublic={() => navigate('home')} onSignOut={signOut} user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/>}
+      {view === 'request' && (session?.user?.available_portals?.includes('requester') ? <Dashboard key={session.user.id} foundation={brand} onPublic={() => navigate('home')} onSignOut={signOut} initialPortal="requester" initialTab="new-request" user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/> : <PublicRequest navigate={navigate}/>)}
       {view === 'verify-request' && <RequestVerification ready={status === 'ready'} navigate={navigate}/>}
     </main>
     <footer className={workspace ? 'workspace-footer' : 'public-footer'}><span>© {new Date().getFullYear()} {brand}</span><span>Personas que se unen. Comunidades que crecen.</span></footer>

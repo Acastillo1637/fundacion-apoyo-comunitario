@@ -4,10 +4,12 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-let server, Dashboard;
+let server, Dashboard, OperationalOverview, Notifications;
 before(async () => {
   server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
   Dashboard = (await server.ssrLoadModule('/src/volunteers/Dashboard.jsx')).default;
+  OperationalOverview = (await server.ssrLoadModule('/src/design/Overview.jsx')).default;
+  Notifications = (await server.ssrLoadModule('/src/activities/Participation.jsx')).Notifications;
 });
 after(async () => { await server?.close(); });
 
@@ -52,4 +54,22 @@ test('notificaciones no renderiza simultáneamente el resumen', () => {
 
 test('una cuenta con varios roles dispone de cambio explícito de espacio', () => {
   assert.match(render('volunteer', { available_portals: ['volunteer', 'requester'] }), /Cambiar de espacio/);
+});
+
+test('el dashboard muestra los datos conservados mientras actualiza', () => {
+  const snapshot = { metrics: [{ label: 'Cuentas activas', value: 12, target: 'users' }], events: [], reviews: [], audit: [] };
+  const html = renderToStaticMarkup(React.createElement(OperationalOverview, {
+    portal: 'administration', user: {}, navigate() {}, snapshots: { administration: snapshot },
+  }));
+  assert.match(html, /Cuentas activas/);
+  assert.match(html, /Actualizando datos/);
+  assert.doesNotMatch(html, /Cargando el centro/);
+});
+
+test('notificaciones presenta el contenido ya cargado al abrir la sección', () => {
+  const html = renderToStaticMarkup(React.createElement(Notifications, {
+    initialData: { unread: 1, results: [{ id: 1, message: 'Invitación disponible', created_at: '2026-11-02T10:00:00Z' }] },
+  }));
+  assert.match(html, /Invitación disponible/);
+  assert.doesNotMatch(html, /Cargando/);
 });

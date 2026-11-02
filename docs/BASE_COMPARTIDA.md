@@ -45,7 +45,7 @@ React se inicia como siempre, desde `frontend` con `npm run dev`. Cada persona u
 
 Coordinen las migraciones: actualicen el código y una sola persona ejecuta `manage-shared.ps1 migrate`. Los scripts de inicio compartido no aplican migraciones automáticamente.
 
-Si ya tenían configurado el puerto 5432, cambien únicamente `POSTGRES_PORT=6543` en cada `.env.shared` privado y reinicien Django con el script anterior. El host y las credenciales del mismo pooler se conservan. No se crea otra base ni se vuelven a importar los datos. Django libera las conexiones al terminar cada petición en desarrollo; los cursores de servidor y las sentencias preparadas están desactivados para el modo por transacciones. Esto evita el error `EMAXCONNSESSION: max clients reached in session mode` observado al abrir varias vistas.
+Si ya tenían configurado el puerto 5432, cambien únicamente `POSTGRES_PORT=6543` en cada `.env.shared` privado y reinicien Django con el script anterior. El host y las credenciales del mismo pooler se conservan. No se crea otra base ni se vuelven a importar los datos. Django devuelve las conexiones a un pool local de entre 1 y 4 conexiones por proceso al terminar cada petición; los cursores de servidor y las sentencias preparadas están desactivados para el modo por transacciones. Esto evita el error `EMAXCONNSESSION: max clients reached in session mode` observado al abrir varias vistas.
 
 ## 4. Documentos y correo
 
@@ -64,3 +64,5 @@ Antes de publicar, separar el entorno de pruebas del entorno de producción, con
 Estado al 1 de noviembre de 2026: se conectó el proyecto configurado en `.env.shared` y se importaron 3 usuarios, 1 perfil de voluntario, 3 direcciones de correo, 9 registros de auditoría y los catálogos locales (1 tipo documental, 4 habilidades y 2 profesiones). Se compararon conteos y contenido tras la importación. No había documentos privados ni factores MFA para trasladar. SQLite se conservó intacto.
 
 Referencias: [conexión PostgreSQL de Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres), [respaldos](https://supabase.com/docs/guides/platform/backups).
+
+Después de actualizar esta versión, ejecuta `.venv\Scripts\python.exe -m pip install -r backend/requirements.lock` y reinicia Django. El pool acotado reutiliza las conexiones cifradas entre peticiones y evita repetir su apertura en cada clic. Los paneles conservan la última respuesta únicamente en la memoria del componente de la sesión y la actualizan al volver a abrirlos; no se guardan datos privados en localStorage.

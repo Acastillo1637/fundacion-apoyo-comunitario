@@ -58,13 +58,15 @@ else:
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
         'HOST': os.environ.get('POSTGRES_HOST', '127.0.0.1'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-        # runserver creates request threads: persistent session-pool connections
-        # can exhaust Supabase's small pool even with only two developers.
-        'CONN_MAX_AGE': 0 if DEBUG else 60,
+        # Return connections to a bounded per-process pool after each request.
+        # This avoids both a TLS handshake per request and unbounded thread-local
+        # connections. Supabase's transaction pooler still handles server reuse.
+        'CONN_MAX_AGE': 0,
         'CONN_HEALTH_CHECKS': True,
         'DISABLE_SERVER_SIDE_CURSORS': os.environ.get('POSTGRES_PORT', '5432') == '6543',
         'OPTIONS': {'sslmode': os.environ.get('POSTGRES_SSLMODE', 'prefer'), 'connect_timeout': 10,
-                    'prepare_threshold': None},
+                    'prepare_threshold': None,
+                    'pool': {'min_size': 1, 'max_size': 4, 'timeout': 10, 'max_idle': 60}},
     }}
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend', 'allauth.account.auth_backends.AuthenticationBackend']
