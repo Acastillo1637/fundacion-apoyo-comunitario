@@ -228,10 +228,11 @@ Consulta [controles y endpoints de administración](docs/USUARIOS.md).
 
 ## Base de datos
 
-- **Desarrollo local:** SQLite, un archivo que el script crea automáticamente. Así puedes comenzar sin instalar PostgreSQL.
-- **Servidor Cloud-2:** PostgreSQL. La configuración de producción no permite SQLite.
+- **Base definitiva:** PostgreSQL administrado en **Supabase**, tanto para la arquitectura de producción como para el trabajo colaborativo actual.
+- **Hosting:** ejecutará la aplicación y se conectará a Supabase; no se trasladará la base al servidor web.
+- **Pruebas aisladas:** SQLite local y PostgreSQL desechable en integración continua. Producción no permite SQLite.
 
-Las bases de datos locales no se suben al repositorio.
+Consulta la [decisión de arquitectura y el texto para el informe](docs/ARQUITECTURA_BD.md). Las credenciales y los respaldos no se suben al repositorio. Los documentos privados requieren almacenamiento aparte de PostgreSQL.
 
 ## Cómo ejecutar las pruebas
 
@@ -263,7 +264,7 @@ Las pruebas comprueban permisos, perfil propio, CSRF, registro sin privilegios, 
 
 ## GitHub y publicación
 
-GitHub guarda el código y su historial. **Subirlo no publica la aplicación en Internet.** El despliegue en V2Networks se hará después, con dominio, HTTPS, PostgreSQL y backups.
+GitHub guarda el código y su historial. **Subirlo no publica la aplicación en Internet.** El despliegue en V2Networks se hará después, con dominio y HTTPS. El backend del hosting se conectará a PostgreSQL en Supabase, que permanece como base definitiva.
 
 No subas `.env`, contraseñas, claves privadas, bases de datos, documentos personales ni backups. `.env.example` contiene nombres de variables sin secretos reales.
 

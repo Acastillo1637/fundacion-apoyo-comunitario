@@ -1,6 +1,6 @@
 # Una base de datos para Amaro y Almendra
 
-Usaremos PostgreSQL en Supabase como base compartida de desarrollo. Django conserva usuarios, contraseñas, roles y reglas de negocio; no se cambia la autenticación a Supabase Auth.
+PostgreSQL administrado en Supabase es la base de datos definitiva del proyecto. Actualmente se utiliza como base compartida del equipo; el hosting también se conectará a Supabase. Django conserva usuarios, contraseñas, roles y reglas de negocio; no se cambia la autenticación a Supabase Auth. Consulta [la decisión de arquitectura y el texto para el informe](ARQUITECTURA_BD.md).
 
 ## 1. Crear el proyecto
 
@@ -51,11 +51,13 @@ La base guarda referencias a los documentos; sus PDF e imágenes siguen en el al
 
 Los mensajes de correo siguen saliendo en la terminal del equipo que ejecutó la acción. Compartir la base no configura SMTP ni publica la web.
 
-## 5. Pasar los datos al hosting
+## 5. Conectar el hosting a la base definitiva
 
-Podemos mantener PostgreSQL en Supabase o mover los datos a PostgreSQL del hosting. Para moverlos se prepara un respaldo lógico de las tablas de la aplicación con `pg_dump` y se restaura en una base vacía mediante `pg_restore`. No se deben copiar todos los roles/esquemas internos administrados por Supabase al hosting.
+La decisión aprobada es conservar PostgreSQL en Supabase. No se exportará la base para instalarla en el hosting. El servidor web recibirá las variables privadas de conexión al proyecto Supabase del entorno de producción, además de su configuración HTTPS, dominio, correo y almacenamiento privado.
 
-Antes del cambio se detienen las escrituras de ambos equipos, se genera el respaldo final, se prueba la restauración y se copian los documentos privados por separado. El servidor destino debe tener una versión compatible de PostgreSQL y el mismo código/migraciones. Conserva de manera privada la clave de Django necesaria para los datos cifrados; prepara cualquier rotación de forma explícita. No copies claves anon/service_role como sustituto de la contraseña PostgreSQL.
+Los scripts `start-shared-backend.ps1` y `manage-shared.ps1` son herramientas de desarrollo: fuerzan DEBUG y el correo de consola. No se usan para ejecutar producción. La plantilla `.env.example` documenta las variables que deberá cargar el servicio del backend en el hosting.
+
+Antes de publicar, separar el entorno de pruebas del entorno de producción, configurar una cuenta de conexión con permisos mínimos y preparar respaldo y restauración de PostgreSQL y de los archivos privados. Las exportaciones lógicas mediante `pg_dump` quedan como herramienta de respaldo o recuperación, no como un traslado obligatorio al hosting. No se deben copiar indiscriminadamente los roles/esquemas internos administrados por Supabase.
 
 Estado al 1 de noviembre de 2026: se conectó el proyecto configurado en `.env.shared` y se importaron 3 usuarios, 1 perfil de voluntario, 3 direcciones de correo, 9 registros de auditoría y los catálogos locales (1 tipo documental, 4 habilidades y 2 profesiones). Se compararon conteos y contenido tras la importación. No había documentos privados ni factores MFA para trasladar. SQLite se conservó intacto.
 

@@ -7,7 +7,7 @@ Estado: desarrollo local. No habilitar datos reales todavía.
 ## Decisiones vigentes
 
 - Una fundación: Fundación Apoyo Comunitario. Nombre configurable mediante FOUNDATION_NAME.
-- React + Vite + JavaScript, Django + DRF y PostgreSQL como destino.
+- React + Vite + JavaScript, Django + DRF y PostgreSQL administrado en Supabase como base definitiva. El hosting alojará la aplicación y se conectará a Supabase. Consulta [la decisión y el texto para el informe](ARQUITECTURA_BD.md).
 - Referencia visual: ZIP de Stitch entregado por el usuario. Sus textos y automatizaciones no constituyen requisitos.
 - Paleta tomada de DESIGN.md: azul #0051d5, texto #142339 y fondos claros.
 - No se incorporan OTP por WhatsApp, entrega/lectura simulada ni promoción autónoma de respaldos.
@@ -16,7 +16,7 @@ Estado: desarrollo local. No habilitar datos reales todavía.
 - allauth gestiona enlaces de verificación, recuperación, TOTP y códigos de recuperación.
 - Cuentas privilegiadas o con factores configurados pasan por el flujo de allauth. El endpoint JSON no omite MFA.
 - Operaciones administrativas requieren permiso específico y autenticación MFA en la sesión.
-- Desarrollo SQLite explícito por falta de PostgreSQL/Docker local. Producción no admite SQLite.
+- Desarrollo colaborativo sobre Supabase. SQLite se conserva para trabajo local aislado y pruebas; producción no admite SQLite.
 
 ## Endpoints del primer bloque
 
