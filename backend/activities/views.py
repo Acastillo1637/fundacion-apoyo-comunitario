@@ -7,6 +7,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
+from django.db.models import Prefetch
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from rest_framework.authentication import SessionAuthentication
@@ -18,7 +19,7 @@ from rest_framework.response import Response
 from accounts.models import AuditEvent
 from accounts.views import limited
 from volunteers.models import DocumentType, Skill
-from .models import Event, ServiceRequest
+from .models import Event, EventChange, ServiceRequest
 from .serializers import EditEventSerializer, EventSerializer, PublishedEventSerializer, RequestSerializer, TransitionSerializer
 from .services import create_event, edit_event, event_data, request_data, require_operator, send_verification, transition_event, transition_request, update_published_event
 
@@ -160,7 +161,9 @@ def event_create(request, request_id):
 @api_view(['GET'])
 def events(request):
     require_operator(request)
-    queryset = Event.objects.all()
+    queryset = Event.objects.prefetch_related(
+        'positions__required_skills__required_documents', 'positions__required_documents', 'transitions',
+        Prefetch('changes', queryset=EventChange.objects.select_related('actor').all()[:20], to_attr='loaded_changes'))
     page, rows = pagination(request, queryset)
     return Response({'results': [event_data(item, private=True) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
 
@@ -201,6 +204,7 @@ def operator_options(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def public_events(request):
-    queryset = Event.objects.filter(status='open', starts_at__gt=timezone.now())
+    queryset = Event.objects.filter(status='open', starts_at__gt=timezone.now()).prefetch_related(
+        'positions__required_skills__required_documents', 'positions__required_documents')
     page, rows = pagination(request, queryset)
     return Response({'results': [event_data(item) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})

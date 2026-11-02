@@ -5,6 +5,32 @@ import { api } from './api.js';
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 
+test('comparte lecturas simultáneas y vuelve a consultar después de completarlas', async () => {
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return Response.json({ value: calls }); };
+  const [first, second] = await Promise.all([api('session/'), api('session/')]);
+  assert.equal(calls, 1);
+  assert.deepEqual(first, second);
+  await api('session/');
+  assert.equal(calls, 2);
+});
+
+test('una mutación impide reutilizar lecturas pendientes de la sesión anterior', async () => {
+  let finish;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    if (calls === 1) return new Promise(resolve => { finish = () => resolve(Response.json({ old: true })); });
+    return Response.json({ old: false });
+  };
+  const previous = api('session/');
+  await api('logout/', { method: 'POST' });
+  assert.deepEqual(await api('session/'), { old: false });
+  finish();
+  await previous;
+  assert.equal(calls, 3);
+});
+
 test('el desafío MFA se muestra en el acceso de la web', async () => {
   globalThis.fetch = async () => Response.json({ detail: 'Ingresa tu código.', mfa_required: true }, { status: 409 });
   await assert.rejects(api('login/'), error => error.mfaRequired === true && !error.continueUrl);

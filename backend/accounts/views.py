@@ -32,8 +32,9 @@ def csrf_failure(request, reason=''):
 
 
 def user_data(user):
+    from .portals import role_names
     return {'id': str(user.pk), 'email': user.email, 'first_name': user.first_name,
-            'last_name': user.last_name, 'roles': list(user.groups.values_list('name', flat=True)),
+            'last_name': user.last_name, 'roles': role_names(user),
             'can_manage_volunteers': user.has_perm('accounts.view_volunteerprofile'),
             'can_review_documents': user.has_perm('documents.review_volunteerdocument'),
             'can_manage_activities': user.has_perm('activities.manage_operations'),

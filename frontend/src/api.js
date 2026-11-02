@@ -1,4 +1,20 @@
 let csrfToken = '';
+const pendingReads = new Map();
+
+export function api(path, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const shareable = method === 'GET' && Object.keys(options).every(key => key === 'method');
+  // Share only simultaneous reads. Completed responses are never cached, and
+  // mutations (including login/logout) prevent reuse of earlier requests.
+  if (method !== 'GET') pendingReads.clear();
+  if (!shareable) return sendRequest(path, options);
+  if (pendingReads.has(path)) return pendingReads.get(path);
+  const pending = sendRequest(path, options).finally(() => {
+    if (pendingReads.get(path) === pending) pendingReads.delete(path);
+  });
+  pendingReads.set(path, pending);
+  return pending;
+}
 
 const labels = {
   skills: 'Habilidades', professions: 'Profesiones', slots: 'Franjas',
@@ -15,7 +31,7 @@ function describeError(value, prefix = '') {
   return '';
 }
 
-export async function api(path, options = {}) {
+async function sendRequest(path, options = {}) {
   let response;
   try {
     response = await fetch(`/api/${path}`, {

@@ -23,8 +23,8 @@ foreach ($name in @('POSTGRES_HOST', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_P
     if (-not $configuration[$name]) { throw "Falta completar $name en .env.shared." }
 }
 if ($configuration['DJANGO_SECRET_KEY'].Length -lt 50) { throw 'Usa una clave DJANGO_SECRET_KEY privada de al menos 50 caracteres.' }
-if (-not $configuration['POSTGRES_PORT']) { $configuration['POSTGRES_PORT'] = '5432' }
-if ($configuration['POSTGRES_PORT'] -ne '5432') { throw 'Selecciona Session pooler, puerto 5432, para esta configuracion compartida.' }
+if (-not $configuration['POSTGRES_PORT']) { $configuration['POSTGRES_PORT'] = '6543' }
+if ($configuration['POSTGRES_PORT'] -notin @('5432', '6543')) { throw 'Usa el puerto 5432 (Session pooler) o 6543 (Transaction pooler).' }
 if (-not $configuration['POSTGRES_SSLMODE']) { $configuration['POSTGRES_SSLMODE'] = 'require' }
 if ($configuration['POSTGRES_SSLMODE'] -notin @('require', 'verify-ca', 'verify-full')) { throw 'La base compartida debe usar una conexion SSL.' }
 foreach ($name in $configuration.Keys) { [Environment]::SetEnvironmentVariable($name, $configuration[$name], 'Process') }

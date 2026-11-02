@@ -106,7 +106,7 @@ def request_data(item):
             'organization': item.organization,
             'events': [{'id': str(event.pk), 'title': event.title, 'public_description': event.public_description,
                         'status': event.status, 'starts_at': event.starts_at, 'commune': event.commune}
-                       for event in item.events.exclude(status='draft')],
+                         for event in item.events.all() if event.status != 'draft'],
             'history': [{'status': entry.to_status, 'at': entry.created_at}
                         for entry in item.transitions.all()]}
 
@@ -117,7 +117,7 @@ def requests(request):
     owner = get_object_or_404(RequesterProfile, user=request.user)
     if request.method == 'GET':
         from activities.views import pagination
-        rows = ServiceRequest.objects.filter(requester=owner).prefetch_related('transitions')
+        rows = ServiceRequest.objects.filter(requester=owner).prefetch_related('transitions', 'events')
         page, items = pagination(request, rows)
         return Response({'results': [request_data(item) for item in items], 'count': rows.count(), 'page': page})
     if limited(request, 'owned-request', 5):

@@ -33,7 +33,7 @@ def lock_actor(request):
 
 
 def protected(user):
-    return user.is_superuser or user.user_permissions.exists() or user.groups.exclude(name__in=ROLE_NAMES).exists()
+    return user.is_superuser or user.user_permissions.exists() or any(group.name not in ROLE_NAMES for group in user.groups.all())
 
 
 def access_snapshot(user):
@@ -45,7 +45,7 @@ def account_data(user, actor, detail=False):
     technical = protected(user)
     data = {
         'id': str(user.pk), 'email': user.email, 'first_name': user.first_name, 'last_name': user.last_name,
-        'is_active': user.is_active, 'roles': list(user.groups.values_list('name', flat=True)),
+        'is_active': user.is_active, 'roles': [group.name for group in user.groups.all()],
         'email_verified': any(address.verified for address in user.emailaddress_set.all()),
         'has_password': user.has_usable_password(), 'has_mfa': user.authenticator_set.exists(),
         'has_volunteer_profile': hasattr(user, 'volunteer_profile'),
@@ -91,7 +91,7 @@ def send_access_email(request, user, reason):
 def accounts(request):
     require_account_manager(request)
     if request.method == 'GET':
-        queryset = User.objects.order_by('email').prefetch_related('groups', 'emailaddress_set', 'authenticator_set').select_related('volunteer_profile')
+        queryset = User.objects.order_by('email').prefetch_related('groups', 'user_permissions', 'emailaddress_set', 'authenticator_set').select_related('volunteer_profile')
         query = request.query_params.get('q', '').strip()
         if len(query) > 100:
             raise ValidationError('La búsqueda no puede superar 100 caracteres.')

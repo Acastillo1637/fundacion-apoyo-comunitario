@@ -59,23 +59,32 @@ def summary(request):
     result = {'portal': portal}
     if portal == 'administration':
         if request.user.has_perm('accounts.manage_accounts'):
+            totals = User.objects.aggregate(
+                active=Count('pk', filter=Q(is_active=True), distinct=True),
+                inactive=Count('pk', filter=Q(is_active=False), distinct=True),
+                volunteers=Count('pk', filter=Q(groups__name='Voluntario', is_active=True), distinct=True),
+                requesters=Count('pk', filter=Q(groups__name='Solicitante', is_active=True), distinct=True))
             result['metrics'] = [
-                {'label': 'Cuentas activas', 'value': User.objects.filter(is_active=True).count(), 'target': 'users'},
-                {'label': 'Cuentas inactivas', 'value': User.objects.filter(is_active=False).count(), 'target': 'users'},
-                {'label': 'Voluntarios', 'value': User.objects.filter(groups__name='Voluntario', is_active=True).count(), 'target': 'users'},
-                {'label': 'Solicitantes', 'value': User.objects.filter(groups__name='Solicitante', is_active=True).count(), 'target': 'users'},
+                {'label': 'Cuentas activas', 'value': totals['active'], 'target': 'users'},
+                {'label': 'Cuentas inactivas', 'value': totals['inactive'], 'target': 'users'},
+                {'label': 'Voluntarios', 'value': totals['volunteers'], 'target': 'users'},
+                {'label': 'Solicitantes', 'value': totals['requesters'], 'target': 'users'},
             ]
         else:
             result['metrics'] = []
     elif portal == 'operations':
         result['metrics'] = []
         if request.user.has_perm('activities.manage_operations'):
+            totals = Participation.objects.filter(event__status='open').aggregate(
+                applied=Count('pk', filter=Q(status='applied', event__starts_at__gt=timezone.now())),
+                primary=Count('pk', filter=Q(status='confirmed', assignment='primary')),
+                backup=Count('pk', filter=Q(status='confirmed', assignment='backup')))
             result['metrics'] += [
                 {'label': 'Solicitudes pendientes', 'value': ServiceRequest.objects.filter(status__in=['pending', 'in_review'], email_verified_at__isnull=False).count(), 'target': 'operations'},
                 {'label': 'Eventos abiertos', 'value': Event.objects.filter(status='open', starts_at__gt=timezone.now()).count(), 'target': 'operations'},
-                {'label': 'Postulaciones por revisar', 'value': Participation.objects.filter(status='applied', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participants'},
-                {'label': 'Titulares confirmados', 'value': Participation.objects.filter(status='confirmed', assignment='primary', event__status='open').count(), 'target': 'participants'},
-                {'label': 'Respaldos confirmados', 'value': Participation.objects.filter(status='confirmed', assignment='backup', event__status='open').count(), 'target': 'participants'},
+                {'label': 'Postulaciones por revisar', 'value': totals['applied'], 'target': 'participants'},
+                {'label': 'Titulares confirmados', 'value': totals['primary'], 'target': 'participants'},
+                {'label': 'Respaldos confirmados', 'value': totals['backup'], 'target': 'participants'},
             ]
         if request.user.has_perm('documents.review_volunteerdocument'):
             # Only latest versions are actionable in the review queue.
@@ -84,25 +93,37 @@ def summary(request):
             result['metrics'].append({'label': 'Documentos por revisar', 'value': VolunteerDocument.objects.filter(status='pending').annotate(newer=Exists(newer)).filter(newer=False).exclude(profile__user=request.user).count(), 'target': 'document-review'})
     elif portal == 'requester':
         rows = ServiceRequest.objects.filter(requester__user=request.user)
-        result['metrics'] = [{'label': label, 'value': rows.filter(status=status).count(), 'target': 'my-requests'} for status, label in ServiceRequest.Status.choices]
+        totals = counts(rows)
+        result['metrics'] = [{'label': label, 'value': totals.get(status, 0), 'target': 'my-requests'} for status, label in ServiceRequest.Status.choices]
     else:
         rows = Participation.objects.filter(profile__user=request.user)
+        totals = rows.filter(event__status='open').aggregate(
+            invited=Count('pk', filter=Q(status='invited', expires_at__gt=timezone.now())),
+            primary=Count('pk', filter=Q(status='confirmed', assignment='primary', event__starts_at__gt=timezone.now())),
+            backup=Count('pk', filter=Q(status='confirmed', assignment='backup', event__starts_at__gt=timezone.now())),
+            applied=Count('pk', filter=Q(status='applied')))
         result['metrics'] = [
-            {'label': 'Invitaciones vigentes', 'value': rows.filter(status='invited', expires_at__gt=timezone.now(), event__status='open').count(), 'target': 'participations'},
-            {'label': 'Titulares confirmados', 'value': rows.filter(status='confirmed', assignment='primary', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participations'},
-            {'label': 'Respaldos confirmados', 'value': rows.filter(status='confirmed', assignment='backup', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participations'},
-            {'label': 'Postulaciones pendientes', 'value': rows.filter(status='applied', event__status='open').count(), 'target': 'participations'},
+            {'label': 'Invitaciones vigentes', 'value': totals['invited'], 'target': 'participations'},
+            {'label': 'Titulares confirmados', 'value': totals['primary'], 'target': 'participations'},
+            {'label': 'Respaldos confirmados', 'value': totals['backup'], 'target': 'participations'},
+            {'label': 'Postulaciones pendientes', 'value': totals['applied'], 'target': 'participations'},
         ]
     if portal in ['administration', 'operations']:
-        from django.db.models import Q, Sum
+        from django.db.models import Sum, OuterRef, Subquery
+        from activities.models import EventPosition
         result['events'] = []
         if request.user.has_perm('activities.manage_operations'):
-            for event in Event.objects.filter(status='open', ends_at__gt=timezone.now()).order_by('starts_at')[:5]:
-                capacity = event.positions.aggregate(total=Sum('capacity'))['total'] or 0
+            capacity = EventPosition.objects.filter(event_id=OuterRef('pk')).order_by().values('event_id').annotate(total=Sum('capacity')).values('total')
+            upcoming = Event.objects.filter(status='open', ends_at__gt=timezone.now()).annotate(
+                total_capacity=Subquery(capacity),
+                confirmed_count=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='primary')),
+                backup_count=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='backup')),
+                waiting_count=Count('participations', filter=Q(participations__status='waitlisted'))).order_by('starts_at')[:5]
+            for event in upcoming:
                 result['events'].append({'id': str(event.pk), 'title': event.title, 'commune': event.commune,
-                    'starts_at': event.starts_at, 'capacity': capacity,
-                    'confirmed': event.participations.filter(status='confirmed', assignment='primary').count(),
-                    'backups': event.participations.filter(status='confirmed', assignment='backup').count(), 'waiting': event.participations.filter(status='waitlisted').count()})
+                    'starts_at': event.starts_at, 'capacity': event.total_capacity or 0,
+                    'confirmed': event.confirmed_count,
+                    'backups': event.backup_count, 'waiting': event.waiting_count})
         result['reviews'] = []
         if request.user.has_perm('documents.review_volunteerdocument'):
             from django.db.models import OuterRef, Exists
@@ -126,7 +147,7 @@ class CatalogSerializer(StrictSerializer):
 
 def catalog_data(item):
     return {'id': item.pk, 'name': item.name, 'description': item.description, 'is_active': item.is_active,
-            'required_documents': list(item.required_documents.values_list('pk', flat=True)) if hasattr(item, 'required_documents') else []}
+            'required_documents': [document.pk for document in item.required_documents.all()] if hasattr(item, 'required_documents') else []}
 
 
 @api_view(['GET', 'POST', 'PUT'])
@@ -138,7 +159,10 @@ def catalogs(request, kind):
     if not request.user.has_perm(f'volunteers.{operation}_{model._meta.model_name}') or not portal_authenticated(request):
         raise PermissionDenied('No tienes acceso a este catálogo.')
     if request.method == 'GET':
-        return Response({'results': [catalog_data(item) for item in model.objects.all()], 'documents': list(DocumentType.objects.filter(is_active=True).values('id', 'name'))})
+        rows = model.objects.all()
+        if kind != 'documents':
+            rows = rows.prefetch_related('required_documents')
+        return Response({'results': [catalog_data(item) for item in rows], 'documents': list(DocumentType.objects.filter(is_active=True).values('id', 'name'))})
     serializer = CatalogSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     values = dict(serializer.validated_data)

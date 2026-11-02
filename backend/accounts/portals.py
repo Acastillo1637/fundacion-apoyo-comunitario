@@ -1,9 +1,20 @@
+from django.db.models import prefetch_related_objects
+
+
+def role_names(user):
+    if not user.is_authenticated:
+        return []
+    # Django invalidates this instance's prefetch when its groups are changed.
+    prefetch_related_objects([user], 'groups')
+    return [group.name for group in user.groups.all()]
+
+
 def is_volunteer(user):
-    return user.is_authenticated and user.groups.filter(name='Voluntario').exists()
+    return user.is_authenticated and 'Voluntario' in role_names(user)
 
 
 def is_requester(user):
-    return user.is_authenticated and user.groups.filter(name='Solicitante').exists()
+    return user.is_authenticated and 'Solicitante' in role_names(user)
 
 
 def portal_access(user):

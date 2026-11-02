@@ -5,7 +5,7 @@ PostgreSQL administrado en Supabase es la base de datos definitiva del proyecto.
 ## 1. Crear el proyecto
 
 1. Crea un proyecto en tu cuenta de Supabase y guarda su contraseña de base de datos.
-2. Abre **Connect** y selecciona **Session pooler**, puerto **5432**. Copia los valores de host, database y user que muestra tu proyecto. No uses el puerto 6543 para estos scripts.
+2. Abre **Connect** y selecciona **Transaction pooler**, puerto **6543**. Copia los valores de host, database y user que muestra tu proyecto. Los scripts también admiten Session pooler (5432), pero la web compartida usa transacciones para evitar agotar las conexiones disponibles.
 3. Copia `config/shared-database.env.example` a `.env.shared` en la raíz del proyecto. Completa los datos. No son la clave anon/public ni service_role: es la conexión PostgreSQL del backend.
 4. Genera una clave privada una sola vez con el comando de la plantilla. Ambos equipos deben usar la misma `DJANGO_SECRET_KEY`. Comparte credenciales por un canal privado; nunca mediante el repositorio ni capturas.
 
@@ -44,6 +44,8 @@ React se inicia como siempre, desde `frontend` con `npm run dev`. Cada persona u
 `start-backend.ps1` también detecta `.env.shared` automáticamente y usa Supabase si existe. Si no existe, mantiene el inicio local con SQLite. `manage-local.ps1` siempre selecciona SQLite para las pruebas aisladas; no lo uses para administrar los datos compartidos. No ejecutes la suite de pruebas sobre Supabase: los permisos de la base y los datos compartidos no son un entorno de pruebas desechable.
 
 Coordinen las migraciones: actualicen el código y una sola persona ejecuta `manage-shared.ps1 migrate`. Los scripts de inicio compartido no aplican migraciones automáticamente.
+
+Si ya tenían configurado el puerto 5432, cambien únicamente `POSTGRES_PORT=6543` en cada `.env.shared` privado y reinicien Django con el script anterior. El host y las credenciales del mismo pooler se conservan. No se crea otra base ni se vuelven a importar los datos. Django libera las conexiones al terminar cada petición en desarrollo; los cursores de servidor y las sentencias preparadas están desactivados para el modo por transacciones. Esto evita el error `EMAXCONNSESSION: max clients reached in session mode` observado al abrir varias vistas.
 
 ## 4. Documentos y correo
 

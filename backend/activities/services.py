@@ -45,7 +45,9 @@ def request_data(item, detail=False):
 
 
 def event_data(item, private=False):
-    positions = list(item.positions.prefetch_related('required_skills__required_documents', 'required_documents'))
+    from django.db.models import prefetch_related_objects
+    positions = list(item.positions.all())
+    prefetch_related_objects(positions, 'required_skills__required_documents', 'required_documents')
     data = {
         'id': str(item.pk), 'title': item.title, 'public_description': item.public_description,
         'commune': item.commune, 'status': item.status, **schedule_data(item),
@@ -65,7 +67,7 @@ def event_data(item, private=False):
                     can_edit_information=item.status == 'open' and item.starts_at > timezone.now(),
                     changes=[{'revision': change.revision, 'reason': change.reason, 'fields_changed': change.fields_changed,
                               'at': change.created_at, 'actor': change.actor.get_full_name() or 'Coordinación'}
-                             for change in item.changes.select_related('actor').all()[:20]],
+                             for change in (item.loaded_changes if hasattr(item, 'loaded_changes') else item.changes.select_related('actor').all()[:20])],
                     history=[{'from': change.from_status, 'to': change.to_status, 'reason': change.reason, 'at': change.created_at} for change in item.transitions.all()])
     return data
 
