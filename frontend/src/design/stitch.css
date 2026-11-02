@@ -34,3 +34,5 @@ body{background:var(--surface)}h1,h2,h3{color:var(--ink)}h2{letter-spacing:-.6px
 @media(max-width:700px){.header>.mobile-menu{display:inline-flex}}
 
 .vacancy-summary{display:flex;align-items:center;justify-content:space-between;gap:20px;border-left:4px solid #0051d5}.vacancy-summary h3{margin:0 0 8px}.vacancy-summary p{margin:0 0 8px}.vacancy-summary small{font-size:11px;color:#647084;line-height:1.7}.vacancy-summary .button{flex-shrink:0}@media(max-width:760px){.vacancy-summary{flex-direction:column;align-items:flex-start}}
+
+.published-information-editor{margin-top:24px;background:#f8faff}.published-information-editor h3{font-size:18px}.published-information-editor>p{font-size:12px;max-width:750px}

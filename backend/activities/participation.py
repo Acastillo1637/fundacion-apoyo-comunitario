@@ -62,7 +62,7 @@ def notify(profile, message):
 
 def data(item, operator=False):
     expired = item.status == 'invited' and item.expires_at <= timezone.now()
-    result = {'id': str(item.pk), 'event_id': str(item.event_id), 'title': item.event.title,
+    result = {'id': str(item.pk), 'event_id': str(item.event_id), 'title': item.event.title, 'public_description': item.event.public_description,
               'position': item.position.name, 'position_id': item.position_id,
               'status': 'expired' if expired else item.status, 'event_status': item.event.status,
               'starts_at': item.event.starts_at, 'ends_at': item.event.ends_at,

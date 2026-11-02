@@ -104,6 +104,9 @@ def request_data(item):
             'quantity': item.quantity, 'starts_at': item.starts_at, 'ends_at': item.ends_at,
             'address': item.address, 'commune': item.commune, 'created_at': item.created_at,
             'organization': item.organization,
+            'events': [{'id': str(event.pk), 'title': event.title, 'public_description': event.public_description,
+                        'status': event.status, 'starts_at': event.starts_at, 'commune': event.commune}
+                       for event in item.events.exclude(status='draft')],
             'history': [{'status': entry.to_status, 'at': entry.created_at}
                         for entry in item.transitions.all()]}
 

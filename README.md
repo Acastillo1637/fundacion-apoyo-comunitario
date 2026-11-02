@@ -26,7 +26,8 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Restricciones con fecha opcional de término, historial y control de cambios simultáneos.
 - Notificaciones de revisión documental y acceso directo al detalle desde los avisos.
 - Respaldos con aceptación propia y activación manual mediante una nueva invitación como titular.
-- 208 pruebas del backend, incluidas cuatro de concurrencia que requieren PostgreSQL, y 16 del frontend.
+- Edición de información de convocatorias publicadas, con motivo, historial y avisos internos.
+- 222 pruebas del backend, incluidas cuatro de concurrencia que requieren PostgreSQL, y 16 del frontend.
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
 
 **Para producción:** configurar SMTP, HTTPS, respaldos externos y monitoreo; completar la revisión visual/móvil. WhatsApp es manual asistido, sin API pagada. Consulta el [circuito de participación y los dashboards](docs/PARTICIPACION.md).
@@ -205,7 +206,7 @@ Reinicia Django con el script del paso 3 para aplicar las migraciones y permisos
 9. En **Eventos**, abre el borrador y pulsa **Abrir convocatoria**.
 10. Comprueba la publicación en **Oportunidades** o en la página de inicio: se muestran comuna y requisitos, pero no dirección exacta ni contacto del solicitante.
 
-Una solicitud puede generar varios eventos. Los borradores se pueden editar; los abiertos no se editan en esta etapa hasta implementar el flujo de comunicación de cambios. Se puede cancelar con motivo; finalizar exige que haya terminado el horario. Los voluntarios pueden postular; la coordinación puede confirmar postulaciones e invitar candidatos desde **Participantes y asistencia**. Los cupos se asignan al confirmar, con lista de espera si están completos.
+Una solicitud puede generar varios eventos. Los borradores se pueden editar. En una convocatoria abierta que aún no comienza, **Editar información publicada** permite corregir título, descripción pública y notas internas con motivo e historial. Los cambios públicos generan avisos internos para participantes vinculados y el solicitante; los horarios, ubicación, funciones, cupos y requisitos siguen protegidos. Se puede cancelar con motivo; finalizar exige que haya terminado el horario. Los voluntarios pueden postular; la coordinación puede confirmar postulaciones e invitar candidatos desde **Participantes y asistencia**. Los cupos se asignan al confirmar, con lista de espera si están completos.
 
 Para producción se necesita `PUBLIC_APP_URL` con el dominio HTTPS real, además de un servicio de correo configurado. No uses una dirección enviada por el visitante para construir enlaces. Más detalles en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
 

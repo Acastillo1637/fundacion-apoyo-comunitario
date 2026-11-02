@@ -70,4 +70,6 @@ Con permiso y MFA, bajo /api/activities/operations/:
 
 Las pruebas cubren recorrido completo, idempotencia de envío/verificación, fallo y reintento de correo, CSRF anónimo, permisos/MFA, estados, revisiones, requisitos retirados, horario y privacidad de publicación.
 
-Pendiente: revisión visual/móvil, interfaz de seguimiento del solicitante, cambios de actividades abiertas con comunicaciones, notificaciones internas, retención y eliminación de expedientes, limitación de creación de eventos y procesamiento asíncrono del correo. El siguiente bloque funcional es matching y, después, postulaciones/invitaciones/participantes con cupos transaccionales.
+Pendiente: revisión visual/móvil, interfaz de seguimiento del solicitante, modificaciones logísticas con reconfirmación de participantes, notificaciones internas, retención y eliminación de expedientes, limitación de creación de eventos y procesamiento asíncrono del correo. El siguiente bloque funcional es matching y, después, postulaciones/invitaciones/participantes con cupos transaccionales.
+
+Las correcciones informativas de convocatorias abiertas (título, descripción y notas internas) ya cuentan con revisión, motivo, historial y avisos internos. Consulta el flujo vigente en [PARTICIPACION.md](PARTICIPACION.md). Los cambios de horario, ubicación y dotación siguen protegidos.

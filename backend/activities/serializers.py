@@ -108,3 +108,16 @@ class TransitionSerializer(StrictSerializer):
 
 class EditEventSerializer(EventSerializer):
     revision = serializers.IntegerField(min_value=0)
+
+
+class PublishedEventSerializer(StrictSerializer):
+    revision = serializers.IntegerField(min_value=0)
+    reason = serializers.CharField(min_length=8, max_length=1000)
+    title = serializers.CharField(max_length=150, required=False)
+    public_description = serializers.CharField(min_length=20, max_length=2000, required=False)
+    internal_notes = serializers.CharField(max_length=1500, allow_blank=True, required=False)
+
+    def validate(self, attrs):
+        if not set(attrs).intersection({'title', 'public_description', 'internal_notes'}):
+            raise serializers.ValidationError('Indica al menos un dato informativo para actualizar.')
+        return attrs

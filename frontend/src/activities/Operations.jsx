@@ -49,6 +49,15 @@ export default function Operations() {
     finally { setBusy(false); }
   }
 
+  async function saveInformation(body) {
+    setBusy(true); setError(''); setMessage('');
+    try {
+      const result = await api(`activities/operations/events/${selected.id}/`, { method: 'PATCH', body: JSON.stringify({ ...body, revision: selected.revision }) });
+      setSelected(result); setMessage('Información actualizada. Si cambió el título o la descripción pública, se generaron los avisos correspondientes.'); return true;
+    } catch (err) { setError(err.message); return false; }
+    finally { setBusy(false); }
+  }
+
   async function saveEvent(body) {
     setBusy(true); setError(''); setMessage('');
     try {
@@ -65,7 +74,7 @@ export default function Operations() {
     <div className="panel"><div className="panel-heading"><h2>Solicitudes y eventos</h2><button className="text-button" disabled={busy} onClick={() => { setSelected(null); load(); }}><RefreshCw size={15}/> Recargar</button></div><p className="section-description">La decisión y publicación corresponden al equipo. La información de contacto y la dirección exacta son privadas.</p><div className="operation-tabs"><button className={`button ${section === 'requests' ? 'primary' : 'secondary'}`} onClick={() => { setPage(1); setSection('requests'); }} disabled={busy}>Solicitudes</button><button className={`button ${section === 'events' ? 'primary' : 'secondary'}`} onClick={() => { setPage(1); setSection('events'); }} disabled={busy}>Eventos</button></div></div>
     {error && <p role="alert" className="error">{error}</p>}{message && <p role="status" className="success">{message}</p>}
     {selected ? <div className={mode === 'editor' ? 'planning-wrapper' : 'panel'}><button className="text-button" disabled={busy} onClick={() => { setSelected(null); setMode('detail'); setError(''); }}><ArrowLeft size={16}/> Volver a la lista</button>
-      {mode === 'editor' ? <EventEditor key={selected.id} source={selected} editing={section === 'events'} options={options} busy={busy} onSave={saveEvent}/> : section === 'requests' ? <RequestDetail item={selected} busy={busy} onTransition={transition} onCreate={() => setMode('editor')}/> : <EventDetail item={selected} busy={busy} onTransition={transition} onEdit={() => setMode('editor')}/>}
+      {mode === 'editor' ? <EventEditor key={selected.id} source={selected} editing={section === 'events'} options={options} busy={busy} onSave={saveEvent}/> : section === 'requests' ? <RequestDetail item={selected} busy={busy} onTransition={transition} onCreate={() => setMode('editor')}/> : <EventDetail item={selected} busy={busy} onSaveInformation={saveInformation} onTransition={transition} onEdit={() => setMode('editor')}/>}
     </div> : <div className="panel">{busy && !data && <p role="status">Cargando…</p>}{data?.results.length === 0 && <div className="empty-state"><p>No hay registros en esta página.</p></div>}<div className="operation-list">{data?.results.map(item => <article className="operation-item" key={item.id}><div><span className="tag">{section === 'requests' ? requestLabels[item.status] : eventLabels[item.status]}</span><h3>{section === 'requests' ? item.organization || item.contact_name : item.title}</h3><p>{item.commune} · {item.date.split('-').reverse().join('/')} · {item.start_time}–{item.end_time}</p>{section === 'requests' && <small className="help">{item.email_verified ? 'Correo verificado' : 'Correo pendiente de verificación'}</small>}</div><button className="button secondary small" disabled={busy} onClick={() => open(item.id)}>Ver detalle</button></article>)}</div>{data && <div className="form-actions"><button className="button secondary" disabled={busy || page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button><span className="help">Página {page} · {data.total} registros</span><button className="button secondary" disabled={busy || page * 20 >= data.total} onClick={() => setPage(current => current + 1)}>Siguiente</button></div>}</div>}
   </section>;
 }
@@ -84,15 +93,22 @@ function RequestDetail({ item, busy, onTransition, onCreate }) {
   </>;
 }
 
-function EventDetail({ item, busy, onTransition, onEdit }) {
+function EventDetail({ item, busy, onTransition, onEdit, onSaveInformation }) {
+  const [editingInformation, setEditingInformation] = useState(false);
   const [reason, setReason] = useState('');
   return <><h2 className="detail-title">{item.title}</h2><span className="tag">{eventLabels[item.status]}</span><p className="public-description">{item.public_description}</p><dl className="detail-grid"><dt>Fecha y horario</dt><dd>{item.date} · {item.start_time}–{item.end_time} · Santiago</dd><dt>Dirección privada</dt><dd>{item.address}, {item.commune}</dd><dt>Notas internas</dt><dd>{item.internal_notes || 'Sin notas'}</dd></dl><h3>Cupos por función</h3><ul className="position-list">{item.positions.map(position => <li key={position.id}><strong>{position.name}</strong> · {position.capacity} cupos<small>Habilidades: {position.required_skills.map(skill => skill.name).join(', ') || 'Sin requisitos específicos'}</small><small>Documentos: {[...new Map([...position.required_documents, ...position.inherited_documents].map(document => [document.id, document])).values()].map(document => document.name).join(', ') || 'Sin requisitos adicionales'}</small></li>)}</ul>
     <fieldset className="form-fieldset" disabled={busy}>
       {item.status === 'draft' && <div className="operation-tabs"><button className="button secondary" onClick={onEdit}>Editar borrador</button><button className="button primary" onClick={() => onTransition('open', '')}>Abrir convocatoria</button></div>}
+      {item.can_edit_information && <button className="button secondary" onClick={() => setEditingInformation(!editingInformation)}>Editar información publicada</button>}
       {item.status === 'open' && <button className="button primary" onClick={() => onTransition('finished', '')}>Finalizar actividad</button>}
       {['draft', 'open'].includes(item.status) && <><label className="field">Motivo de cancelación<textarea maxLength={1000} rows={2} value={reason} onChange={event => setReason(event.target.value)}/></label><button className="button secondary" disabled={!reason.trim()} onClick={() => onTransition('cancelled', reason)}>Cancelar actividad</button></>}
-    </fieldset><History rows={item.history} labels={eventLabels}/>
+    </fieldset>{editingInformation && item.can_edit_information && <PublishedInformationEditor key={`${item.id}-${item.revision}`} item={item} busy={busy} onCancel={() => setEditingInformation(false)} onSave={async body => { if (await onSaveInformation(body)) setEditingInformation(false); }}/>}<section className="history-section"><h3>Cambios de información publicada</h3>{!item.changes?.length ? <p className="help">Sin cambios informativos registrados.</p> : <ol>{item.changes.map(change => <li key={change.revision}><strong>Revisión {change.revision} · {change.actor}</strong><small>{new Date(change.at).toLocaleString('es-CL', { timeZone: 'America/Santiago' })}</small><p>{change.reason}</p><small>Datos modificados: {change.fields_changed.map(field => ({ title: 'Título', public_description: 'Descripción pública', internal_notes: 'Notas internas' }[field] || field)).join(', ')}</small></li>)}</ol>}</section><History rows={item.history} labels={eventLabels}/>
   </>;
+}
+
+function PublishedInformationEditor({ item, busy, onSave, onCancel }) {
+  function submit(event) { event.preventDefault(); onSave(Object.fromEntries(new FormData(event.currentTarget))); }
+  return <section className="panel published-information-editor"><h3>Actualizar información de la convocatoria</h3><p>Los horarios, la ubicación, las funciones, los cupos y los requisitos se conservan. Los cambios públicos generan avisos internos para las personas vinculadas.</p><form onSubmit={submit}><fieldset className="form-fieldset" disabled={busy}><label className="field">Título público<input name="title" defaultValue={item.title} maxLength={150} required/></label><label className="field">Descripción pública<textarea name="public_description" defaultValue={item.public_description} minLength={20} maxLength={2000} required rows={4}/></label><p className="help">Evita datos de contacto e información sensible de las personas beneficiarias.</p><label className="field">Notas internas<textarea name="internal_notes" defaultValue={item.internal_notes} maxLength={1500} rows={3}/></label><label className="field">Motivo del cambio<textarea name="reason" minLength={8} maxLength={1000} rows={2} required/></label><div className="actions"><button className="button primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios y comunicar'}</button><button type="button" className="button secondary" disabled={busy} onClick={onCancel}>Cancelar edición</button></div></fieldset></form></section>;
 }
 
 function History({ rows, labels }) {

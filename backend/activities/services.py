@@ -8,7 +8,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 
 from accounts.models import AuditEvent
 from accounts.security import portal_authenticated
-from .models import Event, EventPosition, EventTransition, RequestTransition, ServiceRequest, Notification
+from .models import Event, EventChange, EventPosition, EventTransition, RequestTransition, ServiceRequest, Notification
 
 
 class Conflict(APIException):
@@ -62,6 +62,10 @@ def event_data(item, private=False):
     if private:
         data.update(request_id=str(item.request_id), address=item.address, internal_notes=item.internal_notes,
                     revision=item.revision,
+                    can_edit_information=item.status == 'open' and item.starts_at > timezone.now(),
+                    changes=[{'revision': change.revision, 'reason': change.reason, 'fields_changed': change.fields_changed,
+                              'at': change.created_at, 'actor': change.actor.get_full_name() or 'Coordinación'}
+                             for change in item.changes.select_related('actor').all()[:20]],
                     history=[{'from': change.from_status, 'to': change.to_status, 'reason': change.reason, 'at': change.created_at} for change in item.transitions.all()])
     return data
 
@@ -122,6 +126,38 @@ def create_event(request, request_id, data):
     item = Event.objects.create(request=source, **data)
     replace_positions(item, positions)
     AuditEvent.objects.create(actor=request.user, action='event.created', resource=f'event:{item.pk}')
+    return item
+
+
+@transaction.atomic
+def update_published_event(request, event_id, data):
+    require_operator(request)
+    item = get_object_or_404(Event.objects.select_for_update(of=('self',)).select_related('request__requester__user'), pk=event_id)
+    if item.revision != data['revision']:
+        raise Conflict()
+    if item.status != 'open' or item.starts_at <= timezone.now():
+        raise ValidationError('Solo se actualiza información de convocatorias abiertas que todavía no comienzan.')
+    changed = [field for field in ['title', 'public_description', 'internal_notes'] if field in data and getattr(item, field) != data[field]]
+    if not changed:
+        raise ValidationError('No hay cambios para guardar.')
+    public_fields = [field for field in changed if field != 'internal_notes']
+    before = {field: getattr(item, field) for field in public_fields}
+    for field in changed:
+        setattr(item, field, data[field])
+    item.revision += 1
+    item.save(update_fields=[*changed, 'revision'])
+    EventChange.objects.create(event=item, actor=request.user, revision=item.revision, reason=data['reason'],
+        fields_changed=changed, before_public=before, after_public={field: getattr(item, field) for field in public_fields})
+    if public_fields:
+        audience = models.Q(status__in=['applied', 'confirmed', 'waitlisted']) | models.Q(status='invited', expires_at__gt=timezone.now())
+        recipients = {user_id: 'participations' for user_id in item.participations.filter(
+            audience, profile__user__is_active=True).values_list('profile__user_id', flat=True)}
+        if item.request.requester_id and item.request.requester.user.is_active:
+            recipients.setdefault(item.request.requester.user_id, 'my-requests')
+        Notification.objects.bulk_create([Notification(user_id=user_id, target=target,
+            message=f'Se actualizó la información pública de {item.title}. Revisa el título y la descripción de la convocatoria.')
+            for user_id, target in recipients.items()])
+    AuditEvent.objects.create(actor=request.user, action='event.information.updated', resource=f'event:{item.pk}')
     return item
 
 

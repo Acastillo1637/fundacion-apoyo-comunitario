@@ -109,6 +109,21 @@ class EventTransition(models.Model):
         ordering = ['created_at', 'pk']
 
 
+class EventChange(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='changes')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    revision = models.PositiveIntegerField()
+    reason = models.CharField(max_length=1000)
+    fields_changed = models.JSONField(default=list)
+    before_public = models.JSONField(default=dict)
+    after_public = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+        constraints = [models.UniqueConstraint(fields=['event', 'revision'], name='event_change_revision_once')]
+
+
 class Participation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='participations')

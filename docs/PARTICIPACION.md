@@ -63,6 +63,16 @@ La fecha opcional de término se interpreta al final del día en America/Santiag
 
 El voluntario ve su estado vigente y motivo tanto en el resumen como en Mis participaciones. Al aplicar, modificar o retirar una restricción recibe un aviso interno; el mero vencimiento no genera una notificación programada. Las participaciones anteriores se revisan por separado por la coordinación.
 
+## Correcciones informativas de convocatorias publicadas
+
+Antes del inicio, la coordinación puede corregir título, descripción pública y notas internas de un evento abierto. Se exige motivo y revisión vigente. El backend bloquea la fila del evento, comprueba el estado, registra los campos modificados y conserva las versiones anterior/nueva de los campos públicos. Las notas internas no se duplican en las instantáneas de contenido público.
+
+Cambiar título o descripción genera un aviso interno a los usuarios activos con postulaciones, invitaciones vigentes, participaciones confirmadas (titulares y respaldos) o lista de espera, y al solicitante vinculado. Si una persona tiene ambos papeles, recibe un solo aviso. Las invitaciones vencidas y participaciones rechazadas/canceladas no se incluyen. Las notas y el motivo interno no se copian en las notificaciones. Si solo cambian notas internas, se conserva el historial sin generar avisos externos al equipo. Los avisos son internos a la aplicación; no se envía WhatsApp ni correo automáticamente.
+
+La actualización, el historial y los avisos se guardan en la misma transacción. Si falla la operación, se revierten. Reintentar con una revisión antigua devuelve 409 y no duplica avisos. Los participantes consultan la descripción actual en Mis participaciones; el solicitante ve los eventos relacionados publicados desde Mis solicitudes, sin notas internas ni borradores.
+
+Este flujo no cambia horarios, dirección, funciones, cupos ni requisitos, y no elimina participantes. Esos cambios requieren un flujo de modificación logística y reconfirmación todavía pendiente. Los eventos comenzados, finalizados o cancelados no admiten estas correcciones. El endpoint es `PATCH /api/activities/operations/events/<uuid>/`; `PUT` conserva su uso para editar borradores.
+
 ## Endpoints
 
 | Método | Ruta | Acceso |

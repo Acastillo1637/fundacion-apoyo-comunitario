@@ -19,8 +19,8 @@ from accounts.models import AuditEvent
 from accounts.views import limited
 from volunteers.models import DocumentType, Skill
 from .models import Event, ServiceRequest
-from .serializers import EditEventSerializer, EventSerializer, RequestSerializer, TransitionSerializer
-from .services import create_event, edit_event, event_data, request_data, require_operator, send_verification, transition_event, transition_request
+from .serializers import EditEventSerializer, EventSerializer, PublishedEventSerializer, RequestSerializer, TransitionSerializer
+from .services import create_event, edit_event, event_data, request_data, require_operator, send_verification, transition_event, transition_request, update_published_event
 
 
 def pagination(request, queryset):
@@ -166,12 +166,16 @@ def events(request):
 
 
 @never_cache
-@api_view(['GET', 'PUT'])
+@api_view(['GET', 'PUT', 'PATCH'])
 def event_detail(request, event_id):
     require_operator(request)
     if request.method == 'GET':
         from django.shortcuts import get_object_or_404
         return Response(event_data(get_object_or_404(Event, pk=event_id), private=True))
+    if request.method == 'PATCH':
+        serializer = PublishedEventSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(event_data(update_published_event(request, event_id, serializer.validated_data), private=True))
     serializer = EditEventSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     return Response(event_data(edit_event(request, event_id, dict(serializer.validated_data)), private=True))
