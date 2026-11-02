@@ -9,6 +9,7 @@ urlpatterns = [
     path('account-profile/', workspaces.account_profile),
     path('management/catalogs/<str:kind>/', workspaces.catalogs),
     path('operations/volunteers/', workspaces.volunteers),
+    path('operations/volunteers/<int:profile_id>/', workspaces.volunteer_detail),
     path('requester/profile/', requesters.profile),
     path('requester/requests/', requesters.requests),
     path('requester/requests/<uuid:request_id>/', requesters.request_detail),

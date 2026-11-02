@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, FileCheck2, RefreshCw, Upload } from 'lucide-react';
 import { api } from '../api';
+import { Avatar } from '../design/Overview';
 
 const statuses = { pending: 'Pendiente', validated: 'Validado', rejected: 'Rechazado', expired: 'Vencido' };
 const formatDate = value => value ? new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', dateStyle: 'medium' }).format(new Date(value)) : '—';
@@ -85,46 +86,36 @@ export default function Documents() {
 }
 
 export function DocumentReviewQueue() {
-  const [data, setData] = useState(null);
-  const [page, setPage] = useState(1);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  async function load() {
-    setBusy(true); setError('');
-    try { setData(await api(`documents/review-queue/?page=${page}`)); }
-    catch (err) { setError(err.message); }
-    finally { setBusy(false); }
-  }
-  useEffect(() => { load(); }, [page]);
-
+  const [data, setData] = useState(null), [page, setPage] = useState(1), [selectedId, setSelectedId] = useState(null), [filter, setFilter] = useState('');
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
+  async function load() { setBusy(true); setError(''); try { setData(await api(`documents/review-queue/?page=${page}`)); } catch (err) { setError(err.message); } finally { setBusy(false); } }
+  useEffect(() => { setSelectedId(null); load(); }, [page]);
+  const rows = data?.results.filter(item => `${item.volunteer_name} ${item.type_name}`.toLocaleLowerCase('es').includes(filter.toLocaleLowerCase('es'))) || [];
+  const selected = rows.find(item => item.id === selectedId) || rows[0];
   async function review(event, document) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setBusy(true); setError(''); setMessage('');
-    try {
-      await api(`documents/${document.id}/review/`, { method: 'POST', body: JSON.stringify({ decision: form.get('decision'), observation: form.get('observation'), expires_on: form.get('expires_on') || null }) });
-      setData(await api(`documents/review-queue/?page=${page}`));
-      setMessage('La revisión quedó registrada.');
-    } catch (err) { setError(err.message); }
-    finally { setBusy(false); }
+    event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setError(''); setMessage('');
+    try { await api(`documents/${document.id}/review/`, { method: 'POST', body: JSON.stringify({ decision: form.get('decision'), observation: form.get('observation'), expires_on: form.get('expires_on') || null }) }); await load(); setMessage('La revisión quedó registrada con tu cuenta y fecha.'); }
+    catch (err) { setError(err.message); } finally { setBusy(false); }
   }
-  return <section className="panel" aria-busy={busy}>
-    <div className="panel-heading"><h2>Revisión documental</h2><button type="button" className="text-button" disabled={busy} onClick={load}><RefreshCw size={15}/> Recargar</button></div>
-    <p className="section-description">Revisa el archivo antes de decidir. Cada decisión se registra con tu cuenta y fecha; no puedes revisar tus propios documentos.</p>
-    {error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}
-    {data?.results.length === 0 && <div className="empty-state"><p>No hay documentos pendientes en esta página.</p></div>}
-    {data?.results.map(document => <article className="document-card" key={document.id}>
-      <h3>{document.type_name} · Versión {document.version}</h3><p>{document.volunteer_name}</p>
-      {document.scan_status !== 'clean' && <p className="help">Sin análisis antimalware: solo para pruebas locales.</p>}
-      <a className="button secondary small" href={document.download_url}><Download size={15}/> Descargar para revisar</a>
-      <form onSubmit={event => review(event, document)}><fieldset disabled={busy} className="form-fieldset">
-        <label className="field">Decisión<select required name="decision" defaultValue=""><option value="" disabled>Selecciona una decisión</option><option value="validated">Validar</option><option value="rejected">Rechazar</option></select></label>
-        <label className="field">Observación (obligatoria para rechazar)<textarea name="observation" maxLength={1000} rows={3}/></label>
-        <label className="field">Válido hasta (si corresponde)<input type="date" name="expires_on"/></label>
-        <button className="button primary" disabled={busy}>Registrar revisión</button>
-      </fieldset></form>
-    </article>)}
-    {data && <div className="form-actions"><button type="button" className="button secondary" disabled={busy || page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button><span className="help">Página {page} · {data.total} pendientes</span><button type="button" className="button secondary" disabled={busy || page * data.page_size >= data.total} onClick={() => setPage(current => current + 1)}>Siguiente</button></div>}
-  </section>;
+  return <section className="document-review-page" aria-busy={busy}><div className="review-stat-strip"><FileCheck2 size={30}/><strong>{data?.total || 0}</strong><div><h3>Pendientes de revisión</h3><small>Se revisa la versión más reciente de cada documento.</small></div><button type="button" className="text-button" disabled={busy} onClick={load}><RefreshCw size={15}/> Actualizar</button></div>
+    <section className="panel directory-toolbar"><label className="field">Buscar en la página actual<input value={filter} maxLength={100} onChange={event => setFilter(event.target.value)} placeholder="Nombre o tipo de documento"/></label></section>
+    {error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}{!data && !error && <p role="status">Cargando expedientes…</p>}
+    <div className="document-review-columns"><section><div className="section-heading-inline"><h2>Expedientes en espera</h2><span className="tag">{rows.length} en esta página</span></div>{rows.map(document => <button key={document.id} className={`document-queue-item ${selected?.id === document.id ? 'active' : ''}`} onClick={() => setSelectedId(document.id)}><Avatar name={document.volunteer_name}/><div><h3>{document.volunteer_name || 'Voluntario'}</h3><p>{document.type_name}</p><small>Versión {document.version} · {formatDate(document.uploaded_at)}</small></div></button>)}{data && rows.length === 0 && <div className="panel empty-state"><FileCheck2 size={30}/><p>No hay documentos pendientes con estos criterios.</p></div>}{data && <div className="form-actions"><button className="button secondary small" disabled={busy || page <= 1} onClick={() => setPage(page - 1)}>Anterior</button><small>Página {page}</small><button className="button secondary small" disabled={busy || page * data.page_size >= data.total} onClick={() => setPage(page + 1)}>Siguiente</button></div>}</section>
+    <section>{selected ? <><div className="panel"><div className="panel-heading"><h2><FileCheck2 size={22}/> Visor documental</h2><span className="tag">Versión {selected.version}</span></div><p>{selected.type_name} · {selected.volunteer_name}</p><a className="button secondary small" href={selected.download_url}><Download size={15}/> Descargar archivo</a>{selected.scan_status !== 'clean' && <p className="help">Entorno de pruebas: sin análisis antimalware.</p>}<DocumentPreview key={selected.id} document={selected}/></div><div className="panel review-decision-panel"><h2>Dictamen de revisión</h2><p>Revisa el documento antes de decidir. No puedes revisar archivos propios.</p><form key={selected.id} onSubmit={event => review(event, selected)}><fieldset className="form-fieldset" disabled={busy}><div className="form-row"><label className="field">Decisión<select name="decision" required defaultValue=""><option value="" disabled>Selecciona una decisión</option><option value="validated">Aprobar documento</option><option value="rejected">Observar / rechazar</option></select></label><label className="field">Válido hasta (si corresponde)<input type="date" name="expires_on"/></label></div><label className="field">Observación (obligatoria al rechazar)<textarea name="observation" rows={3} maxLength={1000}/></label><button className="button primary" disabled={busy}><FileCheck2 size={17}/> Registrar decisión</button></fieldset></form></div></> : <div className="panel document-preview-empty"><FileCheck2 size={45}/><h2>Tu próxima revisión empieza aquí</h2><p>Selecciona un expediente para consultar el archivo y registrar una decisión.</p></div>}</section></div></section>;
+}
+
+function DocumentPreview({ document }) {
+  const [preview, setPreview] = useState(null), [error, setError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController(); let objectUrl;
+    fetch(document.download_url, { credentials: 'same-origin', signal: controller.signal }).then(async response => {
+      if (!response.ok) throw new Error('No se pudo cargar la vista previa. Usa la descarga para revisar el archivo.');
+      const blob = await response.blob();
+      if (!['application/pdf', 'image/png', 'image/jpeg'].includes(blob.type)) throw new Error('Vista previa no disponible para este formato.');
+      if (controller.signal.aborted) return;
+      objectUrl = URL.createObjectURL(blob); setPreview({ url: objectUrl, type: blob.type });
+    }).catch(err => { if (err.name !== 'AbortError') setError(err.message); });
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [document.download_url]);
+  return <div style={{ marginTop: 20 }}>{error ? <p className="error" role="alert">{error}</p> : !preview ? <p role="status">Cargando archivo privado…</p> : preview.type === 'application/pdf' ? <iframe className="document-viewer" src={preview.url} title={`Documento: ${document.type_name}`}/> : <img className="document-image-preview" src={preview.url} alt={`Documento para revisión: ${document.type_name}`}/>}</div>;
 }

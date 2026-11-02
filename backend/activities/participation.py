@@ -143,7 +143,12 @@ def event_participants(request, event_id):
         from .views import pagination
         rows = event.participations.select_related('profile__user', 'event', 'position')
         page, items = pagination(request, rows)
-        return Response({'results': [data(item, True) for item in items], 'total': rows.count(), 'page': page})
+        from django.db.models import Sum
+        return Response({'results': [data(item, True) for item in items], 'total': rows.count(), 'page': page,
+                         'stats': {'capacity': event.positions.aggregate(total=Sum('capacity'))['total'] or 0,
+                                   'confirmed': rows.filter(status='confirmed').count(),
+                                   'waiting': rows.filter(status='waitlisted').count(),
+                                   'invited': rows.filter(status='invited', expires_at__gt=timezone.now()).count()}})
     serializer = InviteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data

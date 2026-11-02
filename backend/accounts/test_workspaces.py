@@ -1,7 +1,7 @@
 from allauth.account.models import EmailAddress
 from allauth.mfa.totp.internal.auth import TOTP, format_hotp_value, generate_totp_secret, hotp_value, yield_hotp_counters_from_time
 from allauth.mfa.recovery_codes.internal.auth import RecoveryCodes
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.core.management import call_command
 from django.test import Client, TestCase
 
@@ -128,3 +128,28 @@ class WorkspaceTests(TestCase):
                                    ('management/catalogs/skills/', 'post', []),
                                    ('operations/volunteers/', 'post', {'id': 'invalid', 'restricted': True, 'reason': 'Motivo de prueba'})]:
             self.assertEqual(getattr(self.client, method)('/api/' + path, data, content_type='application/json').status_code, 400)
+
+    def test_directory_detail_requires_operator_and_documents_permission(self):
+        profile = make_profile('directory-detail@example.org')
+        path = f'/api/operations/volunteers/{profile.pk}/'
+        self.assertEqual(self.client.get(path).status_code, 200)
+        operator = User.objects.create_user('limited-directory@example.org')
+        operator.user_permissions.add(Permission.objects.get(codename='manage_operations'))
+        authenticate_operator(self.client, operator)
+        response = self.client.get(path)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('documents', response.json())
+        self.assertNotIn('whatsapp_url', response.json())
+        self.client.force_login(profile.user)
+        self.assertEqual(self.client.get(path).status_code, 403)
+
+    def test_directory_filter_and_summary_use_real_scoped_records(self):
+        first = make_profile('directory-first@example.org')
+        second = make_profile('directory-second@example.org')
+        second.is_restricted = True
+        second.save(update_fields=['is_restricted'])
+        response = self.client.get('/api/operations/volunteers/?restricted=true')
+        self.assertEqual([row['id'] for row in response.json()['results']], [second.pk])
+        self.assertEqual(self.client.get('/api/operations/volunteers/?restricted=invalid').status_code, 400)
+        self.client.force_login(first.user)
+        self.assertEqual(self.client.get('/api/workspace-summary/?portal=operations').status_code, 403)

@@ -87,6 +87,26 @@ def summary(request):
             {'label': 'Participaciones confirmadas', 'value': rows.filter(status='confirmed', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participations'},
             {'label': 'Postulaciones pendientes', 'value': rows.filter(status='applied', event__status='open').count(), 'target': 'participations'},
         ]
+    if portal in ['administration', 'operations']:
+        from django.db.models import Q, Sum
+        result['events'] = []
+        if request.user.has_perm('activities.manage_operations'):
+            for event in Event.objects.filter(status='open', ends_at__gt=timezone.now()).order_by('starts_at')[:5]:
+                capacity = event.positions.aggregate(total=Sum('capacity'))['total'] or 0
+                result['events'].append({'id': str(event.pk), 'title': event.title, 'commune': event.commune,
+                    'starts_at': event.starts_at, 'capacity': capacity,
+                    'confirmed': event.participations.filter(status='confirmed').count(),
+                    'waiting': event.participations.filter(status='waitlisted').count()})
+        result['reviews'] = []
+        if request.user.has_perm('documents.review_volunteerdocument'):
+            from django.db.models import OuterRef, Exists
+            newer = VolunteerDocument.objects.filter(profile_id=OuterRef('profile_id'), document_type_id=OuterRef('document_type_id'), version__gt=OuterRef('version'))
+            rows = VolunteerDocument.objects.filter(status='pending').exclude(profile__user=request.user).annotate(newer=Exists(newer)).filter(newer=False).select_related('profile__user', 'document_type')
+            result['reviews'] = [{'id': str(row.pk), 'type_name': row.document_type.name, 'name': row.profile.user.get_full_name(), 'uploaded_at': row.uploaded_at} for row in rows[:3]]
+        audit = AuditEvent.objects.select_related('actor').order_by('-created_at', '-pk')
+        if portal != 'administration' or not request.user.has_perm('accounts.manage_accounts'):
+            audit = audit.filter(Q(action__startswith='event.') | Q(action__startswith='request.') | Q(action__startswith='participation.') | Q(action__startswith='document.'))
+        result['audit'] = [{'id': row.pk, 'action': row.action, 'actor': row.actor.get_full_name() if row.actor else 'Portal público', 'created_at': row.created_at, 'resource': row.resource} for row in audit[:10]]
     return Response(result)
 
 
@@ -166,6 +186,40 @@ def volunteers(request):
     if query:
         from django.db.models import Q
         rows = rows.filter(Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(commune__icontains=query))
+    restriction = request.query_params.get('restricted', '')
+    if restriction not in ['', 'true', 'false']:
+        raise ValidationError('Filtro de estado no válido.')
+    if restriction:
+        rows = rows.filter(is_restricted=restriction == 'true')
     page, items = pagination(request, rows)
     return Response({'results': [{'id': profile.pk, 'name': profile.user.get_full_name(), 'commune': profile.commune,
                                  'restricted': profile.is_restricted, 'reason': profile.restriction_reason} for profile in items], 'total': rows.count(), 'page': page})
+
+
+@api_view(['GET'])
+def volunteer_detail(request, profile_id):
+    require_operator(request)
+    profile = get_object_or_404(VolunteerProfile.objects.select_related('user'), pk=profile_id, user__groups__name='Voluntario')
+    attended = profile.participations.filter(attendance='present', event__status='finished').select_related('event')
+    hours = sum((item.event.ends_at - item.event.starts_at).total_seconds() / 3600 for item in attended)
+    result = {'id': profile.pk, 'name': profile.user.get_full_name(), 'email': profile.user.email,
+              'commune': profile.commune, 'restricted': profile.is_restricted, 'reason': profile.restriction_reason,
+              'skills': list(profile.declared_skills.values_list('skill__name', flat=True)),
+              'professions': list(profile.declared_professions.values_list('profession__name', flat=True)),
+              'attended_events': attended.count(), 'recorded_hours': round(hours, 1),
+              'availability': list(profile.availability_slots.values('weekday', 'start_time', 'end_time')),
+              'participations': [{'title': item.event.title, 'position': item.position.name, 'status': item.status,
+                                  'starts_at': item.event.starts_at, 'attendance': item.attendance}
+                                 for item in profile.participations.select_related('event', 'position')[:6]],
+              'restriction_history': list(AccountChange.objects.filter(target=profile.user, action='participation_restriction')[:5].values('reason', 'created_at', 'after_access'))}
+    if request.user.has_perm('documents.review_volunteerdocument'):
+        from documents.services import document_data
+        latest = {}
+        for document in profile.documents.select_related('document_type').order_by('document_type_id', '-version'):
+            latest.setdefault(document.document_type_id, document)
+        result['documents'] = [document_data(document) for document in latest.values()]
+    if profile.whatsapp_opt_in_at and profile.phone:
+        phone = ''.join(character for character in profile.phone if character.isdigit())
+        if 8 <= len(phone) <= 15:
+            result['whatsapp_url'] = f'https://wa.me/{phone}'
+    return Response(result)
