@@ -50,7 +50,7 @@ def eligibility(profile, position):
     if start.date() != end.date() or profile.unavailable_dates.filter(date=start.date()).exists() or not profile.availability_slots.filter(
             weekday=start.weekday(), start_time__lte=start.time(), end_time__gte=end.time()).exists():
         reasons.append('Fuera de la disponibilidad declarada')
-    if profile.participations.filter(status='confirmed', event__status='open', event__starts_at__lt=event.ends_at,
+    if profile.participations.filter(status='confirmed', assignment='primary', event__status='open', event__starts_at__lt=event.ends_at,
                                     event__ends_at__gt=event.starts_at).exclude(event=event).exists():
         reasons.append('Coincide con otra participación confirmada')
     return reasons
@@ -67,8 +67,8 @@ def data(item, operator=False):
               'status': 'expired' if expired else item.status, 'event_status': item.event.status,
               'starts_at': item.event.starts_at, 'ends_at': item.event.ends_at,
               'commune': item.event.commune, 'expires_at': item.expires_at,
-              'attendance': item.attendance, 'revision': item.revision}
-    if item.status == 'confirmed' and item.event.status != 'cancelled':
+              'attendance': item.attendance, 'revision': item.revision, 'assignment': item.assignment}
+    if item.status == 'confirmed' and item.assignment == 'primary' and item.event.status != 'cancelled':
         result['address'] = item.event.address
     if operator:
         result.update(name=item.profile.user.get_full_name(), email=item.profile.user.email,
@@ -76,7 +76,8 @@ def data(item, operator=False):
         if item.profile.whatsapp_opt_in_at and item.profile.phone:
             phone = ''.join(character for character in item.profile.phone if character.isdigit())
             if 8 <= len(phone) <= 15:
-                text = f'{settings.FOUNDATION_NAME}: tienes una invitación para {item.event.title}. Revisa tu espacio en {settings.PUBLIC_APP_URL}/'
+                assignment = 'como respaldo' if item.assignment == 'backup' else 'como titular'
+                text = f'{settings.FOUNDATION_NAME}: tienes una invitación {assignment} para {item.event.title}. Revisa tu espacio en {settings.PUBLIC_APP_URL}/'
                 result['whatsapp_url'] = f'https://wa.me/{phone}?{urlencode({"text": text})}'
     return result
 
@@ -88,11 +89,12 @@ class ApplySerializer(StrictSerializer):
 class InviteSerializer(StrictSerializer):
     position_id = serializers.IntegerField(min_value=1)
     profile_id = serializers.IntegerField(min_value=1)
+    assignment = serializers.ChoiceField(choices=['primary', 'backup'], default='primary')
 
 
 class DecisionSerializer(StrictSerializer):
     revision = serializers.IntegerField(min_value=0)
-    action = serializers.ChoiceField(choices=['accept', 'decline', 'withdraw', 'confirm', 'reject', 'cancel', 'present', 'absent'])
+    action = serializers.ChoiceField(choices=['accept', 'decline', 'withdraw', 'confirm', 'reject', 'cancel', 'present', 'absent', 'invite-backup', 'activate-backup'])
 
 
 def open_event(event):
@@ -104,8 +106,8 @@ def confirm(item):
     reasons = eligibility(item.profile, item.position)
     if reasons:
         raise ValidationError(' · '.join(reasons))
-    taken = Participation.objects.filter(position=item.position, status='confirmed').exclude(pk=item.pk).count()
-    item.status = 'confirmed' if taken < item.position.capacity else 'waitlisted'
+    taken = Participation.objects.filter(position=item.position, status='confirmed', assignment='primary').exclude(pk=item.pk).count()
+    item.status = 'confirmed' if item.assignment == 'backup' or taken < item.position.capacity else 'waitlisted'
 
 
 @api_view(['GET', 'POST'])
@@ -141,14 +143,26 @@ def event_participants(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     if request.method == 'GET':
         from .views import pagination
-        rows = event.participations.select_related('profile__user', 'event', 'position')
+        all_rows = event.participations.select_related('profile__user', 'event', 'position')
+        rows = all_rows
+        assignment = request.query_params.get('assignment', '')
+        status = request.query_params.get('status', '')
+        if assignment not in ['', 'primary', 'backup'] or status not in ['', 'confirmed']:
+            raise ValidationError('Filtro de participantes no válido.')
+        if assignment:
+            rows = rows.filter(assignment=assignment)
+        if status:
+            rows = rows.filter(status=status)
         page, items = pagination(request, rows)
-        from django.db.models import Sum
+        from django.db.models import Sum, Count, Q
+        positions = event.positions.annotate(confirmed=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='primary')))
         return Response({'results': [data(item, True) for item in items], 'total': rows.count(), 'page': page,
                          'stats': {'capacity': event.positions.aggregate(total=Sum('capacity'))['total'] or 0,
-                                   'confirmed': rows.filter(status='confirmed').count(),
-                                   'waiting': rows.filter(status='waitlisted').count(),
-                                   'invited': rows.filter(status='invited', expires_at__gt=timezone.now()).count()}})
+                                   'confirmed': all_rows.filter(status='confirmed', assignment='primary').count(),
+                                   'backups': all_rows.filter(status='confirmed', assignment='backup').count(),
+                                   'vacancies': [{'position_id': row.pk, 'name': row.name, 'available': row.capacity - row.confirmed} for row in positions if row.capacity > row.confirmed],
+                                   'waiting': all_rows.filter(status='waitlisted').count(),
+                                   'invited': all_rows.filter(status='invited', expires_at__gt=timezone.now()).count()}})
     serializer = InviteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
@@ -161,16 +175,18 @@ def event_participants(request, event_id):
         if reasons:
             raise ValidationError(' · '.join(reasons))
         item, created = Participation.objects.get_or_create(event=event, profile=profile, defaults={
-            'position': position, 'status': 'invited', 'expires_at': min(timezone.now() + timedelta(hours=48), event.starts_at)})
+            'position': position, 'assignment': values['assignment'], 'status': 'invited', 'expires_at': min(timezone.now() + timedelta(hours=48), event.starts_at)})
         if not created:
             if item.status not in ['declined', 'cancelled', 'rejected'] and not (item.status == 'invited' and item.expires_at <= timezone.now()):
                 raise Conflict('Esta persona ya tiene una participación activa para el evento.')
             item.position = position
+            item.assignment = values['assignment']
             item.status = 'invited'
             item.expires_at = min(timezone.now() + timedelta(hours=48), event.starts_at)
             item.revision += 1
-            item.save(update_fields=['position', 'status', 'expires_at', 'revision', 'updated_at'])
-        notify(profile, f'Invitación: {event.title}. Responde antes de {timezone.localtime(item.expires_at):%d/%m %H:%M}.')
+            item.save(update_fields=['position', 'assignment', 'status', 'expires_at', 'revision', 'updated_at'])
+        label = 'respaldo' if item.assignment == 'backup' else 'titular'
+        notify(profile, f'Invitación como {label}: {event.title}. Responde antes de {timezone.localtime(item.expires_at):%d/%m %H:%M}.')
         AuditEvent.objects.create(actor=request.user, action='participation.invited', resource=f'participation:{item.pk}')
     return Response(data(item, True), status=201)
 
@@ -194,7 +210,7 @@ def decision(request, participation_id):
     serializer = DecisionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     action, revision = serializer.validated_data['action'], serializer.validated_data['revision']
-    operator = action in ['confirm', 'reject', 'cancel', 'present', 'absent']
+    operator = action in ['confirm', 'reject', 'cancel', 'present', 'absent', 'invite-backup', 'activate-backup']
     if operator:
         require_operator(request)
         identity = get_object_or_404(Participation, pk=participation_id)
@@ -208,7 +224,7 @@ def decision(request, participation_id):
         if item.revision != revision:
             raise Conflict()
         if action in ['present', 'absent']:
-            if item.status != 'confirmed' or event.status not in ['open', 'finished'] or event.starts_at > timezone.now():
+            if item.status != 'confirmed' or item.assignment != 'primary' or event.status not in ['open', 'finished'] or event.starts_at > timezone.now():
                 raise ValidationError('La asistencia se registra para participantes confirmados desde el inicio del evento.')
             item.attendance = action
         elif action == 'withdraw':
@@ -222,7 +238,23 @@ def decision(request, participation_id):
             item.status = 'cancelled'
         else:
             open_event(event)
-            if action in ['accept', 'decline']:
+            if action in ['invite-backup', 'activate-backup']:
+                reasons = eligibility(item.profile, item.position)
+                if reasons:
+                    raise ValidationError(' · '.join(reasons))
+                if action == 'invite-backup':
+                    if item.status not in ['applied', 'waitlisted'] or item.assignment != 'primary':
+                        raise ValidationError('Selecciona una postulación o lista de espera para proponer un respaldo.')
+                    item.assignment = 'backup'
+                else:
+                    if item.status != 'confirmed' or item.assignment != 'backup':
+                        raise ValidationError('Solo se puede activar a un respaldo que haya aceptado.')
+                    if Participation.objects.filter(position=item.position, status='confirmed', assignment='primary').count() >= item.position.capacity:
+                        raise Conflict('No hay un cupo titular disponible en esta función.')
+                    item.assignment = 'primary'
+                item.status = 'invited'
+                item.expires_at = min(timezone.now() + timedelta(hours=48), event.starts_at)
+            elif action in ['accept', 'decline']:
                 if item.status != 'invited' or item.expires_at <= timezone.now():
                     raise ValidationError('La invitación ya fue respondida o venció.')
                 if action == 'accept':
@@ -237,8 +269,13 @@ def decision(request, participation_id):
                 else:
                     item.status = 'rejected'
         item.revision += 1
-        item.save(update_fields=['status', 'attendance', 'revision', 'updated_at'])
-        notify(item.profile, f'{event.title}: participación actualizada ({item.status}).')
+        item.save(update_fields=['status', 'assignment', 'expires_at', 'attendance', 'revision', 'updated_at'])
+        if action in ['invite-backup', 'activate-backup']:
+            assignment = 'respaldo' if item.assignment == 'backup' else 'titular'
+            notify(item.profile, f'{event.title}: recibiste una invitación como {assignment}. Revisa las condiciones y acepta o rechaza desde tu espacio.')
+        else:
+            assignment = 'respaldo' if item.assignment == 'backup' else 'titular'
+            notify(item.profile, f'{event.title}: participación como {assignment} actualizada ({item.status}).')
         AuditEvent.objects.create(actor=request.user, action=f'participation.{action}', resource=f'participation:{item.pk}')
     return Response(data(item, operator))
 

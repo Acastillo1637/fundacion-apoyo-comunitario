@@ -30,6 +30,23 @@ Las cuentas con varios roles cambian de espacio explícitamente. No se inventan 
 
 Una persona tiene una sola participación por evento. Puede participar en varios eventos si no se superponen. La asignación bloquea evento y perfil en PostgreSQL, evitando exceder cupos y confirmar cruces concurrentes. Las decisiones llevan revisión; una pantalla obsoleta devuelve 409.
 
+## Voluntarios de respaldo
+
+Cada participación distingue su asignación: titular o respaldo. Las anteriores se conservan como titulares. Los estados de invitación, confirmación, rechazo y cancelación son los mismos; la asignación se muestra explícitamente en los espacios del voluntario y de coordinación.
+
+1. Desde Matching, la coordinación elige Invitar como titular o Invitar como respaldo. También puede proponer como respaldo a alguien que postuló o quedó en espera.
+2. El voluntario debe aceptar la invitación como respaldo. Esa aceptación no ocupa un cupo titular, no confirma asistencia y no genera horas registradas.
+3. Participantes y asistencia muestra los cupos disponibles por función y una lista de respaldos con paginación independiente. Se vuelve a comprobar su compatibilidad al consultarlos.
+4. Cuando hay un cupo libre en la función del respaldo, la coordinación pulsa Activar respaldo. Solo se admite para un respaldo que ya aceptó y antes del inicio de la actividad.
+5. Activar genera una nueva invitación como titular; no confirma al voluntario automáticamente. La persona puede aceptar o rechazar. La invitación vence a las 48 horas o al inicio del evento.
+6. La aceptación final comprueba otra vez requisitos, restricciones, disponibilidad, cruces con otras participaciones titulares y capacidad. Si otra persona ocupó el cupo, pasa a lista de espera. Las invitaciones no reservan cupos.
+
+Cancelar una participación no contacta ni promueve automáticamente a los respaldos: el cupo aparece disponible para revisión humana. Las invitaciones generan avisos internos. La preparación manual de WhatsApp sigue requiriendo consentimiento y teléfono registrado.
+
+Un respaldo no bloquea por sí solo una participación titular en otro evento. Al activarlo se comprueba si adquirió otro compromiso confirmado; si se superpone, la activación se rechaza. Solo los titulares confirmados reciben la dirección exacta y pueden tener asistencia u horas registradas. Los avisos de cambios quedan en notificaciones y cada decisión se audita.
+
+El API de participantes admite los filtros `assignment=primary|backup` y `status=confirmed`. La respuesta conserva indicadores del evento completo y entrega vacantes por función. `invite-backup` propone un respaldo a partir de una postulación/lista de espera y `activate-backup` crea la invitación titular. Ambas acciones exigen permiso de coordinación y revisión vigente.
+
 La dirección exacta solo se entrega al participante confirmado, además de la coordinación autorizada. Los candidatos no exponen documentos o domicilios. La revisión documental continúa exigiendo un permiso específico y prohíbe revisar archivos propios. Las restricciones conservan motivo, actor e historial administrativo; bloquean nuevas postulaciones, invitaciones y confirmaciones. La coordinación revisa y cancela por separado compromisos confirmados anteriores.
 
 ## WhatsApp y notificaciones

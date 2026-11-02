@@ -218,6 +218,9 @@ class ParticipationTests(TestCase):
 class CapacityConcurrencyTests(TransactionTestCase):
     def test_two_acceptances_for_one_remaining_slot(self):
         event, position = event_fixture()
+        backup = make_profile('concurrent-backup@example.org')
+        available(backup, event)
+        Participation.objects.create(event=event, position=position, profile=backup, status='confirmed', assignment='backup')
         profiles = [make_profile(f'concurrent{number}@example.org') for number in range(2)]
         for profile in profiles:
             available(profile, event)
@@ -237,4 +240,4 @@ class CapacityConcurrencyTests(TransactionTestCase):
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(worker, items))
         self.assertEqual(sorted(results), [(200, 'confirmed'), (200, 'waitlisted')])
-        self.assertEqual(Participation.objects.filter(status='confirmed').count(), 1)
+        self.assertEqual(Participation.objects.filter(status='confirmed', assignment='primary').count(), 1)

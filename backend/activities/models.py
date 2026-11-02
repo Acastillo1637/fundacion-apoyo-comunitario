@@ -114,6 +114,7 @@ class Participation(models.Model):
     event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='participations')
     position = models.ForeignKey(EventPosition, on_delete=models.PROTECT, related_name='participations')
     profile = models.ForeignKey('accounts.VolunteerProfile', on_delete=models.PROTECT, related_name='participations')
+    assignment = models.CharField(max_length=10, choices=[('primary', 'Titular'), ('backup', 'Respaldo')], default='primary', db_default='primary')
     status = models.CharField(max_length=20, choices=[(value, value) for value in ['applied', 'invited', 'confirmed', 'waitlisted', 'declined', 'cancelled', 'rejected']], default='applied')
     expires_at = models.DateTimeField(null=True, blank=True)
     attendance = models.CharField(max_length=12, choices=[('', 'Pendiente'), ('present', 'Presente'), ('absent', 'Ausente')], blank=True)
@@ -123,7 +124,8 @@ class Participation(models.Model):
 
     class Meta:
         ordering = ['-created_at', 'pk']
-        constraints = [models.UniqueConstraint(fields=['event', 'profile'], name='one_participation_per_event')]
+        constraints = [models.UniqueConstraint(fields=['event', 'profile'], name='one_participation_per_event'),
+                       models.CheckConstraint(condition=models.Q(assignment__in=['primary', 'backup']), name='participation_assignment_valid')]
 
 
 class Notification(models.Model):

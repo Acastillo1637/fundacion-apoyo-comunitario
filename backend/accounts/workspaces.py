@@ -74,7 +74,8 @@ def summary(request):
                 {'label': 'Solicitudes pendientes', 'value': ServiceRequest.objects.filter(status__in=['pending', 'in_review'], email_verified_at__isnull=False).count(), 'target': 'operations'},
                 {'label': 'Eventos abiertos', 'value': Event.objects.filter(status='open', starts_at__gt=timezone.now()).count(), 'target': 'operations'},
                 {'label': 'Postulaciones por revisar', 'value': Participation.objects.filter(status='applied', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participants'},
-                {'label': 'Participaciones confirmadas', 'value': Participation.objects.filter(status='confirmed', event__status='open').count(), 'target': 'participants'},
+                {'label': 'Titulares confirmados', 'value': Participation.objects.filter(status='confirmed', assignment='primary', event__status='open').count(), 'target': 'participants'},
+                {'label': 'Respaldos confirmados', 'value': Participation.objects.filter(status='confirmed', assignment='backup', event__status='open').count(), 'target': 'participants'},
             ]
         if request.user.has_perm('documents.review_volunteerdocument'):
             # Only latest versions are actionable in the review queue.
@@ -88,7 +89,8 @@ def summary(request):
         rows = Participation.objects.filter(profile__user=request.user)
         result['metrics'] = [
             {'label': 'Invitaciones vigentes', 'value': rows.filter(status='invited', expires_at__gt=timezone.now(), event__status='open').count(), 'target': 'participations'},
-            {'label': 'Participaciones confirmadas', 'value': rows.filter(status='confirmed', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participations'},
+            {'label': 'Titulares confirmados', 'value': rows.filter(status='confirmed', assignment='primary', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participations'},
+            {'label': 'Respaldos confirmados', 'value': rows.filter(status='confirmed', assignment='backup', event__status='open', event__starts_at__gt=timezone.now()).count(), 'target': 'participations'},
             {'label': 'Postulaciones pendientes', 'value': rows.filter(status='applied', event__status='open').count(), 'target': 'participations'},
         ]
     if portal in ['administration', 'operations']:
@@ -99,8 +101,8 @@ def summary(request):
                 capacity = event.positions.aggregate(total=Sum('capacity'))['total'] or 0
                 result['events'].append({'id': str(event.pk), 'title': event.title, 'commune': event.commune,
                     'starts_at': event.starts_at, 'capacity': capacity,
-                    'confirmed': event.participations.filter(status='confirmed').count(),
-                    'waiting': event.participations.filter(status='waitlisted').count()})
+                    'confirmed': event.participations.filter(status='confirmed', assignment='primary').count(),
+                    'backups': event.participations.filter(status='confirmed', assignment='backup').count(), 'waiting': event.participations.filter(status='waitlisted').count()})
         result['reviews'] = []
         if request.user.has_perm('documents.review_volunteerdocument'):
             from django.db.models import OuterRef, Exists
@@ -225,7 +227,7 @@ def volunteers(request):
 def volunteer_detail(request, profile_id):
     require_operator(request)
     profile = get_object_or_404(VolunteerProfile.objects.select_related('user'), pk=profile_id, user__groups__name='Voluntario')
-    attended = profile.participations.filter(attendance='present', event__status='finished').select_related('event')
+    attended = profile.participations.filter(attendance='present', assignment='primary', event__status='finished').select_related('event')
     hours = sum((item.event.ends_at - item.event.starts_at).total_seconds() / 3600 for item in attended)
     result = {'id': profile.pk, 'name': profile.user.get_full_name(), 'email': profile.user.email,
               'commune': profile.commune, **restriction_data(profile),
@@ -233,7 +235,7 @@ def volunteer_detail(request, profile_id):
               'professions': list(profile.declared_professions.values_list('profession__name', flat=True)),
               'attended_events': attended.count(), 'recorded_hours': round(hours, 1),
               'availability': list(profile.availability_slots.values('weekday', 'start_time', 'end_time')),
-              'participations': [{'title': item.event.title, 'position': item.position.name, 'status': item.status,
+              'participations': [{'title': item.event.title, 'position': item.position.name, 'status': item.status, 'assignment': item.assignment,
                                   'starts_at': item.event.starts_at, 'attendance': item.attendance}
                                  for item in profile.participations.select_related('event', 'position')[:6]],
               'restriction_history': list(AccountChange.objects.filter(target=profile.user, action='participation_restriction')[:5].values('reason', 'created_at', 'after_access', 'actor_id', 'actor__first_name', 'actor__last_name'))}
