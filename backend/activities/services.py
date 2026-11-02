@@ -108,7 +108,7 @@ def transition_request(request, request_id, data):
     item.save(update_fields=['status', 'revision'])
     AuditEvent.objects.create(actor=request.user, action=f'request.{target}', resource=f'request:{item.pk}')
     if item.requester_id:
-        Notification.objects.create(user=item.requester.user, message=f'Solicitud actualizada: {item.get_status_display()}. Revisa Mis solicitudes.')
+        Notification.objects.create(user=item.requester.user, target='my-requests', message=f'Solicitud actualizada: {item.get_status_display()}. Revisa Mis solicitudes.')
     return item
 
 
@@ -170,6 +170,6 @@ def transition_event(request, event_id, data):
     AuditEvent.objects.create(actor=request.user, action=f'event.{target}', resource=f'event:{item.pk}')
     if target == 'cancelled':
         for participation in item.participations.filter(status__in=['applied', 'invited', 'confirmed', 'waitlisted']).select_related('profile'):
-            Notification.objects.create(user_id=participation.profile.user_id, message=f'Actividad cancelada: {item.title}.')
+            Notification.objects.create(user_id=participation.profile.user_id, target='participations', message=f'Actividad cancelada: {item.title}.')
         item.participations.filter(status__in=['applied', 'invited', 'confirmed', 'waitlisted']).update(status='cancelled', revision=models.F('revision') + 1)
     return item

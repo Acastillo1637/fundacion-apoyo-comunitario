@@ -1,5 +1,9 @@
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
+
+from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -7,8 +11,8 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from activities.models import Event, Participation, ServiceRequest
-from activities.services import require_operator
+from activities.models import Event, Notification, Participation, ServiceRequest
+from activities.services import Conflict, require_operator
 from documents.models import VolunteerDocument
 from volunteers.models import DocumentType, Profession, Skill
 from volunteers.serializers import StrictSerializer
@@ -162,6 +166,18 @@ class RestrictionSerializer(StrictSerializer):
     id = serializers.IntegerField(min_value=1)
     restricted = serializers.BooleanField()
     reason = serializers.CharField(min_length=8, max_length=1000)
+    until = serializers.DateField(required=False, allow_null=True, default=None)
+    revision = serializers.IntegerField(min_value=0, default=0)
+
+    def validate(self, attrs):
+        if attrs['until'] and (not attrs['restricted'] or attrs['until'] < timezone.localdate()):
+            raise ValidationError({'until': 'Selecciona una fecha de término vigente solo al aplicar una restricción.'})
+        return attrs
+
+
+def restriction_data(profile):
+    return {'restricted': profile.participation_restricted, 'reason': profile.restriction_reason,
+            'restriction_expires_at': profile.restriction_expires_at, 'restriction_revision': profile.restriction_revision}
 
 
 @api_view(['GET', 'POST'])
@@ -172,28 +188,37 @@ def volunteers(request):
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             profile = get_object_or_404(VolunteerProfile.objects.select_for_update(), pk=serializer.validated_data['id'])
-            previous = profile.is_restricted
+            if profile.restriction_revision != serializer.validated_data['revision']:
+                raise Conflict('La restricción cambió en otra sesión. Vuelve a abrir la ficha.')
+            previous = {'participation_restricted': profile.participation_restricted,
+                        'restriction_expires_at': profile.restriction_expires_at.isoformat() if profile.restriction_expires_at else None}
             profile.is_restricted = serializer.validated_data['restricted']
             profile.restriction_reason = serializer.validated_data['reason']
-            profile.save(update_fields=['is_restricted', 'restriction_reason'])
+            until = serializer.validated_data['until']
+            profile.restriction_expires_at = timezone.make_aware(datetime.combine(until, time.max), ZoneInfo(settings.TIME_ZONE)) if until else None
+            profile.restriction_revision += 1
+            profile.save(update_fields=['is_restricted', 'restriction_reason', 'restriction_expires_at', 'restriction_revision'])
             AuditEvent.objects.create(actor=request.user, action='volunteer.restriction.updated', resource=f'profile:{profile.pk}')
             AccountChange.objects.create(actor=request.user, target=profile.user, action='participation_restriction',
-                reason=profile.restriction_reason, fields_changed=['participation_restricted'],
-                before_access={'participation_restricted': previous}, after_access={'participation_restricted': profile.is_restricted})
+                reason=profile.restriction_reason, fields_changed=['participation_restricted', 'restriction_expires_at'],
+                before_access=previous, after_access={'participation_restricted': profile.participation_restricted,
+                    'restriction_expires_at': profile.restriction_expires_at.isoformat() if profile.restriction_expires_at else None})
+            status = 'Se actualizó una restricción de participación en tu cuenta.' if profile.is_restricted else 'Se retiró la restricción de participación de tu cuenta.'
+            Notification.objects.create(user=profile.user, target='participations', message=f'{status} Revisa el estado en tu espacio.')
     from activities.views import pagination
     rows = VolunteerProfile.objects.filter(user__groups__name='Voluntario').select_related('user').order_by('user__first_name', 'pk')
     query = request.query_params.get('q', '')[:100].strip()
     if query:
-        from django.db.models import Q
         rows = rows.filter(Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(commune__icontains=query))
     restriction = request.query_params.get('restricted', '')
     if restriction not in ['', 'true', 'false']:
         raise ValidationError('Filtro de estado no válido.')
     if restriction:
-        rows = rows.filter(is_restricted=restriction == 'true')
+        active = Q(is_restricted=True) & (Q(restriction_expires_at__isnull=True) | Q(restriction_expires_at__gt=timezone.now()))
+        rows = rows.filter(active) if restriction == 'true' else rows.exclude(active)
     page, items = pagination(request, rows)
     return Response({'results': [{'id': profile.pk, 'name': profile.user.get_full_name(), 'commune': profile.commune,
-                                 'restricted': profile.is_restricted, 'reason': profile.restriction_reason} for profile in items], 'total': rows.count(), 'page': page})
+                                 **restriction_data(profile)} for profile in items], 'total': rows.count(), 'page': page})
 
 
 @api_view(['GET'])
@@ -203,7 +228,7 @@ def volunteer_detail(request, profile_id):
     attended = profile.participations.filter(attendance='present', event__status='finished').select_related('event')
     hours = sum((item.event.ends_at - item.event.starts_at).total_seconds() / 3600 for item in attended)
     result = {'id': profile.pk, 'name': profile.user.get_full_name(), 'email': profile.user.email,
-              'commune': profile.commune, 'restricted': profile.is_restricted, 'reason': profile.restriction_reason,
+              'commune': profile.commune, **restriction_data(profile),
               'skills': list(profile.declared_skills.values_list('skill__name', flat=True)),
               'professions': list(profile.declared_professions.values_list('profession__name', flat=True)),
               'attended_events': attended.count(), 'recorded_hours': round(hours, 1),
@@ -211,7 +236,7 @@ def volunteer_detail(request, profile_id):
               'participations': [{'title': item.event.title, 'position': item.position.name, 'status': item.status,
                                   'starts_at': item.event.starts_at, 'attendance': item.attendance}
                                  for item in profile.participations.select_related('event', 'position')[:6]],
-              'restriction_history': list(AccountChange.objects.filter(target=profile.user, action='participation_restriction')[:5].values('reason', 'created_at', 'after_access'))}
+              'restriction_history': list(AccountChange.objects.filter(target=profile.user, action='participation_restriction')[:5].values('reason', 'created_at', 'after_access', 'actor_id', 'actor__first_name', 'actor__last_name'))}
     if request.user.has_perm('documents.review_volunteerdocument'):
         from documents.services import document_data
         latest = {}

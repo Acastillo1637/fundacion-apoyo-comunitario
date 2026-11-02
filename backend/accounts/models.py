@@ -2,6 +2,7 @@ import uuid
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -69,6 +70,12 @@ class VolunteerProfile(models.Model):
     availability_revision = models.PositiveIntegerField(default=0)
     is_restricted = models.BooleanField(default=False)
     restriction_reason = models.CharField(max_length=1000, blank=True)
+    restriction_expires_at = models.DateTimeField(null=True, blank=True)
+    restriction_revision = models.PositiveIntegerField(default=0, db_default=0)
+
+    @property
+    def participation_restricted(self):
+        return self.is_restricted and (self.restriction_expires_at is None or self.restriction_expires_at > timezone.now())
 
 
 class RequesterProfile(models.Model):

@@ -52,6 +52,8 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
   useEffect(() => { api('activities/notifications/').then(data => setUnread(data.unread)).catch(() => {}); }, [selectedTab, portal]);
   function navigate(target, eventId = null) {
     if (['operations', 'participants', 'matching', 'document-review'].includes(target) && portal === 'administration' && portals.includes('operations')) setPortal('operations');
+    if (target === 'my-requests' && portals.includes('requester')) setPortal('requester');
+    if (['documents', 'participations'].includes(target) && portals.includes('volunteer')) setPortal('volunteer');
     setTab(target); setTargetEvent(eventId); setMobileNav(false);
   }
   if (!portal) return <section className="wrap panel"><h1>Cuenta sin espacio asignado</h1><p>Solicita al administrador que revise tus roles de acceso.</p></section>;
@@ -70,7 +72,7 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
     {portal === 'requester' && !['notifications', 'help'].includes(tab) && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={setTab}/>}
     {tab === 'staff-overview' && <OperationalOverview portal={portal} navigate={navigate} user={user}/>}
     {tab === 'staff-profile' && <StaffProfile user={user} setUser={setUser}/>}
-    {tab === 'notifications' && <Notifications/>}
+    {tab === 'notifications' && <Notifications onNavigate={navigate}/>}
     {tab === 'catalogs' && user.can_manage_catalogs && <Catalogs/>}
     {['participants', 'matching'].includes(tab) && user.can_manage_activities && <Participants key={`${tab}-${targetEvent || ''}`} initialEventId={targetEvent} mode={tab}/>}
     {tab === 'directory' && user.can_manage_activities && <Directory/>}

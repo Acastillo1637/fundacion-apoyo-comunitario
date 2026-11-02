@@ -29,7 +29,7 @@ def eligibility(profile, position):
     reasons = []
     if position.required_skills.filter(is_active=False).exists() or position.required_documents.filter(is_active=False).exists() or position.required_skills.filter(required_documents__is_active=False).exists():
         reasons.append('La coordinación debe revisar requisitos desactivados')
-    if not profile.user.is_active or not profile.user.groups.filter(name='Voluntario').exists() or profile.is_restricted:
+    if not profile.user.is_active or not profile.user.groups.filter(name='Voluntario').exists() or profile.participation_restricted:
         reasons.append('Participación no habilitada')
     required = set(position.required_skills.values_list('pk', flat=True))
     declared = set(profile.declared_skills.values_list('skill_id', flat=True))
@@ -57,7 +57,7 @@ def eligibility(profile, position):
 
 
 def notify(profile, message):
-    Notification.objects.create(user=profile.user, message=message[:300])
+    Notification.objects.create(user=profile.user, message=message[:300], target='participations')
 
 
 def data(item, operator=False):
@@ -250,4 +250,12 @@ def notifications(request):
             raise ValidationError('Solicitud no válida.')
         request.user.notifications.filter(read_at__isnull=True).update(read_at=timezone.now())
     rows = request.user.notifications.all()
-    return Response({'unread': rows.filter(read_at__isnull=True).count(), 'results': list(rows[:30].values('id', 'message', 'read_at', 'created_at'))})
+    return Response({'unread': rows.filter(read_at__isnull=True).count(), 'results': list(rows[:30].values('id', 'message', 'target', 'read_at', 'created_at'))})
+
+
+@api_view(['GET'])
+def participation_status(request):
+    profile = own_profile(request)
+    return Response({'restricted': profile.participation_restricted,
+                     'reason': profile.restriction_reason if profile.participation_restricted else '',
+                     'expires_at': profile.restriction_expires_at if profile.participation_restricted else None})

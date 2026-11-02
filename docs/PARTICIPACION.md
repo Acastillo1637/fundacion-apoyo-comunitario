@@ -36,6 +36,16 @@ La dirección exacta solo se entrega al participante confirmado, además de la c
 
 Las notificaciones se guardan en la aplicación y se pueden marcar como leídas. No se envían correos ni WhatsApp automáticamente para invitaciones. Si el voluntario aceptó el contacto por WhatsApp y registró teléfono, la coordinación obtiene **Preparar WhatsApp**: abre un mensaje que la persona encargada decide enviar. No se simulan entrega ni lectura.
 
+Al aprobar u observar un documento se notifica únicamente a su titular, una sola vez por decisión. La notificación no copia las observaciones privadas: el titular las consulta en Mis documentos. Los avisos nuevos pueden incluir un botón Ver detalle que abre documentos, participaciones o solicitudes propias; la autorización de cada destino sigue comprobándose en el backend.
+
+## Restricciones temporales
+
+Desde Voluntarios → Ver ficha, la coordinación puede aplicar, modificar o retirar una restricción. Cada operación exige motivo y una revisión vigente de la ficha; si otra persona la cambió, se devuelve 409 para evitar sobrescribirla. El historial conserva responsable, fecha, motivo y fechas de término anterior/nueva.
+
+La fecha opcional de término se interpreta al final del día en America/Santiago. Si se deja vacía, el retiro es manual. Las restricciones existentes sin fecha se conservan como manuales. El backend calcula su vigencia cada vez que evalúa una postulación, una invitación o una confirmación: pasada la fecha ya no bloquea esas acciones, sin borrar el historial ni requerir una tarea programada. No se aplican sanciones automáticamente por rechazar invitaciones o registrar ausencias.
+
+El voluntario ve su estado vigente y motivo tanto en el resumen como en Mis participaciones. Al aplicar, modificar o retirar una restricción recibe un aviso interno; el mero vencimiento no genera una notificación programada. Las participaciones anteriores se revisan por separado por la coordinación.
+
 ## Endpoints
 
 | Método | Ruta | Acceso |
@@ -49,6 +59,7 @@ Las notificaciones se guardan en la aplicación y se pueden marcar como leídas.
 | GET/POST | `/api/activities/operations/events/<uuid>/participants/` | Coordinación; listado/invitación |
 | GET | `/api/activities/operations/events/<uuid>/positions/<id>/candidates/` | Coordinación |
 | GET/POST | `/api/activities/notifications/` | Notificaciones propias; marcar leídas |
+| GET | `/api/activities/participation-status/` | Estado y motivo vigentes del voluntario conectado |
 
 ## Validación y límites
 

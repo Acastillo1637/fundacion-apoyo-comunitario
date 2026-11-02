@@ -52,4 +52,8 @@ def review_document(request, document_id, data):
     document.reviewed_at = timezone.now()
     document.save(update_fields=['status', 'observation', 'expires_on', 'reviewer', 'reviewed_at'])
     AuditEvent.objects.create(actor=request.user, action=f'document.{document.status}', resource=f'document:{document.pk}')
+    from activities.models import Notification
+    decision = 'aprobado' if document.status == VolunteerDocument.Status.VALIDATED else 'observado'
+    Notification.objects.create(user=profile.user, target='documents',
+        message=f'Tu documento {document.document_type.name} (versión {document.version}) fue {decision}. Revisa el resultado y las observaciones en Mis documentos.')
     return document

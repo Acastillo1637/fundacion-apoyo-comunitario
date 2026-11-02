@@ -129,6 +129,7 @@ class Participation(models.Model):
 class Notification(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     message = models.CharField(max_length=300)
+    target = models.CharField(max_length=30, blank=True, default='', db_default='', choices=[('', 'Sin enlace'), ('documents', 'Documentos'), ('participations', 'Participaciones'), ('my-requests', 'Mis solicitudes')])
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

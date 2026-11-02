@@ -23,7 +23,9 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Perfil de solicitante para persona natural, empresa o institución; nueva solicitud y seguimiento desde su cuenta.
 - Dashboards con cantidades reales, postulaciones, candidatos, invitaciones, lista de espera, participantes, asistencia y notificaciones.
 - Catálogos y restricciones administrables desde React.
-- 184 pruebas del backend, incluidas cuatro de concurrencia que requieren PostgreSQL, y 16 del frontend.
+- Restricciones con fecha opcional de término, historial y control de cambios simultáneos.
+- Notificaciones de revisión documental y acceso directo al detalle desde los avisos.
+- 194 pruebas del backend, incluidas cuatro de concurrencia que requieren PostgreSQL, y 16 del frontend.
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
 
 **Para producción:** configurar SMTP, HTTPS, respaldos externos y monitoreo; completar la revisión visual/móvil. WhatsApp es manual asistido, sin API pagada. Consulta el [circuito de participación y los dashboards](docs/PARTICIPACION.md).

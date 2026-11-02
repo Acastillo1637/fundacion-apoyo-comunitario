@@ -3,6 +3,7 @@ from . import views
 from . import participation
 
 urlpatterns = [
+    path('participation-status/', participation.participation_status),
     path('participations/', participation.mine),
     path('participations/<uuid:participation_id>/decision/', participation.decision),
     path('notifications/', participation.notifications),

@@ -12,6 +12,7 @@ from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
 from accounts.models import AuditEvent
+from activities.models import Notification
 from volunteers.models import DocumentType, Profession, VolunteerProfession
 from volunteers.tests import make_profile
 from .models import VolunteerDocument
@@ -163,6 +164,26 @@ class DocumentTests(TestCase):
         data = self.upload().json()
         self.reviewer(profile=self.profile)
         self.assertEqual(self.review(data['id']).status_code, 403)
+
+    def test_review_notifies_owner_once_and_links_to_private_documents(self):
+        data = self.upload().json()
+        self.reviewer()
+        self.assertEqual(self.review(data['id']).status_code, 200)
+        notification = Notification.objects.get(user=self.profile.user)
+        self.assertEqual(notification.target, 'documents')
+        self.assertIn('aprobado', notification.message)
+        self.assertNotIn(str(self.other.user_id), notification.message)
+        self.assertEqual(self.review(data['id']).status_code, 400)
+        self.assertEqual(Notification.objects.count(), 1)
+
+    def test_rejected_document_notifies_only_owner_without_copying_observation(self):
+        data = self.upload().json()
+        self.reviewer()
+        self.assertEqual(self.review(data['id'], decision='rejected', observation='Observación privada de prueba').status_code, 200)
+        notification = Notification.objects.get()
+        self.assertEqual(notification.user_id, self.profile.user_id)
+        self.assertIn('observado', notification.message)
+        self.assertNotIn('Observación privada', notification.message)
         self.assertEqual(self.client.get('/api/documents/review-queue/').json()['total'], 0)
 
     def test_rejection_requires_reason(self):
