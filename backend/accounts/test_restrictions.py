@@ -42,6 +42,9 @@ class RestrictionTests(TestCase):
         available(self.profile, event)
         self.assertIn('Participación no habilitada', eligibility(self.profile, position))
         after = self.profile.restriction_expires_at + timedelta(seconds=1)
+        session = self.client.session
+        session.set_expiry(3 * 24 * 60 * 60)
+        session.save()
         with patch('django.utils.timezone.now', return_value=after):
             self.assertFalse(self.profile.participation_restricted)
             self.assertNotIn('Participación no habilitada', eligibility(self.profile, position))
@@ -94,6 +97,9 @@ class RestrictionTests(TestCase):
         self.update(until=str(timezone.localdate()))
         self.profile.refresh_from_db()
         self.client.force_login(self.profile.user)
+        session = self.client.session
+        session.set_expiry(3 * 24 * 60 * 60)
+        session.save()
         with patch('django.utils.timezone.now', return_value=self.profile.restriction_expires_at + timedelta(seconds=1)):
             result = self.client.get('/api/activities/participation-status/').json()
         self.assertEqual(result, {'restricted': False, 'reason': '', 'expires_at': None})

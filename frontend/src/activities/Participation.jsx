@@ -52,12 +52,12 @@ export default function Participants({ mode = 'participants', initialEventId = n
     catch (err) { setError(err.message); }
   }
   async function loadCandidates() {
-    if (!event || !position) return;
+    if (mode !== 'matching' || !event || !position) return;
     try { setCandidates(await api(`activities/operations/events/${event.id}/positions/${position}/candidates/?page=${candidatePage}`)); }
     catch (err) { setError(err.message); }
   }
   useEffect(() => { setParticipants(null); load(); }, [event?.id, page, backupPage]);
-  useEffect(() => { setCandidates(null); loadCandidates(); }, [event?.id, position, candidatePage]);
+  useEffect(() => { setCandidates(null); loadCandidates(); }, [event?.id, position, candidatePage, mode]);
   async function invite(profileId, assignment = 'primary') {
     setBusy(true); setError(''); setMessage('');
     try { await api(`activities/operations/events/${event.id}/participants/`, { method: 'POST', body: JSON.stringify({ profile_id: profileId, position_id: Number(position), assignment }) }); setMessage(`Invitación como ${assignment === 'backup' ? 'respaldo' : 'titular'} creada. La persona puede responder desde su cuenta.`); await load(); await loadCandidates(); }

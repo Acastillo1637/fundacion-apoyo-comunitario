@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch, prefetch_related_objects
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -24,22 +24,42 @@ def own_profile(request):
     return get_object_or_404(VolunteerProfile, user=request.user)
 
 
-def eligibility(profile, position):
+def prepare_eligibility(profiles, positions):
+    """Batch read-only matching data. Writes continue to use fresh locked queries."""
+    prefetch_related_objects(positions, 'required_skills__required_documents', 'required_documents')
+    prefetch_related_objects(profiles, 'user__groups', 'declared_skills', 'documents',
+                             'unavailable_dates', 'availability_slots',
+                             Prefetch('participations', queryset=Participation.objects.filter(
+                                 status='confirmed', assignment='primary', event__status='open').select_related('event'),
+                                      to_attr='matching_confirmed'))
+
+
+def eligibility(profile, position, prepared=False):
     event = position.event
     reasons = []
-    if position.required_skills.filter(is_active=False).exists() or position.required_documents.filter(is_active=False).exists() or position.required_skills.filter(required_documents__is_active=False).exists():
+    skills = list(position.required_skills.all()) if prepared else None
+    required_docs = list(position.required_documents.all()) if prepared else None
+    inactive = (any(not skill.is_active for skill in skills)
+                or any(not doc.is_active for doc in required_docs)
+                or any(not doc.is_active for skill in skills for doc in skill.required_documents.all())) if prepared else (
+                    position.required_skills.filter(is_active=False).exists() or position.required_documents.filter(is_active=False).exists() or position.required_skills.filter(required_documents__is_active=False).exists())
+    if inactive:
         reasons.append('La coordinación debe revisar requisitos desactivados')
-    if not profile.user.is_active or not profile.user.groups.filter(name='Voluntario').exists() or profile.participation_restricted:
+    volunteer = any(group.name == 'Voluntario' for group in profile.user.groups.all()) if prepared else profile.user.groups.filter(name='Voluntario').exists()
+    if not profile.user.is_active or not volunteer or profile.participation_restricted:
         reasons.append('Participación no habilitada')
-    required = set(position.required_skills.values_list('pk', flat=True))
-    declared = set(profile.declared_skills.values_list('skill_id', flat=True))
+    required = {skill.pk for skill in skills} if prepared else set(position.required_skills.values_list('pk', flat=True))
+    declared = {skill.skill_id for skill in profile.declared_skills.all()} if prepared else set(profile.declared_skills.values_list('skill_id', flat=True))
     if not required.issubset(declared):
         reasons.append('Faltan habilidades requeridas')
-    documents = set(position.required_documents.values_list('pk', flat=True))
+    documents = {doc.pk for doc in required_docs} if prepared else set(position.required_documents.values_list('pk', flat=True))
     for skill in position.required_skills.all():
-        documents.update(skill.required_documents.values_list('pk', flat=True))
+        if prepared:
+            documents.update(doc.pk for doc in skill.required_documents.all())
+        else:
+            documents.update(skill.required_documents.values_list('pk', flat=True))
     for document_id in documents:
-        latest = profile.documents.filter(document_type_id=document_id).order_by('-version').first()
+        latest = max((doc for doc in profile.documents.all() if doc.document_type_id == document_id), key=lambda doc: doc.version, default=None) if prepared else profile.documents.filter(document_type_id=document_id).order_by('-version').first()
         event_date = timezone.localtime(event.ends_at).date()
         if (not latest or latest.effective_status != 'validated'
                 or (latest.expires_on and latest.expires_on < event_date)
@@ -47,11 +67,12 @@ def eligibility(profile, position):
             reasons.append('Falta documentación vigente para la fecha del evento')
             break
     start, end = timezone.localtime(event.starts_at), timezone.localtime(event.ends_at)
-    if start.date() != end.date() or profile.unavailable_dates.filter(date=start.date()).exists() or not profile.availability_slots.filter(
-            weekday=start.weekday(), start_time__lte=start.time(), end_time__gte=end.time()).exists():
+    unavailable = any(day.date == start.date() for day in profile.unavailable_dates.all()) if prepared else profile.unavailable_dates.filter(date=start.date()).exists()
+    available = any(slot.weekday == start.weekday() and slot.start_time <= start.time() and slot.end_time >= end.time() for slot in profile.availability_slots.all()) if prepared else profile.availability_slots.filter(weekday=start.weekday(), start_time__lte=start.time(), end_time__gte=end.time()).exists()
+    if start.date() != end.date() or unavailable or not available:
         reasons.append('Fuera de la disponibilidad declarada')
-    if profile.participations.filter(status='confirmed', assignment='primary', event__status='open', event__starts_at__lt=event.ends_at,
-                                    event__ends_at__gt=event.starts_at).exclude(event=event).exists():
+    overlap = any(item.event_id != event.pk and item.event.starts_at < event.ends_at and item.event.ends_at > event.starts_at for item in profile.matching_confirmed) if prepared else profile.participations.filter(status='confirmed', assignment='primary', event__status='open', event__starts_at__lt=event.ends_at, event__ends_at__gt=event.starts_at).exclude(event=event).exists()
+    if overlap:
         reasons.append('Coincide con otra participación confirmada')
     return reasons
 
@@ -60,7 +81,7 @@ def notify(profile, message):
     Notification.objects.create(user=profile.user, message=message[:300], target='participations')
 
 
-def data(item, operator=False):
+def data(item, operator=False, prepared=False):
     expired = item.status == 'invited' and item.expires_at <= timezone.now()
     result = {'id': str(item.pk), 'event_id': str(item.event_id), 'title': item.event.title, 'public_description': item.event.public_description,
               'position': item.position.name, 'position_id': item.position_id,
@@ -72,7 +93,7 @@ def data(item, operator=False):
         result['address'] = item.event.address
     if operator:
         result.update(name=item.profile.user.get_full_name(), email=item.profile.user.email,
-                      profile_id=item.profile_id, eligible=not eligibility(item.profile, item.position))
+                      profile_id=item.profile_id, eligible=not eligibility(item.profile, item.position, prepared))
         if item.profile.whatsapp_opt_in_at and item.profile.phone:
             phone = ''.join(character for character in item.profile.phone if character.isdigit())
             if 8 <= len(phone) <= 15:
@@ -154,9 +175,11 @@ def event_participants(request, event_id):
         if status:
             rows = rows.filter(status=status)
         page, items = pagination(request, rows)
+        items = list(items)
+        prepare_eligibility([item.profile for item in items], [item.position for item in items])
         from django.db.models import Sum, Count, Q
         positions = event.positions.annotate(confirmed=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='primary')))
-        return Response({'results': [data(item, True) for item in items], 'total': rows.count(), 'page': page,
+        return Response({'results': [data(item, True, prepared=True) for item in items], 'total': rows.count(), 'page': page,
                          'stats': {'capacity': event.positions.aggregate(total=Sum('capacity'))['total'] or 0,
                                    'confirmed': all_rows.filter(status='confirmed', assignment='primary').count(),
                                    'backups': all_rows.filter(status='confirmed', assignment='backup').count(),
@@ -198,10 +221,13 @@ def candidates(request, event_id, position_id):
     from .views import pagination
     rows = VolunteerProfile.objects.filter(user__is_active=True, user__groups__name='Voluntario').select_related('user').order_by('user__first_name', 'pk').distinct()
     page, items = pagination(request, rows)
+    items = list(items)
+    prepare_eligibility(items, [position])
+    registered = set(position.event.participations.filter(profile__in=items, status__in=['applied', 'confirmed', 'waitlisted', 'invited']).exclude(status='invited', expires_at__lte=timezone.now()).values_list('profile_id', flat=True))
     return Response({'results': [{'id': item.pk, 'name': item.user.get_full_name(), 'commune': item.commune,
                                  'nearby': bool(item.commune.strip() and item.commune.strip().casefold() == position.event.commune.strip().casefold()),
-                                 'eligible': not (reasons := eligibility(item, position)), 'reasons': reasons,
-                                 'already_registered': position.event.participations.filter(profile=item, status__in=['applied', 'confirmed', 'waitlisted', 'invited']).exclude(status='invited', expires_at__lte=timezone.now()).exists()}
+                                 'eligible': not (reasons := eligibility(item, position, prepared=True)), 'reasons': reasons,
+                                 'already_registered': item.pk in registered}
                                 for item in items], 'total': rows.count(), 'page': page})
 
 
