@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Clock3, Download, FileCheck2, MapPin, MessageSquare, Search, ShieldCheck, Users, X } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import { Pagination, participationTitle } from '../activities/Participation';
 import { Avatar } from './Overview';
 
 export default function Directory() {
-  const [data, setData] = useState(null), [page, setPage] = useState(1), [query, setQuery] = useState(''), [search, setSearch] = useState(''), [status, setStatus] = useState('');
+  const [data, setData] = useState(() => readSnapshot('operations/volunteers/?page=1&q=&restricted=')), [page, setPage] = useState(1), [query, setQuery] = useState(''), [search, setSearch] = useState(''), [status, setStatus] = useState('');
   const [restrictionAction, setRestrictionAction] = useState('apply');
   const [selected, setSelected] = useState(null), [restricting, setRestricting] = useState(false), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   async function load() { setError(''); try { setData(await api(`operations/volunteers/?page=${page}&q=${encodeURIComponent(search)}&restricted=${status}`)); } catch (err) { setError(err.message); } }
-  useEffect(() => { load(); }, [page, search, status]);
+  useEffect(() => { setData(readSnapshot(`operations/volunteers/?page=${page}&q=${encodeURIComponent(search)}&restricted=${status}`)); load(); }, [page, search, status]);
   async function open(id) { setBusy(true); setError(''); setRestricting(false); try { setSelected(await api(`operations/volunteers/${id}/`)); } catch (err) { setError(err.message); } finally { setBusy(false); } }
   async function restrict(event) {
     event.preventDefault(); setBusy(true); setError('');

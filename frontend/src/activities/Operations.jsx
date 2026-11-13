@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CalendarDays, Check, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import { CalendarDays as ScheduleIcon, MessageSquare, MapPin, ShieldCheck } from 'lucide-react';
 
 const requestLabels = { pending: 'Pendiente', in_review: 'En revisión', approved: 'Aprobada', rejected: 'Rechazada' };
@@ -8,10 +8,10 @@ const eventLabels = { draft: 'Borrador', open: 'Abierto', finished: 'Finalizado'
 
 export default function Operations() {
   const [section, setSection] = useState('requests');
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => readSnapshot('activities/operations/requests/?page=1&compact=1'));
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
-  const [options, setOptions] = useState(null);
+  const [options, setOptions] = useState(() => readSnapshot('activities/operations/options/'));
   const [mode, setMode] = useState('detail');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -21,13 +21,13 @@ export default function Operations() {
     setBusy(true); setError('');
     try {
       const [list, catalogs] = await Promise.all([
-        api(`activities/operations/${section}/?page=${page}`), api('activities/operations/options/'),
+        api(`activities/operations/${section}/?page=${page}&compact=1`).then(result => { setData(result); return result; }), options || api('activities/operations/options/'),
       ]);
       setData(list); setOptions(catalogs);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
-  useEffect(() => { setSelected(null); setData(null); setMessage(''); load(); }, [section, page]);
+  useEffect(() => { setSelected(null); setData(readSnapshot(`activities/operations/${section}/?page=${page}&compact=1`)); setMessage(''); load(); }, [section, page]);
 
   async function open(id) {
     setBusy(true); setError(''); setMode('detail'); setMessage('');
@@ -44,7 +44,7 @@ export default function Operations() {
       });
       setSelected(result);
       setMessage('Cambio de estado registrado.');
-      setData(await api(`activities/operations/${section}/?page=${page}`));
+      setData(await api(`activities/operations/${section}/?page=${page}&compact=1`));
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }

@@ -1,15 +1,38 @@
 let csrfToken = '';
 const pendingReads = new Map();
+const snapshots = new Map();
+let generation = 0;
+
+// Only initial display data: api() still fetches on every visit/refresh.
+// Keep private responses in memory, bounded and cleared on every mutation.
+export function readSnapshot(path) {
+  const entry = snapshots.get(path);
+  if (!entry || Date.now() - entry.at > 60000) { snapshots.delete(path); return null; }
+  return structuredClone(entry.data);
+}
+
+function invalidateReads() {
+  generation++;
+  snapshots.clear();
+  pendingReads.clear();
+}
 
 export function api(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const shareable = method === 'GET' && Object.keys(options).every(key => key === 'method');
   // Share only simultaneous reads. Completed responses are never cached, and
   // mutations (including login/logout) prevent reuse of earlier requests.
-  if (method !== 'GET') pendingReads.clear();
-  if (!shareable) return sendRequest(path, options);
+  if (method !== 'GET') invalidateReads();
+  if (!shareable) return method === 'GET' ? sendRequest(path, options) : sendRequest(path, options).finally(invalidateReads);
   if (pendingReads.has(path)) return pendingReads.get(path);
-  const pending = sendRequest(path, options).finally(() => {
+  const startedGeneration = generation;
+  const pending = sendRequest(path, options).then(data => {
+    if (generation === startedGeneration && path !== 'session/') {
+      if (snapshots.size >= 100) snapshots.delete(snapshots.keys().next().value);
+      snapshots.set(path, { data: structuredClone(data), at: Date.now() });
+    }
+    return data;
+  }).finally(() => {
     if (pendingReads.get(path) === pending) pendingReads.delete(path);
   });
   pendingReads.set(path, pending);
@@ -36,6 +59,7 @@ async function sendRequest(path, options = {}) {
   try {
     response = await fetch(`/api/${path}`, {
       credentials: 'same-origin',
+      cache: 'no-store',
       ...options,
       headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(options.method && options.method !== 'GET' ? { 'X-CSRFToken': csrfToken } : {}), ...options.headers },
     });
@@ -43,6 +67,7 @@ async function sendRequest(path, options = {}) {
     throw new Error('No hay conexión con el servidor. Comprueba que Django esté iniciado y vuelve a intentarlo.');
   }
   let data;
+  if ([401, 403].includes(response.status)) invalidateReads();
   try {
     data = await response.json();
   } catch {

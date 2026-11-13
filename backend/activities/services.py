@@ -72,6 +72,13 @@ def event_data(item, private=False):
     return data
 
 
+def event_card(item):
+    """List cards need no private histories or per-position requirements."""
+    return {'id': str(item.pk), 'title': item.title, 'public_description': item.public_description,
+            'commune': item.commune, 'status': item.status, 'revision': item.revision,
+            'capacity': item.total_capacity or 0, **schedule_data(item)}
+
+
 def send_verification(item):
     token = signing.dumps({'id': str(item.pk), 'nonce': str(item.verification_nonce)}, salt='service-request-email')
     url = f'{settings.PUBLIC_APP_URL.rstrip("/")}/#confirm-request={token}'

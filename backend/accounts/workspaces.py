@@ -17,7 +17,7 @@ from documents.models import VolunteerDocument
 from volunteers.models import DocumentType, Profession, Skill
 from volunteers.serializers import StrictSerializer
 from .models import AccountChange, AuditEvent, User, VolunteerProfile
-from .portals import portal_access
+from .portals import can_access_portal
 from .security import portal_authenticated
 
 
@@ -52,7 +52,7 @@ def counts(rows):
 @api_view(['GET'])
 def summary(request):
     portal = request.query_params.get('portal')
-    if portal not in portal_access(request.user):
+    if not can_access_portal(request.user, portal):
         raise PermissionDenied('No tienes acceso a este espacio.')
     if portal in ['administration', 'operations'] and not portal_authenticated(request):
         raise PermissionDenied('Inicia sesión nuevamente para continuar.')
@@ -81,16 +81,14 @@ def summary(request):
                 backup=Count('pk', filter=Q(status='confirmed', assignment='backup')))
             result['metrics'] += [
                 {'label': 'Solicitudes pendientes', 'value': ServiceRequest.objects.filter(status__in=['pending', 'in_review'], email_verified_at__isnull=False).count(), 'target': 'operations'},
-                {'label': 'Eventos abiertos', 'value': Event.objects.filter(status='open', starts_at__gt=timezone.now()).count(), 'target': 'operations'},
+                {'label': 'Eventos abiertos', 'value': 0, 'target': 'operations'},
                 {'label': 'Postulaciones por revisar', 'value': totals['applied'], 'target': 'participants'},
                 {'label': 'Titulares confirmados', 'value': totals['primary'], 'target': 'participants'},
                 {'label': 'Respaldos confirmados', 'value': totals['backup'], 'target': 'participants'},
             ]
         if request.user.has_perm('documents.review_volunteerdocument'):
-            # Only latest versions are actionable in the review queue.
-            from django.db.models import OuterRef, Exists
-            newer = VolunteerDocument.objects.filter(profile_id=OuterRef('profile_id'), document_type_id=OuterRef('document_type_id'), version__gt=OuterRef('version'))
-            result['metrics'].append({'label': 'Documentos por revisar', 'value': VolunteerDocument.objects.filter(status='pending').annotate(newer=Exists(newer)).filter(newer=False).exclude(profile__user=request.user).count(), 'target': 'document-review'})
+            # Filled from the same query that loads the preview below.
+            result['metrics'].append({'label': 'Documentos por revisar', 'value': 0, 'target': 'document-review'})
     elif portal == 'requester':
         rows = ServiceRequest.objects.filter(requester__user=request.user)
         totals = counts(rows)
@@ -109,16 +107,20 @@ def summary(request):
             {'label': 'Postulaciones pendientes', 'value': totals['applied'], 'target': 'participations'},
         ]
     if portal in ['administration', 'operations']:
-        from django.db.models import Sum, OuterRef, Subquery
+        from django.db.models import Sum, OuterRef, Subquery, Window
         from activities.models import EventPosition
         result['events'] = []
         if request.user.has_perm('activities.manage_operations'):
             capacity = EventPosition.objects.filter(event_id=OuterRef('pk')).order_by().values('event_id').annotate(total=Sum('capacity')).values('total')
             upcoming = Event.objects.filter(status='open', ends_at__gt=timezone.now()).annotate(
                 total_capacity=Subquery(capacity),
+                open_count=Window(Count('pk', filter=Q(starts_at__gt=timezone.now()))),
                 confirmed_count=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='primary')),
                 backup_count=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='backup')),
                 waiting_count=Count('participations', filter=Q(participations__status='waitlisted'))).order_by('starts_at')[:5]
+            upcoming = list(upcoming)
+            if portal == 'operations':
+                result['metrics'][1]['value'] = upcoming[0].open_count if upcoming else 0
             for event in upcoming:
                 result['events'].append({'id': str(event.pk), 'title': event.title, 'commune': event.commune,
                     'starts_at': event.starts_at, 'capacity': event.total_capacity or 0,
@@ -128,8 +130,10 @@ def summary(request):
         if request.user.has_perm('documents.review_volunteerdocument'):
             from django.db.models import OuterRef, Exists
             newer = VolunteerDocument.objects.filter(profile_id=OuterRef('profile_id'), document_type_id=OuterRef('document_type_id'), version__gt=OuterRef('version'))
-            rows = VolunteerDocument.objects.filter(status='pending').exclude(profile__user=request.user).annotate(newer=Exists(newer)).filter(newer=False).select_related('profile__user', 'document_type')
-            result['reviews'] = [{'id': str(row.pk), 'type_name': row.document_type.name, 'name': row.profile.user.get_full_name(), 'uploaded_at': row.uploaded_at} for row in rows[:3]]
+            rows = list(VolunteerDocument.objects.filter(status='pending').exclude(profile__user=request.user).annotate(newer=Exists(newer)).filter(newer=False).select_related('profile__user', 'document_type').annotate(total=Window(Count('pk')))[:3])
+            result['reviews'] = [{'id': str(row.pk), 'type_name': row.document_type.name, 'name': row.profile.user.get_full_name(), 'uploaded_at': row.uploaded_at} for row in rows]
+            if portal == 'operations':
+                result['metrics'][-1]['value'] = rows[0].total if rows else 0
         audit = AuditEvent.objects.select_related('actor').order_by('-created_at', '-pk')
         if portal != 'administration' or not request.user.has_perm('accounts.manage_accounts'):
             audit = audit.filter(Q(action__startswith='event.') | Q(action__startswith='request.') | Q(action__startswith='participation.') | Q(action__startswith='document.'))

@@ -1,26 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Clock3, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import { coversWindow, toggleWindow } from './availability-grid';
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-export default function Availability({ compact = false }) {
-  const [schedule, setSchedule] = useState(null);
+export default function Availability({ compact = false, initialSchedule }) {
+  const [schedule, setSchedule] = useState(() => initialSchedule || readSnapshot('volunteer/availability/'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [exceptionDate, setExceptionDate] = useState('');
+  const dirty = useRef(false);
 
   async function load() {
     setBusy(true);
     setError('');
     setMessage('');
-    try { setSchedule(await api('volunteer/availability/')); }
+    try { setSchedule(await api('volunteer/availability/')); dirty.current = false; }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (initialSchedule) { if (!dirty.current) setSchedule(initialSchedule); } else load(); }, [initialSchedule]);
 
   function changeSlot(index, field, value) {
     setMessage('');
@@ -53,6 +54,7 @@ export default function Availability({ compact = false }) {
         body: JSON.stringify({ revision: schedule.revision, slots: schedule.slots, unavailable_dates: schedule.unavailable_dates }),
       });
       setSchedule(result);
+      dirty.current = false;
       setMessage('Tu disponibilidad se guardó correctamente.');
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -65,7 +67,7 @@ export default function Availability({ compact = false }) {
     {busy && !schedule && <p role="status">Cargando tu disponibilidad…</p>}
     {error && <p role="alert" className="error">{error}</p>}
     {message && <p role="status" className="success">{message}</p>}
-    {schedule && <form onSubmit={save}><fieldset className="form-fieldset" disabled={busy}>
+    {schedule && <form onSubmit={save} onChange={() => { dirty.current = true; }} onClick={event => { if (event.target.closest('button')) dirty.current = true; }}><fieldset className="form-fieldset" disabled={busy}>
       <div className="schedule-heading"><h3><CalendarDays size={18}/> Semana habitual</h3><span className="help">{schedule.slots.length}/42 franjas</span></div>
       <div className="availability-legend"><span><i className="legend-dot available"/>Disponible</span><span><i className="legend-dot"/>No disponible</span><small>Selecciona para cambiar</small></div>
       <div className="table-scroll"><table className="availability-matrix"><thead><tr><th>Franja horaria</th>{days.map(day => <th key={day}>{day.slice(0, 3)}</th>)}</tr></thead><tbody>{[['Mañana', '08:00', '13:00'], ['Tarde', '13:00', '18:00'], ['Noche', '18:00', '22:00']].map(([label, from, to]) => <tr key={label}><th>{label}<small>{from}–{to}</small></th>{days.map((day, weekday) => { const active = coversWindow(schedule.slots, weekday, from, to); return <td key={day}><button type="button" className={active ? 'matrix-cell available' : 'matrix-cell'} aria-label={`${day}, ${label}`} aria-pressed={active} onClick={() => { setSchedule(current => ({ ...current, slots: toggleWindow(current.slots, weekday, from, to) })); setMessage(''); }}>{active ? 'Disponible' : 'Inactivo'}</button></td>; })}</tr>)}</tbody></table></div>

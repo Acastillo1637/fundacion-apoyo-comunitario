@@ -28,3 +28,16 @@ def portal_access(user):
     if is_requester(user):
         result.append('requester')
     return result
+
+
+def can_access_portal(user, portal):
+    """Check the requested space without loading unrelated role memberships."""
+    if portal == 'administration':
+        return user.has_perm('accounts.manage_accounts') or user.has_perm('volunteers.change_skill')
+    if portal == 'operations':
+        return user.has_perm('activities.manage_operations') or user.has_perm('documents.review_volunteerdocument')
+    if portal == 'volunteer':
+        return is_volunteer(user)
+    if portal == 'requester':
+        return is_requester(user)
+    return False

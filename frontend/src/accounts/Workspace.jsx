@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import { Pagination } from '../activities/Participation';
 
 export function WorkspaceSummary({ portal, navigate }) {
-  const [data, setData] = useState(null), [error, setError] = useState('');
-  useEffect(() => { setData(null); setError(''); api(`workspace-summary/?portal=${portal}`).then(setData).catch(err => setError(err.message)); }, [portal]);
+  const [data, setData] = useState(() => readSnapshot(`workspace-summary/?portal=${portal}`)), [error, setError] = useState('');
+  useEffect(() => { setData(readSnapshot(`workspace-summary/?portal=${portal}`)); setError(''); api(`workspace-summary/?portal=${portal}`).then(setData).catch(err => setError(err.message)); }, [portal]);
   return <section aria-label="Resumen del espacio">{error && <p className="error" role="alert">{error}</p>}{!data && !error && <p role="status">Cargando resumen…</p>}<div className="dashboard-cards">{data?.metrics.map(item => <article className="panel info-card" key={item.label}><span className="info-label">{item.label}</span><h2>{item.value}</h2><button className="text-button" onClick={() => navigate(item.target)}>Ver detalle →</button></article>)}</div></section>;
 }
 
@@ -20,9 +20,9 @@ export function StaffProfile({ user, setUser }) {
 }
 
 export function Catalogs() {
-  const [kind, setKind] = useState('skills'), [data, setData] = useState(null), [selected, setSelected] = useState(null), [editing, setEditing] = useState(false), [error, setError] = useState(''), [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState('skills'), [data, setData] = useState(() => readSnapshot('management/catalogs/skills/')), [selected, setSelected] = useState(null), [editing, setEditing] = useState(false), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   async function load() { setError(''); try { setData(await api(`management/catalogs/${kind}/`)); } catch (err) { setError(err.message); } }
-  useEffect(() => { setData(null); setEditing(false); load(); }, [kind]);
+  useEffect(() => { setData(readSnapshot(`management/catalogs/${kind}/`)); setEditing(false); load(); }, [kind]);
   async function save(event) {
     event.preventDefault(); setBusy(true); setError('');
     const form = new FormData(event.currentTarget);

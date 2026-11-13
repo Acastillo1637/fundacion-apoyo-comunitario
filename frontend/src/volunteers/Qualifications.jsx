@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Award, BookOpen, Check, RefreshCw } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 
 export default function Qualifications() {
-  const [catalogs, setCatalogs] = useState(null);
-  const [selection, setSelection] = useState(null);
+  const [catalogs, setCatalogs] = useState(() => readSnapshot('volunteer/catalogs/'));
+  const [selection, setSelection] = useState(() => readSnapshot('volunteer/qualifications/'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');

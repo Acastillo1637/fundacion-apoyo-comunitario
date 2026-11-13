@@ -161,6 +161,14 @@ def event_create(request, request_id):
 @api_view(['GET'])
 def events(request):
     require_operator(request)
+    if request.query_params.get('compact') == '1':
+        from django.db.models import OuterRef, Subquery, Sum
+        from .models import EventPosition
+        from .services import event_card
+        capacity = EventPosition.objects.filter(event_id=OuterRef('pk')).order_by().values('event_id').annotate(total=Sum('capacity')).values('total')
+        queryset = Event.objects.annotate(total_capacity=Subquery(capacity))
+        page, rows = pagination(request, queryset)
+        return Response({'results': [event_card(item) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
     queryset = Event.objects.prefetch_related(
         'positions__required_skills__required_documents', 'positions__required_documents', 'transitions',
         Prefetch('changes', queryset=EventChange.objects.select_related('actor').all()[:20], to_attr='loaded_changes'))

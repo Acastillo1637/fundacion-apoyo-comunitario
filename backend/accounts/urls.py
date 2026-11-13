@@ -3,8 +3,10 @@ from . import views
 from . import account_management
 from . import requesters
 from . import workspaces
+from . import overview
 
 urlpatterns = [
+    path('volunteer-overview/', overview.volunteer_overview),
     path('workspace-summary/', workspaces.summary),
     path('account-profile/', workspaces.account_profile),
     path('management/catalogs/<str:kind>/', workspaces.catalogs),

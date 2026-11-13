@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { CalendarDays, MapPin, Users } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 
 export default function PublicEvents({ canApply = false }) {
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => readSnapshot('activities/public-events/?page=1'));
   const [page, setPage] = useState(1);
   const [error, setError] = useState('');
   useEffect(() => {
     setError('');
+    setData(readSnapshot(`activities/public-events/?page=${page}`));
     api(`activities/public-events/?page=${page}`).then(setData).catch(err => setError(err.message));
   }, [page]);
   async function apply(positionId) {

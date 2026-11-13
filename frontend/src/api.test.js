@@ -1,9 +1,60 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { api } from './api.js';
+import { api, readSnapshot } from './api.js';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
+
+test('las copias en memoria no comparten cambios del formulario y no evitan la consulta nueva', async () => {
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return Response.json({ slots: [1] }); };
+  await api('snapshot-test/');
+  const previous = readSnapshot('snapshot-test/');
+  previous.slots.push(2);
+  assert.deepEqual(readSnapshot('snapshot-test/'), { slots: [1] });
+  await api('snapshot-test/');
+  assert.equal(calls, 2);
+  await api('logout/', { method: 'POST' });
+  assert.equal(readSnapshot('snapshot-test/'), null);
+});
+
+test('una lectura de una generación anterior no repuebla los datos después de guardar', async () => {
+  let finish;
+  globalThis.fetch = async url => url.endsWith('old-snapshot/')
+    ? new Promise(resolve => { finish = () => resolve(Response.json({ old: true })); })
+    : Response.json({ saved: true });
+  const previous = api('old-snapshot/');
+  await api('save/', { method: 'POST' });
+  finish(); await previous;
+  assert.equal(readSnapshot('old-snapshot/'), null);
+});
+
+test('guardar también descarta lecturas que terminaron durante la escritura', async () => {
+  let finishSave;
+  globalThis.fetch = async url => url.endsWith('save-in-progress/')
+    ? new Promise(resolve => { finishSave = () => resolve(Response.json({ saved: true })); })
+    : Response.json({ old: true });
+  const save = api('save-in-progress/', { method: 'POST' });
+  await api('during-save/');
+  assert.deepEqual(readSnapshot('during-save/'), { old: true });
+  finishSave(); await save;
+  assert.equal(readSnapshot('during-save/'), null);
+});
+
+test('los datos conservados vencen y se descartan al denegarse el acceso', async () => {
+  const originalNow = Date.now;
+  try {
+    Date.now = () => 100000;
+    globalThis.fetch = async () => Response.json({ private: true });
+    await api('expiring-snapshot/');
+    Date.now = () => 160001;
+    assert.equal(readSnapshot('expiring-snapshot/'), null);
+    await api('protected-snapshot/');
+    globalThis.fetch = async () => Response.json({ detail: 'Sin acceso' }, { status: 403 });
+    await assert.rejects(api('protected-check/'), /Sin acceso/);
+    assert.equal(readSnapshot('protected-snapshot/'), null);
+  } finally { Date.now = originalNow; }
+});
 
 test('comparte lecturas simultáneas y vuelve a consultar después de completarlas', async () => {
   let calls = 0;

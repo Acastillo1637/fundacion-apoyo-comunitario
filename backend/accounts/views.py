@@ -7,7 +7,8 @@ from allauth.account.internal.flows.login import record_authentication
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
@@ -55,13 +56,17 @@ def limited(request, scope, limit):
     window = int(now.timestamp()) // 900
     raw = f'{scope}:{request.META.get("REMOTE_ADDR", "")}:{window}'
     key = hashlib.sha256(raw.encode()).hexdigest()
-    with transaction.atomic():
-        bucket, _ = RateBucket.objects.get_or_create(key=key, defaults={'expires_at': now + timedelta(minutes=30)})
-        bucket = RateBucket.objects.select_for_update().get(pk=bucket.pk)
-        bucket.count += 1
-        bucket.save(update_fields=['count'])
-    RateBucket.objects.filter(expires_at__lt=now).delete()
-    return bucket.count > limit
+    # One atomic upsert, preserving a shared counter across workers/devices.
+    # Both supported databases implement ON CONFLICT ... RETURNING.
+    table = connection.ops.quote_name(RateBucket._meta.db_table)
+    expires = connection.ops.adapt_datetimefield_value(now + timedelta(minutes=30))
+    with connection.cursor() as cursor:
+        cursor.execute(f'INSERT INTO {table} ("key", "count", "expires_at") VALUES (%s, 1, %s) '
+                       f'ON CONFLICT ("key") DO UPDATE SET "count" = {table}."count" + 1 RETURNING "count"', [key, expires])
+        count = cursor.fetchone()[0]
+    if cache.add('rate-bucket-cleanup', True, timeout=900):
+        RateBucket.objects.filter(expires_at__lt=now).delete()
+    return count > limit
 
 
 def read_json(request):

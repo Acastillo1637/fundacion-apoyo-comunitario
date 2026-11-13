@@ -55,3 +55,34 @@ class ViewPerformanceTests(TestCase):
         self.assertFalse(is_volunteer(self.user))
         self.user.groups.add(Group.objects.get(name='Voluntario'))
         self.assertTrue(is_volunteer(self.user))
+
+    def test_compact_event_cards_need_fewer_queries_and_keep_capacity(self):
+        event, position = event_fixture()
+        full_queries, full = self.measure('activities/operations/events/')
+        card_queries, compact = self.measure('activities/operations/events/?compact=1')
+        self.assertLess(card_queries, full_queries)
+        for field in ['id', 'title', 'status', 'capacity', 'date', 'start_time', 'end_time', 'commune']:
+            self.assertEqual(compact['results'][0][field], full['results'][0][field])
+        self.assertNotIn('address', compact['results'][0])
+        self.assertNotIn('changes', compact['results'][0])
+
+    def test_dashboard_totals_cover_rows_outside_preview_and_only_latest_documents(self):
+        from documents.models import VolunteerDocument
+        from volunteers.models import DocumentType
+        for _ in range(7):
+            event_fixture()
+        profile = make_profile('preview-totals@example.org')
+        types = [DocumentType.objects.create(name=f'Preview {index}') for index in range(5)]
+        for index, document_type in enumerate(types):
+            VolunteerDocument.objects.create(profile=profile, document_type=document_type, version=1,
+                storage_key=f'preview-{index}', size=10, mime_type='application/pdf', checksum='a' * 64,
+                scan_status='not_scanned')
+        VolunteerDocument.objects.create(profile=profile, document_type=types[0], version=2,
+            storage_key='preview-newer', size=10, mime_type='application/pdf', checksum='b' * 64,
+            scan_status='clean', status='validated')
+        _, result = self.measure('workspace-summary/?portal=operations')
+        metrics = {row['label']: row['value'] for row in result['metrics']}
+        self.assertEqual(metrics['Eventos abiertos'], 7)
+        self.assertEqual(metrics['Documentos por revisar'], 4)
+        self.assertEqual(len(result['events']), 5)
+        self.assertEqual(len(result['reviews']), 3)

@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Q, Prefetch, Window, prefetch_related_objects
+from django.db.models import Count, Exists, Q, Prefetch, Window, prefetch_related_objects
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -37,29 +37,33 @@ def prepare_eligibility(profiles, positions):
 def eligibility(profile, position, prepared=False):
     event = position.event
     reasons = []
-    skills = list(position.required_skills.all()) if prepared else None
-    required_docs = list(position.required_documents.all()) if prepared else None
+    skills = list(position.required_skills.all() if prepared else position.required_skills.prefetch_related('required_documents'))
+    required_docs = list(position.required_documents.all())
     inactive = (any(not skill.is_active for skill in skills)
                 or any(not doc.is_active for doc in required_docs)
-                or any(not doc.is_active for skill in skills for doc in skill.required_documents.all())) if prepared else (
-                    position.required_skills.filter(is_active=False).exists() or position.required_documents.filter(is_active=False).exists() or position.required_skills.filter(required_documents__is_active=False).exists())
+                or any(not doc.is_active for skill in skills for doc in skill.required_documents.all()))
     if inactive:
         reasons.append('La coordinación debe revisar requisitos desactivados')
     volunteer = any(group.name == 'Voluntario' for group in profile.user.groups.all()) if prepared else profile.user.groups.filter(name='Voluntario').exists()
     if not profile.user.is_active or not volunteer or profile.participation_restricted:
         reasons.append('Participación no habilitada')
-    required = {skill.pk for skill in skills} if prepared else set(position.required_skills.values_list('pk', flat=True))
+    required = {skill.pk for skill in skills}
     declared = {skill.skill_id for skill in profile.declared_skills.all()} if prepared else set(profile.declared_skills.values_list('skill_id', flat=True))
     if not required.issubset(declared):
         reasons.append('Faltan habilidades requeridas')
-    documents = {doc.pk for doc in required_docs} if prepared else set(position.required_documents.values_list('pk', flat=True))
-    for skill in position.required_skills.all():
-        if prepared:
-            documents.update(doc.pk for doc in skill.required_documents.all())
-        else:
-            documents.update(skill.required_documents.values_list('pk', flat=True))
+    documents = {doc.pk for doc in required_docs}
+    for skill in skills:
+        documents.update(doc.pk for doc in skill.required_documents.all())
+    latest_documents = {}
+    if documents:
+        history = profile.documents.all() if prepared else profile.documents.filter(document_type_id__in=documents).only(
+            'document_type_id', 'version', 'status', 'expires_on', 'scan_status')
+        for document in history:
+            previous = latest_documents.get(document.document_type_id)
+            if previous is None or previous.version < document.version:
+                latest_documents[document.document_type_id] = document
     for document_id in documents:
-        latest = max((doc for doc in profile.documents.all() if doc.document_type_id == document_id), key=lambda doc: doc.version, default=None) if prepared else profile.documents.filter(document_type_id=document_id).order_by('-version').first()
+        latest = latest_documents.get(document_id)
         event_date = timezone.localtime(event.ends_at).date()
         if (not latest or latest.effective_status != 'validated'
                 or (latest.expires_on and latest.expires_on < event_date)
@@ -67,9 +71,13 @@ def eligibility(profile, position, prepared=False):
             reasons.append('Falta documentación vigente para la fecha del evento')
             break
     start, end = timezone.localtime(event.starts_at), timezone.localtime(event.ends_at)
-    unavailable = any(day.date == start.date() for day in profile.unavailable_dates.all()) if prepared else profile.unavailable_dates.filter(date=start.date()).exists()
-    available = any(slot.weekday == start.weekday() and slot.start_time <= start.time() and slot.end_time >= end.time() for slot in profile.availability_slots.all()) if prepared else profile.availability_slots.filter(weekday=start.weekday(), start_time__lte=start.time(), end_time__gte=end.time()).exists()
-    if start.date() != end.date() or unavailable or not available:
+    if prepared:
+        unavailable = any(day.date == start.date() for day in profile.unavailable_dates.all())
+        available = not unavailable and any(slot.weekday == start.weekday() and slot.start_time <= start.time() and slot.end_time >= end.time() for slot in profile.availability_slots.all())
+    else:
+        unavailable = profile.unavailable_dates.filter(date=start.date())
+        available = profile.availability_slots.filter(weekday=start.weekday(), start_time__lte=start.time(), end_time__gte=end.time()).filter(~Exists(unavailable)).exists()
+    if start.date() != end.date() or not available:
         reasons.append('Fuera de la disponibilidad declarada')
     overlap = any(item.event_id != event.pk and item.event.starts_at < event.ends_at and item.event.ends_at > event.starts_at for item in profile.matching_confirmed) if prepared else profile.participations.filter(status='confirmed', assignment='primary', event__status='open', event__starts_at__lt=event.ends_at, event__ends_at__gt=event.starts_at).exclude(event=event).exists()
     if overlap:

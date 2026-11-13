@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import PublicRequest from '../activities/PublicRequest';
 import { WorkspaceSummary } from './Workspace';
 
@@ -7,7 +7,7 @@ const types = { person: 'Persona natural', company: 'Empresa', institution: 'Ins
 const statuses = { pending: 'Pendiente', in_review: 'En revisión', approved: 'Aprobada', rejected: 'Rechazada' };
 
 export default function RequesterPortal({ tab, user, setUser, navigate }) {
-  const [profile, setProfile] = useState(undefined);
+  const [profile, setProfile] = useState(() => readSnapshot('requester/profile/')?.profile);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -46,9 +46,9 @@ export default function RequesterPortal({ tab, user, setUser, navigate }) {
 }
 
 function OwnedRequests() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => readSnapshot('requester/requests/?page=1'));
   const [page, setPage] = useState(1);
   const [error, setError] = useState('');
-  useEffect(() => { setError(''); setData(null); api(`requester/requests/?page=${page}`).then(setData).catch(err => setError(err.message)); }, [page]);
+  useEffect(() => { setError(''); setData(readSnapshot(`requester/requests/?page=${page}`)); api(`requester/requests/?page=${page}`).then(setData).catch(err => setError(err.message)); }, [page]);
   return <section className="panel"><h2>Mis solicitudes</h2><p>Solo aparecen las solicitudes enviadas desde esta cuenta. Las solicitudes públicas anteriores se mantienen separadas.</p>{error && <p className="error" role="alert">{error}</p>}{!data && !error && <p role="status">Cargando solicitudes…</p>}{data?.results.length === 0 && <p>Todavía no has enviado solicitudes desde tu cuenta.</p>}{data?.results.map(item => <article className="panel" key={item.id}><span className="pill">{statuses[item.status] || item.status}</span><h3>{item.description}</h3><p>{new Date(item.starts_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' })} · {item.commune} · {item.quantity} voluntarios</p><small>Referencia: {item.id}</small>{item.events?.length > 0 && <section className="history-section"><h4>Actividades relacionadas</h4>{item.events.map(event => <article className="detail-section" key={event.id}><strong>{event.title}</strong><p className="public-description">{event.public_description}</p><small>{new Date(event.starts_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' })} · {event.commune} · {{ open: 'Abierta', finished: 'Finalizada', cancelled: 'Cancelada' }[event.status]}</small></article>)}</section>}{item.history.length > 0 && <ul>{item.history.map((entry, index) => <li key={index}>{statuses[entry.status]} · {new Date(entry.at).toLocaleDateString('es-CL')}</li>)}</ul>}</article>)}{data && <div className="actions"><button className="button secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>Anterior</button><span>Página {page}</span><button className="button secondary" disabled={page * 20 >= data.count} onClick={() => setPage(page + 1)}>Siguiente</button></div>}</section>;
 }

@@ -2,9 +2,10 @@ from smtplib import SMTPException
 
 from allauth.account.internal.flows.password_reset import request_password_reset
 from allauth.account.models import EmailAddress
+from allauth.mfa.models import Authenticator
 from django.contrib.auth.models import Group
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import never_cache
 from rest_framework.decorators import api_view
@@ -33,7 +34,8 @@ def lock_actor(request):
 
 
 def protected(user):
-    return user.is_superuser or user.user_permissions.exists() or any(group.name not in ROLE_NAMES for group in user.groups.all())
+    direct = user.has_direct_grants if hasattr(user, 'has_direct_grants') else user.user_permissions.exists()
+    return user.is_superuser or direct or any(group.name not in ROLE_NAMES for group in user.groups.all())
 
 
 def access_snapshot(user):
@@ -46,8 +48,8 @@ def account_data(user, actor, detail=False):
     data = {
         'id': str(user.pk), 'email': user.email, 'first_name': user.first_name, 'last_name': user.last_name,
         'is_active': user.is_active, 'roles': [group.name for group in user.groups.all()],
-        'email_verified': any(address.verified for address in user.emailaddress_set.all()),
-        'has_password': user.has_usable_password(), 'has_mfa': user.authenticator_set.exists(),
+        'email_verified': user.verified_email if hasattr(user, 'verified_email') else any(address.verified for address in user.emailaddress_set.all()),
+        'has_password': user.has_usable_password(), 'has_mfa': user.enrolled_mfa if hasattr(user, 'enrolled_mfa') else user.authenticator_set.exists(),
         'has_volunteer_profile': hasattr(user, 'volunteer_profile'),
         'revision': user.management_revision, 'date_joined': user.date_joined,
         'last_login': user.last_login, 'is_self': is_self, 'protected': technical,
@@ -91,7 +93,10 @@ def send_access_email(request, user, reason):
 def accounts(request):
     require_account_manager(request)
     if request.method == 'GET':
-        queryset = User.objects.order_by('email').prefetch_related('groups', 'user_permissions', 'emailaddress_set', 'authenticator_set').select_related('volunteer_profile')
+        queryset = User.objects.order_by('email').prefetch_related('groups').select_related('volunteer_profile').annotate(
+            has_direct_grants=Exists(User.user_permissions.through.objects.filter(user_id=OuterRef('pk'))),
+            verified_email=Exists(EmailAddress.objects.filter(user_id=OuterRef('pk'), verified=True)),
+            enrolled_mfa=Exists(Authenticator.objects.filter(user_id=OuterRef('pk'))))
         query = request.query_params.get('q', '').strip()
         if len(query) > 100:
             raise ValidationError('La búsqueda no puede superar 100 caracteres.')

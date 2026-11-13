@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Mail, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 
 const roles = ['Voluntario', 'Solicitante', 'Secretaría', 'Administrador general'];
 const actions = { participation_restriction: 'Restricción de participación actualizada', created_by_admin: 'Cuenta creada', updated_by_admin: 'Cuenta actualizada', access_email_sent: 'Enlace de acceso solicitado', access_email_failed: 'Falló el envío del enlace' };
 const date = value => value ? new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago' }) : 'Sin registros';
 
 export default function UserManagement({ onSelfChanged }) {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => readSnapshot('management/users/?q=&active=&role=&page=1'));
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
   const [filters, setFilters] = useState({ q: '', active: '', role: '' });
@@ -22,7 +22,7 @@ export default function UserManagement({ onSelfChanged }) {
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
-  useEffect(() => { load(); }, [filters, page]);
+  useEffect(() => { setData(readSnapshot(`management/users/?${new URLSearchParams({ ...filters, page })}`)); load(); }, [filters, page]);
 
   async function open(id) {
     setBusy(true); setError(''); setMessage(''); setCreating(false);

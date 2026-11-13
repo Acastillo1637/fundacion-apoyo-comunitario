@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import { CalendarDays, Check, MapPin, MessageSquare, ShieldCheck, Users } from 'lucide-react';
 import { Avatar, PageHeading } from '../design/Overview';
 
@@ -9,9 +9,9 @@ const formatDate = value => new Date(value).toLocaleString('es-CL', { timeZone: 
 
 export function MyParticipations() {
   const [participationStatus, setParticipationStatus] = useState(null);
-  const [data, setData] = useState(null), [page, setPage] = useState(1), [error, setError] = useState(''), [busy, setBusy] = useState(false);
+  const [data, setData] = useState(() => readSnapshot('activities/participations/?page=1')), [page, setPage] = useState(1), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   async function load() { setError(''); try { const [items, status] = await Promise.all([api(`activities/participations/?page=${page}`), api('activities/participation-status/')]); setData(items); setParticipationStatus(status); } catch (err) { setError(err.message); } }
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { setData(readSnapshot(`activities/participations/?page=${page}`)); load(); }, [page]);
   async function decide(item, action) {
     setBusy(true); setError('');
     try { await api(`activities/participations/${item.id}/decision/`, { method: 'POST', body: JSON.stringify({ revision: item.revision, action }) }); await load(); }
@@ -26,7 +26,7 @@ export function RestrictionNotice({ status }) {
 }
 
 export function Notifications({ onNavigate, initialData = null, onUpdate }) {
-  const [data, setData] = useState(initialData), [error, setError] = useState('');
+  const [data, setData] = useState(() => initialData || readSnapshot('activities/notifications/')), [error, setError] = useState('');
   async function load(mark = false) { setError(''); try { const result = await api('activities/notifications/', mark ? { method: 'POST', body: JSON.stringify({ read_all: true }) } : {}); setData(result); onUpdate?.(result); } catch (err) { setError(err.message); } }
   useEffect(() => { load(); }, []);
   return <section className="panel"><div className="panel-heading"><h2>Notificaciones {data ? `(${data.unread} sin leer)` : ''}</h2><div className="actions"><button className="button secondary" onClick={() => load()}>Actualizar</button><button className="button secondary" disabled={!data?.unread} onClick={() => load(true)}>Marcar leídas</button></div></div>{error && <p className="error" role="alert">{error}</p>}{!data && !error && <p role="status">Cargando…</p>}{data?.results.length === 0 && <p>No tienes notificaciones.</p>}{data?.results.map(item => <article className="panel" key={item.id}><strong>{!item.read_at ? 'Nueva · ' : ''}{item.message}</strong><p className="help">{formatDate(item.created_at)}</p>{item.target && onNavigate && <button className="button secondary small" onClick={() => onNavigate(item.target)}>Ver detalle</button>}</article>)}</section>;
@@ -35,10 +35,10 @@ export function Notifications({ onNavigate, initialData = null, onUpdate }) {
 export default function Participants({ mode = 'participants', initialEventId = null }) {
   const [eligibleOnly, setEligibleOnly] = useState(false), [previewName, setPreviewName] = useState('');
   const [backups, setBackups] = useState(null), [backupPage, setBackupPage] = useState(1);
-  const [events, setEvents] = useState(null), [event, setEvent] = useState(null), [position, setPosition] = useState('');
+  const [events, setEvents] = useState(() => readSnapshot('activities/operations/events/?compact=1&page=1')), [event, setEvent] = useState(null), [position, setPosition] = useState('');
   const [participants, setParticipants] = useState(null), [candidates, setCandidates] = useState(null), [page, setPage] = useState(1), [candidatePage, setCandidatePage] = useState(1);
   const [eventPage, setEventPage] = useState(1), [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
-  useEffect(() => { api(`activities/operations/events/?page=${eventPage}`).then(setEvents).catch(err => setError(err.message)); }, [eventPage]);
+  useEffect(() => { setEvents(readSnapshot(`activities/operations/events/?compact=1&page=${eventPage}`)); api(`activities/operations/events/?compact=1&page=${eventPage}`).then(setEvents).catch(err => setError(err.message)); }, [eventPage]);
   async function open(id) {
     setBusy(true); setError('');
     try { const result = await api(`activities/operations/events/${id}/`); setEvent(result); setPosition(String(result.positions[0]?.id || '')); setPage(1); setCandidatePage(1); setBackupPage(1); }

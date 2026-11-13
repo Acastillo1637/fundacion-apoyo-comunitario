@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Download, FileCheck2, RefreshCw, Upload } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 import { Avatar } from '../design/Overview';
 
 const statuses = { pending: 'Pendiente', validated: 'Validado', rejected: 'Rechazado', expired: 'Vencido' };
 const formatDate = value => value ? new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', dateStyle: 'medium' }).format(new Date(value)) : '—';
 
 export default function Documents() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => readSnapshot('documents/'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -86,10 +86,10 @@ export default function Documents() {
 }
 
 export function DocumentReviewQueue() {
-  const [data, setData] = useState(null), [page, setPage] = useState(1), [selectedId, setSelectedId] = useState(null), [filter, setFilter] = useState('');
+  const [data, setData] = useState(() => readSnapshot('documents/review-queue/?page=1')), [page, setPage] = useState(1), [selectedId, setSelectedId] = useState(null), [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
   async function load() { setBusy(true); setError(''); try { setData(await api(`documents/review-queue/?page=${page}`)); } catch (err) { setError(err.message); } finally { setBusy(false); } }
-  useEffect(() => { setSelectedId(null); load(); }, [page]);
+  useEffect(() => { setSelectedId(null); setData(readSnapshot(`documents/review-queue/?page=${page}`)); load(); }, [page]);
   const rows = data?.results.filter(item => `${item.volunteer_name} ${item.type_name}`.toLocaleLowerCase('es').includes(filter.toLocaleLowerCase('es'))) || [];
   const selected = rows.find(item => item.id === selectedId) || rows[0];
   async function review(event, document) {

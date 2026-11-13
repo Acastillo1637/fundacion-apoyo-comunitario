@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, ClipboardCheck, FileCheck2, MapPin, ShieldCheck, Users } from 'lucide-react';
-import { api } from '../api';
+import { api, readSnapshot } from '../api';
 
 const date = value => new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 const actionLabels = { 'account.login': 'Inicio de sesión', 'account.registered': 'Cuenta registrada', 'request.created': 'Solicitud recibida', 'request.approved': 'Solicitud aprobada', 'request.in_review': 'Solicitud en revisión', 'request.rejected': 'Solicitud rechazada', 'event.created': 'Evento planificado', 'event.open': 'Convocatoria publicada', 'event.cancelled': 'Actividad cancelada', 'event.finished': 'Actividad finalizada', 'participation.applied': 'Postulación recibida', 'participation.invited': 'Invitación registrada', 'participation.accept': 'Invitación aceptada', 'participation.confirm': 'Participación confirmada', 'participation.present': 'Asistencia registrada', 'catalog.updated': 'Catálogo actualizado' };
@@ -14,11 +14,11 @@ export function Avatar({ name = '', large = false }) {
 }
 
 export default function OperationalOverview({ portal, navigate, user, snapshots }) {
-  const [data, setData] = useState(snapshots?.[portal] || null), [error, setError] = useState('');
+  const [data, setData] = useState(() => readSnapshot(`workspace-summary/?portal=${portal}`) || snapshots?.[portal] || null), [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(true);
   useEffect(() => {
     let active = true;
-    setData(snapshots?.[portal] || null); setError(''); setRefreshing(true);
+    setData(readSnapshot(`workspace-summary/?portal=${portal}`) || snapshots?.[portal] || null); setError(''); setRefreshing(true);
     api(`workspace-summary/?portal=${portal}`).then(result => {
       if (!active) return;
       if (snapshots) snapshots[portal] = result;
