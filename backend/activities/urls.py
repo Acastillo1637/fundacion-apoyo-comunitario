@@ -1,8 +1,13 @@
 from django.urls import path
 from . import views
 from . import participation
+from . import contacts
+from accounts.geography import event_location
 
 urlpatterns = [
+    path('operations/events/<uuid:event_id>/location/', event_location),
+    path('operations/events/<uuid:event_id>/contacts/', contacts.event_contacts),
+    path('operations/contacts/<int:contact_id>/action/', contacts.contact_action),
     path('participation-status/', participation.participation_status),
     path('participations/', participation.mine),
     path('participations/<uuid:participation_id>/decision/', participation.decision),

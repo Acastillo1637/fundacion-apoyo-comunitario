@@ -2,7 +2,9 @@
 
 Plataforma web para organizar voluntarios y su participación en actividades de la fundación.
 
-**En desarrollo.** Funcionan registro, correo, acceso, perfil, declaración de habilidades y profesiones, y disponibilidad. Todavía no está desplegada ni preparada para datos reales.
+**Conectamos personas, multiplicamos la ayuda.**
+
+Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. Incluye gestión por roles, actividades, documentos privados, recomendaciones con mapas, contactos manuales por WhatsApp y trazabilidad. La publicación en internet requiere completar la configuración institucional y de producción.
 
 ## Lo que ya funciona
 
@@ -28,12 +30,21 @@ Plataforma web para organizar voluntarios y su participación en actividades de 
 - Respaldos con aceptación propia y activación manual mediante una nueva invitación como titular.
 - Edición de información de convocatorias publicadas, con motivo, historial y avisos internos.
 - Datos de demostración con usuarios, entidades y convocatorias ficticias; consulta [contenido y accesos](docs/DATOS_DEMO.md).
-- 244 pruebas del backend, incluidas cinco de concurrencia que requieren PostgreSQL, y 24 del frontend.
+- Matching determinista con pesos administrables, experiencia verificada, habilidades deseables y distancias Haversine.
+- Ubicaciones aproximadas, mapas interactivos y selección sincronizada de candidatos elegibles.
+- Seguimiento manual de contactos WhatsApp, vencimientos, confirmación con revalidación y reemplazos.
+- Solicitudes de privacidad notificadas a todos los administradores generales activos y descarga de datos propios.
+- Logo oficial aportado y eslogan incorporados sin rediseñar el logo.
+- 281 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 31 del frontend.
 
 Las optimizaciones de carga local y sus mediciones están documentadas en [Rendimiento](docs/RENDIMIENTO.md).
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
 
-**Para producción:** configurar SMTP, HTTPS, respaldos externos y monitoreo; completar la revisión visual/móvil. WhatsApp es manual asistido, sin API pagada. Consulta el [circuito de participación y los dashboards](docs/PARTICIPACION.md).
+**Antes de publicar:** configurar dominio/HTTPS, SMTP, ClamAV, volumen privado, copias externas y plazo de conservación aprobado. WhatsApp usa enlaces oficiales y envío humano; la búsqueda externa de lugares está desactivada por defecto.
+
+Consulta [matching, mapas y WhatsApp](docs/MATCHING_MAPAS_WHATSAPP.md), [API](docs/API_PRO12.md), [despliegue y recuperación](docs/DESPLIEGUE_PRO12.md) y [pruebas, seguridad y límites reales](docs/VALIDACION_SEGURIDAD_PRO12.md).
+
+**Después de actualizar:** instala `backend/requirements.lock` en el entorno virtual, ejecuta `npm ci` dentro de `frontend` y reinicia ambos servidores. `scripts/start-backend.ps1` aplica las migraciones de Supabase cuando existe `.env.shared`. No vuelvas a importar los datos ni crees otra base.
 
 ## Cómo abrirlo en tu computador
 
@@ -272,11 +283,11 @@ GitHub guarda el código y su historial. **Subirlo no publica la aplicación en 
 
 No subas `.env`, contraseñas, claves privadas, bases de datos, documentos personales ni backups. `.env.example` contiene nombres de variables sin secretos reales.
 
-## Pendientes importantes
+## Pendientes antes de publicar
 
-- Las pruebas locales usan SQLite. Las tres de concurrencia real se ejecutan únicamente con PostgreSQL, mediante el workflow de GitHub.
-- Completar la revisión visual en navegador; el frontend ya compila.
-- Verificar el recorrido administrativo completo de MFA antes de producción.
-- Incorporar módulos operativos, hardening, backups y restauración.
+- Aprobar el plazo de conservación y el canal para solicitudes de personas sin cuenta. La bandeja interna ya notifica a todos los administradores activos.
+- Configurar SMTP real, dominio, HTTPS, antivirus y almacenamiento privado persistente; probar esos servicios en el hosting elegido.
+- Definir recuperación de administradores, política de enrolamiento MFA, monitoreo y copias externas programadas.
+- Completar la evaluación institucional de privacidad y revisión de accesibilidad/dispositivos. Las pruebas no equivalen a certificación legal ni a un pentest externo.
 
-Consulta [las decisiones técnicas y los pendientes](docs/IMPLEMENTACION.md).
+Las funcionalidades verificadas y las limitaciones se detallan en [la entrega técnica](docs/IMPLEMENTACION.md).

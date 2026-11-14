@@ -1,0 +1,30 @@
+# Reemplazar dominio, rutas y certificados antes de usar. No está instalado.
+server {
+    listen 80;
+    server_name voluntariado.example.org;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name voluntariado.example.org;
+    ssl_certificate /etc/letsencrypt/live/voluntariado.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/voluntariado.example.org/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    root /srv/fundacion/frontend/dist;
+    client_max_body_size 11m;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header X-Frame-Options DENY always;
+    location /static/ { alias /srv/fundacion/backend/staticfiles/; }
+    location ~ ^/(api|accounts|admin)(/|$) {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Sobrescribir, no confiar en cabeceras de clientes externos.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 35s;
+    }
+    # No existe una ruta pública hacia PRIVATE_DOCUMENT_ROOT.
+    location / { try_files $uri /index.html; }
+}

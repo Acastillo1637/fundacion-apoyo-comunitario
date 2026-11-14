@@ -79,7 +79,8 @@ def read_json(request):
 
 @require_GET
 def session_info(request):
-    return JsonResponse({'foundation_name': settings.FOUNDATION_NAME, 'csrf_token': get_token(request),
+    return JsonResponse({'foundation_name': settings.FOUNDATION_NAME, 'retention_notice':settings.DATA_RETENTION_NOTICE,
+                         'development':settings.DEBUG, 'csrf_token': get_token(request),
                          'user': user_data(request.user) if request.user.is_authenticated else None})
 
 
@@ -183,8 +184,12 @@ def profile(request):
             locked_user.management_revision += 1
             locked_user.save(update_fields=['first_name', 'last_name', 'management_revision'])
             request.user.first_name, request.user.last_name = locked_user.first_name, locked_user.last_name
+            request.user.management_revision = locked_user.management_revision
+            instance = VolunteerProfile.objects.select_for_update().get(pk=instance.pk)
+            if instance.commune != data['commune']:
+                instance.location_revision += 1
             instance.phone, instance.commune = data['phone'], data['commune']
-            instance.save(update_fields=['phone', 'commune'])
+            instance.save(update_fields=['phone', 'commune', 'location_revision'])
             AuditEvent.objects.create(actor=request.user, action='profile.updated')
     return Response({**user_data(request.user), 'phone': instance.phone, 'commune': instance.commune})
 

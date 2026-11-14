@@ -1,62 +1,30 @@
-# Fundación Apoyo Comunitario — identidad y base visual
+# Estado de implementación PRO-12
 
-> Actualización de acceso y funciones: el portal usa un inicio de sesión único para todos los roles. Las cuentas sin MFA configurado entran con contraseña; las que lo activaron validan el código en la misma pantalla. Django Admin conserva su requisito MFA. Los controles de roles y propiedad siguen vigentes. Consulta [dashboards y participación](PARTICIPACION.md) para el comportamiento actual, que reemplaza las referencias anteriores a redirección obligatoria y módulos de participación pendientes.
+Fundación Apoyo Comunitario · Conectamos personas, multiplicamos la ayuda.
 
-Estado: desarrollo local. No habilitar datos reales todavía.
+React/Vite y Django/DRF conservan la arquitectura existente; PostgreSQL en Supabase es la base definitiva. SQLite sirve para pruebas aisladas, no para producción. No se sustituyó el proyecto ni se eliminaron sus datos.
 
-## Decisiones vigentes
+## Funcionalidades integradas
 
-- Una fundación: Fundación Apoyo Comunitario. Nombre configurable mediante FOUNDATION_NAME.
-- React + Vite + JavaScript, Django + DRF y PostgreSQL administrado en Supabase como base definitiva. El hosting alojará la aplicación y se conectará a Supabase. Consulta [la decisión y el texto para el informe](ARQUITECTURA_BD.md).
-- Referencia visual: ZIP de Stitch entregado por el usuario. Sus textos y automatizaciones no constituyen requisitos.
-- Paleta tomada de DESIGN.md: azul #0051d5, texto #142339 y fondos claros.
-- No se incorporan OTP por WhatsApp, entrega/lectura simulada ni promoción autónoma de respaldos.
-- Registro público de adultos declarados, sin campo editable de rol.
-- Sesión en cookie HTTPOnly. Todas las mutaciones requieren CSRF, incluso antes de autenticarse.
-- allauth gestiona enlaces de verificación, recuperación, TOTP y códigos de recuperación.
-- Cuentas privilegiadas o con factores configurados pasan por el flujo de allauth. El endpoint JSON no omite MFA.
-- Operaciones administrativas requieren permiso específico y autenticación MFA en la sesión.
-- Desarrollo colaborativo sobre Supabase. SQLite se conserva para trabajo local aislado y pruebas; producción no admite SQLite.
+- Cuentas verificadas, registro voluntario/solicitante adulto declarado, recuperación mediante allauth, sesiones con CSRF y acceso por roles. MFA se exige cuando está enrolado; Django Admin mantiene su flujo protegido.
+- Espacios de voluntariado, solicitante, secretaría y administración; gestión web de usuarios, catálogos y restricciones, con historial.
+- Perfiles, habilidades, profesiones, disponibilidad y excepciones, documentos privados versionados, revisión y vencimiento.
+- Solicitudes verificadas, eventos, funciones, cupos, publicación, cancelación, participantes, asistencia, lista de espera, respaldos, notificaciones y auditoría.
+- Recomendación determinista global con requisitos obligatorios, habilidades deseables, experiencia con asistencia y distancia aproximada. Pesos editables por administración, revisiones y motivos.
+- Ubicaciones de referencia redondeadas, ubicación privada de eventos, actividades remotas, Haversine y mapa interactivo sincronizado. Fallos del proveedor no impiden usar coordenadas y listados.
+- WhatsApp consentido mediante enlaces oficiales, intentos separados del envío manual, estados e historial, renovación de invitaciones y confirmación con control transaccional de cupos/requisitos.
+- Privacidad: descarga de datos propios y solicitudes con notificaciones para todos los administradores generales activos. La respuesta administrativa no borra datos automáticamente.
+- Logo oficial aportado, sin alteración, en React y autenticación Django; eslogan oficial y diseño adaptable.
+- Migraciones aditivas aplicadas en Supabase con respaldo previo; herramientas de respaldo/restauración, salud, ejemplos de despliegue y CI ampliado.
 
-## Endpoints del primer bloque
+## Evidencia y documentación
 
-| Método | Ruta | Acceso |
-| --- | --- | --- |
-| GET | /api/session/ | Público, emite token CSRF y nombre configurado |
-| POST | /api/register/ | Público, consentimiento y declaración de mayoría de edad |
-| POST | /api/login/ | Correo verificado, credenciales y límites |
-| POST | /api/logout/ | CSRF |
-| GET/PATCH | /api/profile/ | Perfil propio; campos permitidos explícitos |
-| GET | /api/operations/ | Permiso view_volunteerprofile + MFA |
-| GET/POST | /accounts/... | Flujos de verificación, recuperación y MFA de allauth |
+[Auditoría inicial y cierre](AUDITORIA_PRO12.md), [algoritmo y proveedores](MATCHING_MAPAS_WHATSAPP.md), [API](API_PRO12.md), [despliegue/recuperación](DESPLIEGUE_PRO12.md) y [validación/seguridad](VALIDACION_SEGURIDAD_PRO12.md).
 
-## Pendientes antes de producción
+281 pruebas backend satisfactorias sobre PostgreSQL local, 31 frontend y compilación correcta. El flujo integral automatizado es de API; la revisión de navegador cubre escenarios críticos, no todas las combinaciones. Cero vulnerabilidades conocidas en las auditorías de dependencias de esta fecha no implica ausencia de vulnerabilidades.
 
-- Aviso institucional y política de retención; consentimiento actual es para pruebas con datos ficticios.
-- Dominio, SMTP real y logo oficial.
-- Probar MFA y recuperación completos en navegador, y política de recuperación de administradores.
-- Ejecutar la suite actualizada con PostgreSQL y completar Nginx/HTTPS antes de publicar.
-- Endurecer límites por cuenta/red y evaluar diferencias temporales de respuestas para enumeración.
-- Completar auditoría de cambios de privilegios y fallos de acceso; la actual registra solo acciones del primer bloque.
-- Configurar inactividad, CSP, monitoreo, copias externas y restauración.
-- Completar matching, postulaciones, invitaciones, notificaciones y demás módulos comprometidos.
+## Límites reales
 
-## Límite del primer bloque
+No se publicó en hosting ni se verificó correo SMTP real, antivirus de producción o certificados del hosting. WhatsApp no envía automáticamente ni confirma entregas. No hay rutas ni tiempos de traslado; Nominatim está desactivado hasta aceptación informada y sus respuestas se probaron con simulación. Faltan plazo institucional de conservación, canal para personas sin cuenta, política MFA de producción, monitoreo y respaldo externo programado. Los archivos privados no se replican por compartir la base.
 
-El dashboard muestra estado real de la cuenta y perfil. No existen todavía métricas de eventos o documentos. No hay usuarios de demostración con contraseñas públicas ni creación automática de superusuarios.
-
-## Segundo bloque
-
-Se incorporan catálogos administrables, habilidades/profesiones declaradas, franjas semanales y fechas no disponibles. El dashboard usa sus cantidades reales. Consulta [modelo, endpoints, permisos y limitaciones](VOLUNTARIOS.md).
-
-## Tercer bloque
-
-Se incorporan carga privada y versiones documentales, requisitos por perfil, descarga autorizada, cola de revisión con permiso y MFA, decisiones auditadas y vencimiento calculado. Consulta [el diseño documental y los pendientes para producción](DOCUMENTOS.md).
-
-## Cuarto bloque
-
-Se incorporan solicitudes públicas verificadas, decisiones administrativas, eventos con funciones/cupos y publicación con datos mínimos. Consulta [modelo, workflows, permisos y limitaciones](ACTIVIDADES.md).
-
-## Administración de usuarios
-
-Se incorpora la sección Usuarios en React, con invitaciones, roles acotados, activación/desactivación, auditoría e invalidación de sesiones. Consulta [controles y límites](USUARIOS.md).
+No se afirma cumplimiento normativo, invulnerabilidad ni certificación de accesibilidad. No introducir datos personales reales antes de resolver los pendientes de publicación.

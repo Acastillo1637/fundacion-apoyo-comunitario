@@ -4,9 +4,9 @@ colorama==0.4.6
 cryptography==50.0.2
 Django==5.2.18
 django-allauth==65.21.1
-djangorestframework==3.16.1
+djangorestframework==3.18.3
 fido2==2.2.1
-pillow==12.3.0
+pillow==13.0.0
 psycopg==3.3.6
 psycopg-binary==3.3.6
 psycopg-pool==3.3.3

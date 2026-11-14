@@ -1,0 +1,17 @@
+import { useEffect, useState } from 'react';
+import { api } from '../api';
+
+export default function MatchingConfiguration() {
+  const [data, setData] = useState(null), [reason, setReason] = useState(''), [accept, setAccept] = useState(false);
+  const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
+  useEffect(() => { api('management/matching-policy/').then(setData).catch(e => setError(e.message)); }, []);
+  async function save(e) {
+    e.preventDefault(); setBusy(true); setError(''); setMessage('');
+    const { geocoding_policy_accepted_at, ...values } = data;
+    try { setData(await api('management/matching-policy/', { method:'PUT', body:JSON.stringify({ ...values, reason, accept_geocoding_policy:accept }) })); setMessage('Criterios guardados y auditados.'); setReason(''); }
+    catch (err) { setError(err.message); } finally { setBusy(false); }
+  }
+  return <section className="panel"><h2>Criterios de recomendación</h2><p>El algoritmo propone candidatos; coordinación decide. Los pesos suman 100. Un puntaje no reserva cupos ni representa una probabilidad.</p>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}{data && <form onSubmit={save}><fieldset className="form-fieldset" disabled={busy}><div className="matching-weight-grid">{[['skills_weight','Habilidades deseables',0,100],['experience_weight','Experiencia acreditada por asistencia',0,100],['distance_weight','Proximidad en línea recta',0,100],['distance_limit_km','Distancia a la que el componente llega a cero (km)',1,500],['experience_target','Participaciones para completar experiencia',1,100]].map(([key,label,min,max]) => <label className="field" key={key}>{label}<input type="number" min={min} max={max} required value={data[key]} onChange={e => setData({ ...data, [key]:Number(e.target.value) })}/></label>)}</div><p>Suma de pesos: <strong>{data.skills_weight+data.experience_weight+data.distance_weight}/100</strong></p>
+      <section className="notice"><h3>Búsqueda pública de lugares, optativa</h3><p>Los mapas y coordenadas manuales no requieren activar este servicio. Nominatim público no tiene garantía de disponibilidad: máximo global de 1 consulta por segundo, búsqueda por botón, caché y sin autocompletado. Está prohibido enviar datos personales o confidenciales.</p><p>Revisa la <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noreferrer">política de Nominatim</a> y la <a href="https://operations.osmfoundation.org/policies/tiles/" target="_blank" rel="noreferrer">política de mapas OpenStreetMap</a> antes de habilitarlo.</p><label className="checkbox"><input type="checkbox" checked={data.geocoding_enabled} onChange={e => setData({ ...data, geocoding_enabled:e.target.checked })}/>Habilitar búsquedas explícitas de lugares públicos</label><label className="checkbox"><input type="checkbox" checked={accept} onChange={e => setAccept(e.target.checked)}/>He leído las políticas, decido utilizar este servicio y asumo su operación conforme a esas condiciones.</label></section>
+      <label className="field">Motivo del ajuste<input value={reason} minLength={8} maxLength={500} required onChange={e => setReason(e.target.value)}/></label><button className="button primary" disabled={busy}>Guardar criterios</button></fieldset></form>}</section>;
+}

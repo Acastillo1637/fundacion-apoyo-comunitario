@@ -1,0 +1,2 @@
+-r requirements.lock
+gunicorn==27.0.1; sys_platform != 'win32'

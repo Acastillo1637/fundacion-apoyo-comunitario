@@ -4,8 +4,23 @@ from . import account_management
 from . import requesters
 from . import workspaces
 from . import overview
+from . import geography
+from . import health
+from . import privacy
+from activities import contacts, matching
 
 urlpatterns = [
+    path('privacy/requests/', privacy.requests),
+    path('privacy/requests/<int:request_id>/review/', privacy.review),
+    path('privacy/export/', privacy.export_own),
+    path('health/live/', health.live),
+    path('health/ready/', health.ready),
+    path('volunteer/location/', geography.own_location),
+    path('volunteer/contact-preferences/', contacts.preferences),
+    path('maps/search/', geography.geocode),
+    path('maps/config/', geography.map_config),
+    path('management/matching-policy/', matching.configuration),
+    path('operations/volunteers/<int:profile_id>/whatsapp/', contacts.profile_whatsapp),
     path('volunteer-overview/', overview.volunteer_overview),
     path('workspace-summary/', workspaces.summary),
     path('account-profile/', workspaces.account_profile),

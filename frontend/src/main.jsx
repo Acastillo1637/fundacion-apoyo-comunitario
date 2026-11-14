@@ -11,6 +11,9 @@ import './activities/styles.css';
 import './design/stitch.css';
 import Auth from './design/Auth';
 import Landing from './design/Landing';
+import { FoundationLogo, slogan } from './design/Brand';
+import './design/pro12.css';
+import { PrivacyNotice } from './accounts/PrivacyRequests';
 
 const steps = ['Crea tu cuenta', 'Completa tu perfil', 'Participa en una actividad'];
 
@@ -31,7 +34,7 @@ function App() {
   return <>
     <a className="skip" href="#main">Saltar al contenido</a>
     <header className={`header ${workspace ? 'workspace-public-header' : ''}`}>
-      <button className="brand" onClick={() => navigate(session?.user ? 'dashboard' : 'home')}><span className="brand-icon"><HeartHandshake size={25}/></span><span>{brand}<small>RED DE VOLUNTARIADO</small></span></button>
+      <button className="brand" onClick={() => navigate(session?.user ? 'dashboard' : 'home')}><FoundationLogo/><span>{brand}<small>{slogan}</small></span></button>
       <button className="mobile-menu icon-btn" aria-label={menu ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</button>
       <nav aria-label="Navegación principal" className={menu ? 'top-nav open' : 'top-nav'}>
         <button className="text-button" disabled={status !== 'ready'} onClick={() => navigate('request')}>Solicitar apoyo</button>
@@ -42,12 +45,13 @@ function App() {
     {error && <div role="alert" className="error global-error">{error}</div>}
     <main id="main" className={workspace ? 'workspace-main' : 'public-main'}>
       {view === 'home' && <Landing brand={brand} ready={status === 'ready'} navigate={navigate}/>}
+      {view === 'privacy' && <PrivacyNotice retentionNotice={session?.retention_notice} development={session?.development}/>}
       {['login', 'register', 'register-requester'].includes(view) && <Auth key={view} mode={view === 'login' ? 'login' : 'register'} initialType={view === 'register-requester' ? 'requester' : 'volunteer'} brand={brand} navigate={navigate} onLogin={user => { setSession(old => ({ ...old, user })); navigate('dashboard'); }}/>}
       {view === 'dashboard' && session?.user && <Dashboard key={session.user.id} foundation={brand} onPublic={() => navigate('home')} onSignOut={signOut} user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/>}
       {view === 'request' && (session?.user?.available_portals?.includes('requester') ? <Dashboard key={session.user.id} foundation={brand} onPublic={() => navigate('home')} onSignOut={signOut} initialPortal="requester" initialTab="new-request" user={session.user} setUser={user => setSession(old => ({ ...old, user }))}/> : <PublicRequest navigate={navigate}/>)}
       {view === 'verify-request' && <RequestVerification ready={status === 'ready'} navigate={navigate}/>}
     </main>
-    <footer className={workspace ? 'workspace-footer' : 'public-footer'}><span>© {new Date().getFullYear()} {brand}</span><span>Personas que se unen. Comunidades que crecen.</span></footer>
+    <footer className={workspace ? 'workspace-footer' : 'public-footer'}><span>© {new Date().getFullYear()} {brand}</span><span>Conectamos personas, multiplicamos la ayuda</span></footer>
   </>;
 }
 

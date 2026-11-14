@@ -16,7 +16,20 @@ from django.utils import timezone
 
 
 APP_ORDER = ['accounts', 'volunteers', 'documents', 'activities', 'account', 'mfa', 'admin']
-EXCLUDED = {'accounts.RateBucket', 'accounts.AccountManagementGuard'}
+EXCLUDED = {'accounts.RateBucket', 'accounts.AccountManagementGuard', 'activities.GeocodingGate', 'activities.GeocodingResult'}
+
+
+def has_application_data(models, alias='default'):
+    for model in models:
+        rows = model._base_manager.using(alias)
+        if model._meta.label == 'activities.MatchingPolicy':
+            # A fresh migrated database has one default singleton; source import
+            # may replace only that untouched bootstrap row, never an edited policy.
+            rows = rows.exclude(pk=1, revision=0, skills_weight=60, experience_weight=15, distance_weight=25,
+                distance_limit_km=50, experience_target=5, geocoding_enabled=False, geocoding_policy_accepted_at__isnull=True)
+        if rows.exists():
+            return True
+    return False
 
 
 def serialized(models, alias):
@@ -53,7 +66,7 @@ class Command(BaseCommand):
         executor = MigrationExecutor(target)
         if executor.migration_plan(executor.loader.graph.leaf_nodes()):
             raise CommandError('Aplica primero las migraciones pendientes en Supabase.')
-        if any(model._base_manager.using('default').exists() for model in models):
+        if has_application_data(models):
             raise CommandError('Destino con datos: se cancela para no sobrescribir ni duplicar registros.')
         backup_dir = settings.BASE_DIR.parent / 'backups' / f"local-to-shared-{timezone.now():%Y%m%dT%H%M%S}-{uuid4().hex[:8]}"
         backup_dir.mkdir(parents=True)
@@ -101,7 +114,7 @@ class Command(BaseCommand):
                 with target.cursor() as cursor:
                     cursor.execute("SET LOCAL lock_timeout = '10s'")
                     cursor.execute('LOCK TABLE ' + ', '.join(tables) + ' IN SHARE ROW EXCLUSIVE MODE')
-                if any(model._base_manager.using('default').exists() for model in models):
+                if has_application_data(models):
                     raise CommandError('El destino cambio durante la preparacion. Importacion cancelada.')
                 # Permissions are resolved by their natural names, never SQLite IDs.
                 for entry in groups:

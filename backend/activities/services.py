@@ -47,21 +47,23 @@ def request_data(item, detail=False):
 def event_data(item, private=False):
     from django.db.models import prefetch_related_objects
     positions = list(item.positions.all())
-    prefetch_related_objects(positions, 'required_skills__required_documents', 'required_documents')
+    prefetch_related_objects(positions, 'required_skills__required_documents', 'required_documents', 'desired_skills')
     data = {
         'id': str(item.pk), 'title': item.title, 'public_description': item.public_description,
         'commune': item.commune, 'status': item.status, **schedule_data(item),
-        'capacity': sum(position.capacity for position in positions),
+        'capacity': sum(position.capacity for position in positions), 'is_remote':item.is_remote,
         'positions': [
             {'id': position.pk, 'name': position.name, 'capacity': position.capacity,
              'required_skills': [{'id': skill.pk, 'name': skill.name} for skill in position.required_skills.all()],
              'required_documents': [{'id': document.pk, 'name': document.name} for document in position.required_documents.all()],
+             'desired_skills': [{'id': skill.pk, 'name': skill.name} for skill in position.desired_skills.all()],
              'inherited_documents': list({document.pk: {'id': document.pk, 'name': document.name}
                                           for skill in position.required_skills.all() for document in skill.required_documents.all()}.values())}
             for position in positions
         ],
     }
     if private:
+        data['location'] = {'latitude':item.latitude, 'longitude':item.longitude, 'is_remote':item.is_remote}
         data.update(request_id=str(item.request_id), address=item.address, internal_notes=item.internal_notes,
                     revision=item.revision,
                     can_edit_information=item.status == 'open' and item.starts_at > timezone.now(),
@@ -97,6 +99,7 @@ def replace_positions(event, positions):
         position = EventPosition.objects.create(event=event, name=data['name'], capacity=data['capacity'])
         position.required_skills.set(data['required_skills'])
         position.required_documents.set(data['required_documents'])
+        position.desired_skills.set(data.get('desired_skills', []))
 
 
 @transaction.atomic

@@ -62,6 +62,10 @@ class VolunteerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='volunteer_profile')
     phone = models.CharField(max_length=20, blank=True)
     commune = models.CharField(max_length=80, blank=True)
+    sector = models.CharField(max_length=80, blank=True, db_default='')
+    reference_latitude = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    reference_longitude = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    location_revision = models.PositiveIntegerField(default=0, db_default=0)
     adult_confirmed_at = models.DateTimeField()
     privacy_accepted_at = models.DateTimeField()
     notice_version = models.CharField(max_length=30, default='development-1')
@@ -72,6 +76,13 @@ class VolunteerProfile(models.Model):
     restriction_reason = models.CharField(max_length=1000, blank=True)
     restriction_expires_at = models.DateTimeField(null=True, blank=True)
     restriction_revision = models.PositiveIntegerField(default=0, db_default=0)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=(
+            models.Q(reference_latitude__isnull=True, reference_longitude__isnull=True) |
+            models.Q(reference_latitude__isnull=False, reference_longitude__isnull=False,
+                     reference_latitude__gte=-90, reference_latitude__lte=90,
+                     reference_longitude__gte=-180, reference_longitude__lte=180)), name='volunteer_reference_valid')]
 
     @property
     def participation_restricted(self):
@@ -102,3 +113,27 @@ class RateBucket(models.Model):
     key = models.CharField(max_length=64, unique=True)
     count = models.PositiveIntegerField(default=0)
     expires_at = models.DateTimeField()
+
+
+class PrivacyRequest(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='privacy_requests')
+    kind = models.CharField(max_length=20, choices=[('access','Acceso a mis datos'), ('rectification','Rectificación'), ('deletion','Eliminación'), ('other','Otra solicitud de privacidad')])
+    note = models.CharField(max_length=1000)
+    status = models.CharField(max_length=20, default='pending', choices=[('pending','Pendiente'), ('in_review','En revisión'), ('answered','Respuesta registrada'), ('rejected','Rechazada con motivo')])
+    response = models.CharField(max_length=2000, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='privacy_reviews')
+    revision = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at','pk']
+
+
+class PrivacyRequestChange(models.Model):
+    request = models.ForeignKey(PrivacyRequest, on_delete=models.PROTECT, related_name='changes')
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    from_status = models.CharField(max_length=20)
+    to_status = models.CharField(max_length=20)
+    response = models.CharField(max_length=2000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

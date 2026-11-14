@@ -170,7 +170,7 @@ def events(request):
         page, rows = pagination(request, queryset)
         return Response({'results': [event_card(item) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
     queryset = Event.objects.prefetch_related(
-        'positions__required_skills__required_documents', 'positions__required_documents', 'transitions',
+        'positions__required_skills__required_documents', 'positions__required_documents', 'positions__desired_skills', 'transitions',
         Prefetch('changes', queryset=EventChange.objects.select_related('actor').all()[:20], to_attr='loaded_changes'))
     page, rows = pagination(request, queryset)
     return Response({'results': [event_data(item, private=True) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
@@ -213,6 +213,6 @@ def operator_options(request):
 @permission_classes([AllowAny])
 def public_events(request):
     queryset = Event.objects.filter(status='open', starts_at__gt=timezone.now()).prefetch_related(
-        'positions__required_skills__required_documents', 'positions__required_documents')
+        'positions__required_skills__required_documents', 'positions__required_documents', 'positions__desired_skills')
     page, rows = pagination(request, queryset)
     return Response({'results': [event_data(item) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})

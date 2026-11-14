@@ -24,6 +24,17 @@ def own_profile(request):
     return get_object_or_404(VolunteerProfile, user=request.user)
 
 
+def locked_profile(profile_id):
+    """After the event lock, consistently lock user before volunteer profile."""
+    from accounts.models import User
+    identity = get_object_or_404(VolunteerProfile.objects.only('user_id'), pk=profile_id)
+    User.objects.select_for_update().get(pk=identity.user_id)
+    profile = get_object_or_404(VolunteerProfile.objects.select_for_update(of=('self',)).select_related('user'), pk=profile_id)
+    if profile.user_id != identity.user_id:
+        raise Conflict()
+    return profile
+
+
 def prepare_eligibility(profiles, positions):
     """Batch read-only matching data. Writes continue to use fresh locked queries."""
     prefetch_related_objects(positions, 'required_skills__required_documents', 'required_documents')
@@ -152,7 +163,7 @@ def mine(request):
     identity = get_object_or_404(EventPosition, pk=serializer.validated_data['position_id'])
     with transaction.atomic():
         event = Event.objects.select_for_update().get(pk=identity.event_id)
-        profile = VolunteerProfile.objects.select_for_update().get(pk=profile.pk)
+        profile = locked_profile(profile.pk)
         position = EventPosition.objects.select_related('event').get(pk=identity.pk)
         open_event(event)
         reasons = eligibility(profile, position)
@@ -199,7 +210,7 @@ def event_participants(request, event_id):
     values = serializer.validated_data
     with transaction.atomic():
         event = Event.objects.select_for_update().get(pk=event.pk)
-        profile = get_object_or_404(VolunteerProfile.objects.select_for_update().select_related('user'), pk=values['profile_id'])
+        profile = locked_profile(values['profile_id'])
         position = get_object_or_404(EventPosition.objects.select_related('event'), pk=values['position_id'], event=event)
         open_event(event)
         reasons = eligibility(profile, position)
@@ -226,17 +237,8 @@ def event_participants(request, event_id):
 def candidates(request, event_id, position_id):
     require_operator(request)
     position = get_object_or_404(EventPosition.objects.select_related('event'), pk=position_id, event_id=event_id)
-    from .views import pagination
-    rows = VolunteerProfile.objects.filter(user__is_active=True, user__groups__name='Voluntario').select_related('user').order_by('user__first_name', 'pk').distinct()
-    page, items = pagination(request, rows)
-    items = list(items)
-    prepare_eligibility(items, [position])
-    registered = set(position.event.participations.filter(profile__in=items, status__in=['applied', 'confirmed', 'waitlisted', 'invited']).exclude(status='invited', expires_at__lte=timezone.now()).values_list('profile_id', flat=True))
-    return Response({'results': [{'id': item.pk, 'name': item.user.get_full_name(), 'commune': item.commune,
-                                 'nearby': bool(item.commune.strip() and item.commune.strip().casefold() == position.event.commune.strip().casefold()),
-                                 'eligible': not (reasons := eligibility(item, position, prepared=True)), 'reasons': reasons,
-                                 'already_registered': item.pk in registered}
-                                for item in items], 'total': rows.count(), 'page': page})
+    from .matching import ranked_candidates
+    return ranked_candidates(request, position)
 
 
 @api_view(['POST'])
@@ -253,8 +255,9 @@ def decision(request, participation_id):
         identity = get_object_or_404(Participation, pk=participation_id, profile=profile)
     with transaction.atomic():
         event = Event.objects.select_for_update().get(pk=identity.event_id)
-        VolunteerProfile.objects.select_for_update().get(pk=identity.profile_id)
-        item = Participation.objects.select_for_update().select_related('event', 'position', 'profile__user').get(pk=identity.pk)
+        profile = locked_profile(identity.profile_id)
+        item = Participation.objects.select_for_update(of=('self',)).select_related('event', 'position', 'profile__user').get(pk=identity.pk)
+        item.profile = profile
         if item.revision != revision:
             raise Conflict()
         if action in ['present', 'absent']:

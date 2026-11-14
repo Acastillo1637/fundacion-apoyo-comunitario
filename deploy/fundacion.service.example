@@ -1,0 +1,22 @@
+[Unit]
+Description=Fundación Apoyo Comunitario Django
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=fundacion
+Group=fundacion
+WorkingDirectory=/srv/fundacion/backend
+EnvironmentFile=/etc/fundacion/backend.env
+ExecStart=/srv/fundacion/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 1 --threads 4 --timeout 30 --access-logfile - --error-logfile -
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fundacion/documents
+
+[Install]
+WantedBy=multi-user.target

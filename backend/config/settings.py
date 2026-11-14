@@ -10,6 +10,7 @@ if not SECRET_KEY:
     raise ImproperlyConfigured('Define DJANGO_SECRET_KEY en el entorno.')
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 FOUNDATION_NAME = os.environ.get('FOUNDATION_NAME', 'Fundación Apoyo Comunitario')
+DATA_RETENTION_NOTICE = os.environ.get('DATA_RETENTION_NOTICE', '')
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in os.environ.get(
         'DJANGO_CSRF_TRUSTED_ORIGINS',
@@ -68,6 +69,8 @@ else:
                     'prepare_threshold': None,
                     'pool': {'min_size': 1, 'max_size': 4, 'timeout': 10, 'max_idle': 60}},
     }}
+    if os.environ.get('POSTGRES_SSLROOTCERT'):
+        DATABASES['default']['OPTIONS']['sslrootcert'] = os.environ['POSTGRES_SSLROOTCERT']
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ['accounts.backends.OptimizedModelBackend', 'django.contrib.auth.backends.ModelBackend', 'allauth.account.auth_backends.AuthenticationBackend']
 AUTH_PASSWORD_VALIDATORS = [
@@ -110,8 +113,11 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_AGE = 60 * 60 * 8
 SESSION_SAVE_EVERY_REQUEST = False
 SECURE_SSL_REDIRECT = not DEBUG
+if os.environ.get('DJANGO_TRUST_PROXY', 'false').lower() == 'true':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 X_FRAME_OPTIONS = 'DENY'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
@@ -124,6 +130,9 @@ PRIVATE_DOCUMENT_ROOT = Path(os.environ.get('PRIVATE_DOCUMENT_ROOT') or BASE_DIR
 DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
 DOCUMENT_USER_QUOTA_BYTES = 50 * 1024 * 1024
 DOCUMENT_MAX_VERSIONS = 100
+MAP_TILE_URL = os.environ.get('MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+GEOCODING_URL = os.environ.get('GEOCODING_URL', 'https://nominatim.openstreetmap.org/search')
+GEOCODING_USER_AGENT = os.environ.get('GEOCODING_USER_AGENT', 'FundacionApoyoComunitario-PRO12/1.0')
 DOCUMENT_SCAN_REQUIRED = not DEBUG
 CLAMAV_HOST = os.environ.get('CLAMAV_HOST', '')
 CLAMAV_PORT = int(os.environ.get('CLAMAV_PORT', '3310'))

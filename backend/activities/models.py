@@ -73,13 +73,20 @@ class Event(models.Model):
     address = models.CharField(max_length=250)
     commune = models.CharField(max_length=80)
     internal_notes = models.CharField(max_length=1500, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    is_remote = models.BooleanField(default=False, db_default=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     revision = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['starts_at', 'pk']
-        constraints = [models.CheckConstraint(condition=models.Q(ends_at__gt=models.F('starts_at')), name='event_positive_duration')]
+        constraints = [models.CheckConstraint(condition=models.Q(ends_at__gt=models.F('starts_at')), name='event_positive_duration'),
+            models.CheckConstraint(condition=(models.Q(latitude__isnull=True, longitude__isnull=True) |
+                models.Q(latitude__isnull=False, longitude__isnull=False, latitude__gte=-90, latitude__lte=90,
+                         longitude__gte=-180, longitude__lte=180)), name='event_coordinates_valid'),
+            models.CheckConstraint(condition=models.Q(is_remote=False)|models.Q(latitude__isnull=True, longitude__isnull=True), name='remote_event_no_coordinates')]
 
 
 class EventPosition(models.Model):
@@ -87,6 +94,7 @@ class EventPosition(models.Model):
     name = models.CharField(max_length=100)
     capacity = models.PositiveIntegerField()
     required_skills = models.ManyToManyField('volunteers.Skill', blank=True)
+    desired_skills = models.ManyToManyField('volunteers.Skill', blank=True, related_name='desirable_positions')
     required_documents = models.ManyToManyField('volunteers.DocumentType', blank=True)
 
     class Meta:
@@ -146,9 +154,84 @@ class Participation(models.Model):
 class Notification(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     message = models.CharField(max_length=300)
-    target = models.CharField(max_length=30, blank=True, default='', db_default='', choices=[('', 'Sin enlace'), ('documents', 'Documentos'), ('participations', 'Participaciones'), ('my-requests', 'Mis solicitudes')])
+    target = models.CharField(max_length=30, blank=True, default='', db_default='', choices=[('', 'Sin enlace'), ('documents', 'Documentos'), ('participations', 'Participaciones'), ('my-requests', 'Mis solicitudes'), ('privacy-requests','Solicitudes de privacidad')])
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at', '-pk']
+
+
+class MatchingPolicy(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    skills_weight = models.PositiveSmallIntegerField(default=60)
+    experience_weight = models.PositiveSmallIntegerField(default=15)
+    distance_weight = models.PositiveSmallIntegerField(default=25)
+    distance_limit_km = models.PositiveSmallIntegerField(default=50)
+    experience_target = models.PositiveSmallIntegerField(default=5)
+    revision = models.PositiveIntegerField(default=0)
+    geocoding_enabled = models.BooleanField(default=False)
+    geocoding_policy_accepted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(id=1), name='matching_policy_singleton'),
+            models.CheckConstraint(condition=models.Q(skills_weight=100-models.F('experience_weight')-models.F('distance_weight')), name='matching_weights_total_100'),
+            models.CheckConstraint(condition=models.Q(distance_limit_km__gte=1, distance_limit_km__lte=500), name='matching_distance_bounds'),
+            models.CheckConstraint(condition=models.Q(experience_target__gte=1, experience_target__lte=100), name='matching_experience_bounds'),
+        ]
+
+
+class ContactInvitation(models.Model):
+    STATUS = [('pending_contact', 'Pendiente de contacto'), ('contact_started', 'Contacto iniciado'),
+              ('sent', 'Enviada: confirmación manual'), ('accepted', 'Aceptada: respuesta registrada'),
+              ('declined', 'Rechazada'), ('no_response', 'Sin respuesta'), ('cancelled', 'Cancelada')]
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='contacts')
+    position = models.ForeignKey(EventPosition, on_delete=models.PROTECT)
+    profile = models.ForeignKey('accounts.VolunteerProfile', on_delete=models.PROTECT, related_name='contacts')
+    status = models.CharField(max_length=20, choices=STATUS, default='pending_contact')
+    revision = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['event', 'profile'], name='one_contact_per_event_profile')]
+        ordering = ['-updated_at', 'pk']
+
+
+class MatchingPolicyChange(models.Model):
+    policy = models.ForeignKey(MatchingPolicy, on_delete=models.PROTECT)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    revision = models.PositiveIntegerField()
+    reason = models.CharField(max_length=500)
+    before = models.JSONField(default=dict)
+    after = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['policy', 'revision'], name='matching_policy_revision_once')]
+
+
+class ContactChange(models.Model):
+    contact = models.ForeignKey(ContactInvitation, on_delete=models.PROTECT, related_name='changes')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    from_status = models.CharField(max_length=20, blank=True)
+    to_status = models.CharField(max_length=20)
+    note = models.CharField(max_length=500, blank=True)
+    action = models.CharField(max_length=30)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+
+
+class GeocodingGate(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1)
+    next_request_at = models.DateTimeField()
+
+
+class GeocodingResult(models.Model):
+    key = models.CharField(max_length=64, primary_key=True)
+    results = models.JSONField(default=list)
+    expires_at = models.DateTimeField(db_index=True)

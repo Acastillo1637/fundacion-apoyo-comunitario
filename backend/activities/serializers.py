@@ -75,10 +75,12 @@ class PositionSerializer(StrictSerializer):
     capacity = serializers.IntegerField(min_value=1, max_value=500)
     required_skills = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=30)
     required_documents = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=30)
+    desired_skills = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=30, default=list)
 
     def validate(self, attrs):
         attrs['required_skills'] = active_choices(Skill, attrs['required_skills'], 'required_skills')
         attrs['required_documents'] = active_choices(DocumentType, attrs['required_documents'], 'required_documents')
+        attrs['desired_skills'] = active_choices(Skill, attrs['desired_skills'], 'desired_skills')
         return attrs
 
 
@@ -89,9 +91,16 @@ class EventSerializer(LocalScheduleSerializer):
     commune = serializers.CharField(max_length=80)
     internal_notes = serializers.CharField(max_length=1500, allow_blank=True, default='')
     positions = PositionSerializer(many=True, min_length=1, max_length=20)
+    latitude = serializers.FloatField(allow_null=True, default=None)
+    longitude = serializers.FloatField(allow_null=True, default=None)
+    is_remote = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        from accounts.geography import point
+        attrs['latitude'], attrs['longitude'] = point(attrs['latitude'], attrs['longitude'])
+        if attrs['is_remote']:
+            attrs['latitude'] = attrs['longitude'] = None
         names = [item['name'].casefold() for item in attrs['positions']]
         if len(names) != len(set(names)):
             raise serializers.ValidationError({'positions': 'Las funciones no pueden tener el mismo nombre.'})

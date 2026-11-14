@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 let server, Dashboard, OperationalOverview, Notifications;
 before(async () => {
-  server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  server = await createServer({ server: { middlewareMode: true, hmr: { port: 24679 } }, appType: 'custom' });
   Dashboard = (await server.ssrLoadModule('/src/volunteers/Dashboard.jsx')).default;
   OperationalOverview = (await server.ssrLoadModule('/src/design/Overview.jsx')).default;
   Notifications = (await server.ssrLoadModule('/src/activities/Participation.jsx')).Notifications;
