@@ -1,5 +1,23 @@
 # Datos de demostración comunitaria
 
+## Escenario adicional de matching y mapas
+
+El lote `matching-map-demo-v1` crea **DEMO — Preparación de kits comunitarios y encuentro vecinal**, con dos cupos y tres candidatos ficticios: Camila Méndez, Diego Araya y Valentina Ríos. Fecha del lote creado el 14-11-2026: **21-11-2026, 10:00–13:00, Santiago**. Incluye una habilidad obligatoria, habilidades deseables con distinta coincidencia, disponibilidad completa, referencias aproximadas y un tipo documental exclusivo DEMO con archivos PDF aprobados sintéticamente y vigentes. No acredita formación ni revisión humana real. Las participaciones quedan vacías para probar invitaciones desde cero.
+
+Los accesos aleatorios están en `backups/matching-map-demo-v1/access.json`, fuera de Git. Los PDF permanecen en el almacenamiento privado del backend que hizo la carga; compartir Supabase no copia esos archivos a otro equipo. Para demostrar descargas desde otro backend, trasladarlos por un canal privado autorizado conservando sus claves de almacenamiento.
+
+El generador no incorpora teléfonos personales ni autoriza WhatsApp automáticamente. El titular del proyecto puede configurar un destinatario autorizado en las preferencias del voluntario ficticio. No se realiza ningún envío. La configuración particular posterior de un número no se almacena en el código ni se publica en GitHub.
+
+```powershell
+./scripts/manage-shared.ps1 seed_matching_demo
+# Solo en desarrollo, para crear el lote una vez:
+./scripts/manage-shared.ps1 seed_matching_demo --apply
+```
+
+El comando no duplica, reinicia ni sobrescribe un lote ya creado. La prueba aislada comprueba elegibilidad, documentos legibles, ausencia de consentimientos inventados y repetición segura. Los candidatos del lote también se verificaron mediante el ranking real sobre la base compartida. No se enviaron invitaciones para dejar el escenario disponible al usuario.
+
+## Lote comunitario original
+
 Se cargó el lote `community-demo-v1` en la base compartida de desarrollo, por solicitud del responsable del proyecto. Las personas, organizaciones, solicitudes y actividades son ficticias. Los nombres y comunas permiten presentar recorridos verosímiles, pero no representan usuarios, alianzas, verificaciones ni acciones reales.
 
 ## Contenido
