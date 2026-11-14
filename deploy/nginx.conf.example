@@ -1,4 +1,6 @@
 # Reemplazar dominio, rutas y certificados antes de usar. No está instalado.
+# Incluir en contexto http. No registrar URLs que puedan contener enlaces firmados.
+log_format foundation '$time_iso8601 $request_method $status $request_time';
 server {
     listen 80;
     server_name voluntariado.example.org;
@@ -11,6 +13,7 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/voluntariado.example.org/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     root /srv/fundacion/frontend/dist;
+    access_log /var/log/nginx/fundacion-access.log foundation;
     client_max_body_size 11m;
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;

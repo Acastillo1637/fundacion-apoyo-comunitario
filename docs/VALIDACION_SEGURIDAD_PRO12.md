@@ -15,7 +15,7 @@
 
 Comandos: `scripts/check-backend.ps1` prueba SQLite (las pruebas exclusivas PostgreSQL se omiten allí); para concurrencia usar una **base PostgreSQL local/CI aislada**, con usuario que pueda crear la base temporal de pruebas, nunca `.env.shared`. Ejecutar `python backend/manage.py test accounts volunteers documents activities` con las variables de esa base. `npm --prefix frontend test` y `npm --prefix frontend run build`. Auditoría: `pip-audit -r backend/requirements.production.lock --no-deps --disable-pip` en Linux y `npm --prefix frontend audit --audit-level=high`. Las versiones están fijadas; no tienen hashes de distribución en el lock.
 
-CI ejecuta PostgreSQL 17, permisos, migraciones, pruebas, auditorías, frontend y una comprobación WSGI de Gunicorn. El smoke Linux no se ejecutó en Windows; consultar el resultado de Actions del commit entregado. No presentar auditorías de dependencias como prueba de ausencia de fallos en el código.
+CI ejecuta PostgreSQL 17, permisos, migraciones, pruebas, auditorías, frontend y una comprobación WSGI de Gunicorn. El arranque WSGI se comprobó satisfactoriamente en Linux mediante [GitHub Actions del commit 3375156](https://github.com/Acastillo1637/fundacion-apoyo-comunitario/actions/runs/43640659435); backend, frontend y auditorías finalizaron correctamente. Las plantillas de Nginx/systemd no se instalaron en un hosting real. No presentar auditorías de dependencias como prueba de ausencia de fallos en el código.
 
 ## Cobertura funcional
 

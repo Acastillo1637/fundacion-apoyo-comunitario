@@ -24,7 +24,8 @@ try {
     $entries=& $pgRestore --list $backup
     if($LASTEXITCODE -ne 0){throw 'No se pudo leer el índice del respaldo.'}
     $restoreList=Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N')+'.restore-list')
-    $entries | Where-Object { $_ -notmatch '^\d+; \d+ \d+ SCHEMA - public ' } | Set-Content -LiteralPath $restoreList -Encoding utf8
+    $filteredEntries=@($entries | Where-Object { $_ -notmatch '^\d+; \d+ \d+ SCHEMA - public ' })
+    [IO.File]::WriteAllLines($restoreList,[string[]]$filteredEntries,[Text.UTF8Encoding]::new($false))
     & $pgRestore --use-list $restoreList --exit-on-error --single-transaction --no-owner --no-acl --dbname $env:PGDATABASE $backup
     if($LASTEXITCODE -ne 0){throw 'La restauración falló y se revirtió la transacción.'}
     Write-Output 'Restauración completada en el destino previamente vacío. Verifica migraciones, conteos y archivos antes de cambiar la aplicación.'
