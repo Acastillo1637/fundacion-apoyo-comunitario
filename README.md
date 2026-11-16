@@ -44,6 +44,8 @@ Las optimizaciones de carga local y sus mediciones están documentadas en [Rendi
 
 Consulta [matching, mapas y WhatsApp](docs/MATCHING_MAPAS_WHATSAPP.md), [API](docs/API_PRO12.md), [despliegue y recuperación](docs/DESPLIEGUE_PRO12.md) y [pruebas, seguridad y límites reales](docs/VALIDACION_SEGURIDAD_PRO12.md).
 
+El voluntario puede [calcular su ubicación aproximada por dirección con Geoapify](docs/GEOCODIFICACION_DOMICILIOS.md). Requiere `GEOAPIFY_API_KEY` solo en el backend y consentimiento explícito; el domicilio completo no se guarda.
+
 **Después de actualizar:** instala `backend/requirements.lock` en el entorno virtual, ejecuta `npm ci` dentro de `frontend` y reinicia ambos servidores. `scripts/start-backend.ps1` aplica las migraciones de Supabase cuando existe `.env.shared`. No vuelvas a importar los datos ni crees otra base.
 
 ## Navegación y seguridad de cuenta

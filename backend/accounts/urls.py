@@ -5,6 +5,7 @@ from . import requesters
 from . import workspaces
 from . import overview
 from . import geography
+from . import address_geocoding
 from . import health
 from . import privacy
 from . import account_security
@@ -19,6 +20,7 @@ urlpatterns = [
     path('health/live/', health.live),
     path('health/ready/', health.ready),
     path('volunteer/location/', geography.own_location),
+    path('volunteer/location/address/', address_geocoding.resolve_address),
     path('volunteer/contact-preferences/', contacts.preferences),
     path('maps/search/', geography.geocode),
     path('maps/config/', geography.map_config),

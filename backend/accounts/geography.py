@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
@@ -71,6 +72,7 @@ def distance_km(lat1, lon1, lat2, lon2):
 def location_data(profile):
     return {'latitude': profile.reference_latitude, 'longitude': profile.reference_longitude,
             'commune': profile.commune, 'sector': profile.sector, 'revision': profile.location_revision,
+            'address_geocoding_enabled': bool(settings.GEOAPIFY_API_KEY),
             'precision': 'Referencia redondeada a 0,01 grados; no representa un domicilio.'}
 
 
@@ -82,6 +84,7 @@ class LocationSerializer(StrictSerializer):
     revision = serializers.IntegerField(min_value=0)
 
 
+@never_cache
 @api_view(['GET', 'PUT'])
 def own_location(request):
     if not is_volunteer(request.user):

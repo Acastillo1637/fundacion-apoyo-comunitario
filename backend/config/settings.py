@@ -137,6 +137,7 @@ DOCUMENT_MAX_VERSIONS = 100
 MAP_TILE_URL = os.environ.get('MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
 GEOCODING_URL = os.environ.get('GEOCODING_URL', 'https://nominatim.openstreetmap.org/search')
 GEOCODING_USER_AGENT = os.environ.get('GEOCODING_USER_AGENT', 'FundacionApoyoComunitario-PRO12/1.0')
+GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY', '').strip()
 DOCUMENT_SCAN_REQUIRED = not DEBUG
 CLAMAV_HOST = os.environ.get('CLAMAV_HOST', '')
 CLAMAV_PORT = int(os.environ.get('CLAMAV_PORT', '3310'))

@@ -4,7 +4,7 @@ $sharedConfig = Join-Path $projectRoot '.env.shared'
 if (-not (Test-Path -LiteralPath $sharedConfig)) {
     throw 'Falta .env.shared. Copia config/shared-database.env.example a .env.shared y completa la conexion privada.'
 }
-$allowedNames = @('POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_SSLMODE', 'DJANGO_SECRET_KEY')
+$allowedNames = @('POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_SSLMODE', 'DJANGO_SECRET_KEY', 'GEOAPIFY_API_KEY')
 $configuration = @{}
 foreach ($line in Get-Content -LiteralPath $sharedConfig -Encoding UTF8) {
     $trimmed = $line.Trim()

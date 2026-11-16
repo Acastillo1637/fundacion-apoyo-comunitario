@@ -2,7 +2,7 @@
 
 ## Recorrido en la web
 
-1. Voluntariado: completa habilidades, disponibilidad, documentos, **Ubicación de referencia** y **Preferencias de comunicación**. La referencia se guarda redondeada a dos decimales; no ingreses un domicilio particular.
+1. Voluntariado: completa habilidades, disponibilidad, documentos, **Ubicación de referencia** y **Preferencias de comunicación**. En ubicación, ingresa calle, número y comuna, autoriza la consulta a Geoapify y pulsa **Guardar y calcular ubicación**. Solo se conserva una referencia redondeada a dos decimales. El buscador público de la opción manual sigue sin admitir domicilios particulares.
 2. Coordinación: aprueba documentos, revisa una solicitud y crea la convocatoria con funciones, cupos, requisitos y habilidades deseables. Confirma su ubicación o indica que es remota. Publica la convocatoria.
 3. **Matching y convocatoria → Encontrar candidatos** muestra primero los elegibles, sus puntuaciones y distancias. Seleccionar una tarjeta o un marcador sincroniza el mapa. El mapa muestra la página actual, no todos los candidatos a la vez.
 4. **Contactar por WhatsApp** registra un intento y abre un enlace oficial. Si el navegador bloquea la ventana, utiliza el enlace que queda visible. La persona operadora revisa y envía el mensaje en WhatsApp.

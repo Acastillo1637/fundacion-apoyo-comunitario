@@ -5,6 +5,7 @@ Base `/api/`. JSON UTF-8; sesión Django en cookie HttpOnly. Las escrituras requ
 | Método y ruta | Autorización y propósito |
 |---|---|
 | GET/PUT `volunteer/location/` | Solo voluntario sobre su propio perfil. Comuna, sector, coordenadas aproximadas y revisión. |
+| POST `volunteer/location/address/` | Solo voluntario sobre su propio perfil; dirección, comuna, sector, consentimiento y revisión. Calcula y guarda referencia con Geoapify o devuelve opciones a confirmar. [Contrato, errores y privacidad](GEOCODIFICACION_DOMICILIOS.md). |
 | GET/PUT `volunteer/contact-preferences/` | Titular voluntario; teléfono, consentimiento WhatsApp, revisión. |
 | GET `maps/config/` | Voluntario o coordinación autorizada; configuración de mapa y búsqueda habilitada. |
 | POST `maps/search/` | Mismos roles; `{ "query": "Plaza de Armas, Santiago" }`. Solo lugares públicos. 503 deshabilitado/proveedor fallido; 429 límite compartido. |
