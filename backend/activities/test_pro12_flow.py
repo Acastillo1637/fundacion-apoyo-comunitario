@@ -41,9 +41,8 @@ class Pro12EndToEndApiTests(TestCase):
     def test_registration_document_matching_contact_confirmation_and_replacement(self):
         password = 'Flow-only-test-password-58392!'
         self.json_request(self.client,'post','register/',{'email':'flow-volunteer@example.org','password':password,
-            'first_name':'Camila','last_name':'Prueba','adult':True,'privacy':True,'whatsapp':False},202)
-        confirmation = re.search(r'https?://[^\s]+/accounts/confirm-email/[^\s]+',mail.outbox[0].body).group(0)
-        self.client.post(confirmation)
+            'first_name':'Camila','last_name':'Prueba','adult':True,'privacy':True,'whatsapp':False},201)
+        self.assertEqual(len(mail.outbox),0)
         self.json_request(self.client,'post','login/',{'email':'flow-volunteer@example.org','password':password})
         profile = VolunteerProfile.objects.get(user__email='flow-volunteer@example.org')
         self.json_request(self.client,'put','volunteer/qualifications/',{'revision':0,'skills':[self.skill.pk],'professions':[]})

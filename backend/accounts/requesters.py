@@ -39,9 +39,6 @@ def require_requester(request):
     if not is_requester(request.user):
         from rest_framework.exceptions import PermissionDenied
         raise PermissionDenied('Esta función pertenece al espacio de solicitante.')
-    if not EmailAddress.objects.filter(user=request.user, verified=True).exists():
-        from rest_framework.exceptions import PermissionDenied
-        raise PermissionDenied('Verifica tu correo antes de continuar.')
 
 
 def profile_data(user, profile):
@@ -136,7 +133,8 @@ def requests(request):
             **data, 'requester': owner, 'requester_type': owner.requester_type,
             'organization': owner.organization, 'contact_name': request.user.get_full_name()[:120],
             'email': request.user.email, 'phone': owner.phone,
-            'privacy_accepted_at': timezone.now(), 'email_verified_at': timezone.now(),
+            'privacy_accepted_at': timezone.now(),
+            'email_verified_at': timezone.now() if EmailAddress.objects.filter(user=request.user, email__iexact=request.user.email, verified=True).exists() else None,
         })
         if item.requester_id != owner.pk:
             return Response({'detail': 'Identificador de envío no disponible. Abre un nuevo formulario.'}, status=409)

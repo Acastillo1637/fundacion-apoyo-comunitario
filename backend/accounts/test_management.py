@@ -236,8 +236,6 @@ class AccountManagementTests(TestCase):
         client = Client()
         client.force_login(user)
         body = {'adult': True, 'privacy': True, 'whatsapp': False}
-        self.assertEqual(client.post('/api/profile/onboarding/', body, content_type='application/json').status_code, 403)
-        EmailAddress.objects.filter(user=user).update(verified=True)
         self.assertEqual(client.post('/api/profile/onboarding/', {**body, 'adult': False}, content_type='application/json').status_code, 400)
         self.assertEqual(client.post('/api/profile/onboarding/', body, content_type='application/json').status_code, 201)
         self.assertEqual(client.post('/api/profile/onboarding/', body, content_type='application/json').status_code, 200)

@@ -32,7 +32,7 @@ def request_data(item, detail=False):
         'id': str(item.pk), 'requester_type': item.requester_type, 'contact_name': item.contact_name,
         'organization': item.organization, 'quantity': item.quantity, 'commune': item.commune,
         'status': item.status, 'revision': item.revision,
-        'email_verified': item.email_verified_at is not None, 'created_at': item.created_at,
+        'email_verified': item.email_verified_at is not None, 'from_account': bool(item.requester_id), 'created_at': item.created_at,
         **schedule_data(item),
     }
     if detail:
@@ -112,7 +112,7 @@ def transition_request(request, request_id, data):
     target = data['status']
     if target not in allowed.get(item.status, []):
         raise ValidationError('Transición de solicitud no permitida.')
-    if target == 'approved' and not item.email_verified_at:
+    if target == 'approved' and not item.email_verified_at and not item.requester_id:
         raise ValidationError('El solicitante debe verificar su correo antes de aprobar.')
     if target == 'approved' and item.starts_at <= timezone.now():
         raise ValidationError('La fecha solicitada ya pasó. Coordina una nueva solicitud con fecha vigente.')
@@ -132,7 +132,7 @@ def transition_request(request, request_id, data):
 def create_event(request, request_id, data):
     require_operator(request)
     source = get_object_or_404(ServiceRequest.objects.select_for_update(), pk=request_id)
-    if source.status != 'approved' or not source.email_verified_at:
+    if source.status != 'approved' or (not source.email_verified_at and not source.requester_id):
         raise ValidationError('Solo una solicitud aprobada y verificada puede generar eventos.')
     positions = data.pop('positions')
     item = Event.objects.create(request=source, **data)

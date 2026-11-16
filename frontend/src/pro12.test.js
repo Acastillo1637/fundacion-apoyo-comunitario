@@ -4,13 +4,14 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-let server, CandidateScore, CandidateMap, PrivacyNotice, PrivacyRequests, FoundationLogo;
+let server, CandidateScore, CandidateMap, PrivacyNotice, PrivacyRequests, FoundationLogo, Auth;
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, hmr: { port: 24680 } }, appType: 'custom' });
   const candidates = await server.ssrLoadModule('/src/activities/CandidateMap.jsx');
   CandidateScore = candidates.CandidateScore; CandidateMap = candidates.default;
   const privacy = await server.ssrLoadModule('/src/accounts/PrivacyRequests.jsx');
   PrivacyNotice = privacy.PrivacyNotice; PrivacyRequests = privacy.default;
+  Auth = (await server.ssrLoadModule('/src/design/Auth.jsx')).default;
   FoundationLogo = (await server.ssrLoadModule('/src/design/Brand.jsx')).FoundationLogo;
 });
 after(async () => { await server?.close(); });
@@ -48,4 +49,14 @@ test('la bandeja propia no muestra controles de revisión administrativa ni elim
 test('el logo conserva el recurso oficial y texto alternativo', () => {
   assert.match(render(FoundationLogo, {}), /brand\/fundacion-logo.png/);
   assert.match(render(FoundationLogo, {}), /Logo oficial/);
+});
+
+
+test('el registro no solicita verificar correo y el login presenta el éxito de creación', () => {
+  const html=render(Auth,{mode:'register',brand:'Fundación',navigate(){},onLogin(){}});
+  assert.doesNotMatch(html,/Verifica tu correo|Revisa tu correo|Activa tu acceso/);
+  assert.match(html,/minLength="12"/);
+  const login=render(Auth,{mode:'login',brand:'Fundación',notice:'Cuenta creada correctamente. Ya puedes iniciar sesión.',navigate(){},onLogin(){}});
+  assert.match(login,/Cuenta creada correctamente/);
+  assert.match(login,/Olvidaste tu contraseña/);
 });

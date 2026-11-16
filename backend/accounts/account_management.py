@@ -139,7 +139,7 @@ def accounts(request):
         raise ValidationError({'email': 'Ya existe una cuenta con ese correo.'})
     delivered = send_access_email(request, user, data['reason'])
     return Response({'user': account_data(user, request.user, detail=True), 'email_sent': delivered,
-                     'detail': 'Cuenta creada. El destinatario debe establecer su contraseña y verificar el correo.' if delivered else 'Cuenta creada, pero falló el envío. Puedes reintentarlo desde el detalle.'}, status=201)
+                     'detail': 'Cuenta creada. El destinatario debe establecer su contraseña mediante el enlace de acceso.' if delivered else 'Cuenta creada, pero falló el envío. Puedes reintentarlo desde el detalle.'}, status=201)
 
 
 @never_cache

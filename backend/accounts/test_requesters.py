@@ -43,7 +43,7 @@ class RequesterTests(TestCase):
     def test_entity_registration_creates_only_requester_profile(self):
         self.client.logout()
         response = self.client.post('/api/register/', self.registration(), content_type='application/json')
-        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.status_code, 201)
         user = User.objects.get(email='new@example.org')
         self.assertEqual(list(user.groups.values_list('name', flat=True)), ['Solicitante'])
         self.assertFalse(VolunteerProfile.objects.filter(user=user).exists())
@@ -63,7 +63,7 @@ class RequesterTests(TestCase):
     def test_person_and_institution_profiles(self):
         for kind in ['person', 'institution']:
             response = self.client.post('/api/register/', self.registration(email=f'{kind}@example.org', requester_type=kind), content_type='application/json')
-            self.assertEqual(response.status_code, 202)
+            self.assertEqual(response.status_code, 201)
             profile = RequesterProfile.objects.get(user__email=f'{kind}@example.org')
             self.assertEqual(profile.organization, '' if kind == 'person' else 'Entidad')
 
@@ -140,10 +140,35 @@ class RequesterTests(TestCase):
         self.assertEqual(self.user.last_name, 'Nueva')
         self.assertEqual(self.user.management_revision, 1)
 
-    def test_unverified_requester_cannot_submit_or_onboard(self):
+    def test_unverified_requester_can_submit_without_forging_email_verification(self):
         EmailAddress.objects.filter(user=self.user).update(verified=False)
-        self.assertEqual(self.post(self.payload()).status_code, 403)
-        self.assertEqual(self.client.get('/api/requester/profile/').status_code, 403)
+        self.assertEqual(self.post(self.payload()).status_code, 201)
+        self.assertEqual(self.client.get('/api/requester/profile/').status_code, 200)
+        self.assertIsNone(ServiceRequest.objects.get().email_verified_at)
+
+    def test_unverified_account_request_can_be_approved_and_generate_event(self):
+        from django.contrib.auth.models import Permission
+        from django.test import Client
+        from activities.test_participation import authenticate_operator
+        EmailAddress.objects.filter(user=self.user).update(verified=False)
+        self.assertEqual(self.post(self.payload()).status_code,201)
+        source=ServiceRequest.objects.get()
+        operator=User.objects.create_user('request-reviewer@example.org')
+        operator.user_permissions.add(Permission.objects.get(codename='manage_operations'))
+        staff=Client(); authenticate_operator(staff,operator)
+        for revision,status in enumerate(['in_review','approved']):
+            response=staff.post(f'/api/activities/operations/requests/{source.pk}/transition/',
+                {'revision':revision,'status':status,'reason':''},content_type='application/json')
+            self.assertEqual(response.status_code,200,response.content)
+        start,end=timezone.localtime(source.starts_at),timezone.localtime(source.ends_at)
+        response=staff.post(f'/api/activities/operations/requests/{source.pk}/events/',{
+            'title':'Actividad de cuenta registrada','public_description':'Actividad comunitaria con requisitos revisados por coordinación.',
+            'date':str(start.date()),'start_time':start.strftime('%H:%M'),'end_time':end.strftime('%H:%M'),
+            'address':source.address,'commune':source.commune,
+            'positions':[{'name':'Apoyo','capacity':1,'required_skills':[],'required_documents':[]}]},content_type='application/json')
+        self.assertEqual(response.status_code,201,response.content)
+        source.refresh_from_db()
+        self.assertIsNone(source.email_verified_at)
 
     def test_invited_requester_can_complete_own_profile(self):
         self.profile.delete()

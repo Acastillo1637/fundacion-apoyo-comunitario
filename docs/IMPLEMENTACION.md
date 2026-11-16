@@ -6,7 +6,7 @@ React/Vite y Django/DRF conservan la arquitectura existente; PostgreSQL en Supab
 
 ## Funcionalidades integradas
 
-- Cuentas verificadas, registro voluntario/solicitante adulto declarado, recuperación mediante allauth, sesiones con CSRF y acceso por roles. MFA se exige cuando está enrolado; Django Admin mantiene su flujo protegido.
+- Cuentas con acceso inmediato sin verificación obligatoria de correo, registro voluntario/solicitante adulto declarado, recuperación mediante allauth, sesiones con CSRF y acceso por roles. MFA se exige cuando está enrolado; Django Admin mantiene su flujo protegido.
 - Espacios de voluntariado, solicitante, secretaría y administración; gestión web de usuarios, catálogos y restricciones, con historial.
 - Perfiles, habilidades, profesiones, disponibilidad y excepciones, documentos privados versionados, revisión y vencimiento.
 - Solicitudes verificadas, eventos, funciones, cupos, publicación, cancelación, participantes, asistencia, lista de espera, respaldos, notificaciones y auditoría.
@@ -21,7 +21,7 @@ React/Vite y Django/DRF conservan la arquitectura existente; PostgreSQL en Supab
 
 [Auditoría inicial y cierre](AUDITORIA_PRO12.md), [algoritmo y proveedores](MATCHING_MAPAS_WHATSAPP.md), [API](API_PRO12.md), [despliegue/recuperación](DESPLIEGUE_PRO12.md) y [validación/seguridad](VALIDACION_SEGURIDAD_PRO12.md).
 
-281 pruebas backend satisfactorias sobre PostgreSQL local, 31 frontend y compilación correcta. El flujo integral automatizado es de API; la revisión de navegador cubre escenarios críticos, no todas las combinaciones. Cero vulnerabilidades conocidas en las auditorías de dependencias de esta fecha no implica ausencia de vulnerabilidades.
+286 pruebas backend satisfactorias sobre PostgreSQL local, 32 frontend y compilación correcta. El flujo integral automatizado es de API; la revisión de navegador cubre escenarios críticos, no todas las combinaciones. Cero vulnerabilidades conocidas en las auditorías de dependencias de esta fecha no implica ausencia de vulnerabilidades.
 
 ## Límites reales
 

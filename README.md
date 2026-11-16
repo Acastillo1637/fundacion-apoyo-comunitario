@@ -9,7 +9,7 @@ Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. 
 ## Lo que ya funciona
 
 - Portal responsive inspirado en Stitch.
-- Registro con declaración de mayoría de edad y verificación por correo.
+- Registro con declaración de mayoría de edad y acceso inmediato, sin verificación obligatoria de correo.
 - Inicio/cierre de sesión y recuperación de contraseña.
 - Edición del nombre, apellido, teléfono y comuna del usuario conectado.
 - Selección de habilidades, profesiones y oficios desde catálogos administrables.
@@ -35,7 +35,7 @@ Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. 
 - Seguimiento manual de contactos WhatsApp, vencimientos, confirmación con revalidación y reemplazos.
 - Solicitudes de privacidad notificadas a todos los administradores generales activos y descarga de datos propios.
 - Logo oficial aportado y eslogan incorporados sin rediseñar el logo.
-- 281 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 31 del frontend.
+- 286 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 32 del frontend.
 
 Las optimizaciones de carga local y sus mediciones están documentadas en [Rendimiento](docs/RENDIMIENTO.md).
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
@@ -124,15 +124,13 @@ Para detener el proyecto, presiona **Ctrl + C** en cada terminal.
 
 ## Cómo probar el registro
 
-En desarrollo, **los correos no se envían a Internet**: se muestran en la terminal de Django.
-
 1. Pulsa **Ser voluntario** y completa el registro con datos ficticios.
-2. Busca el mensaje de verificación en la terminal 1.
-3. Copia el enlace en el navegador. Si contiene el puerto `8000`, reemplázalo por `5173` conservando el resto del enlace.
-4. Confirma el correo en la página que se abre.
-5. Vuelve al portal e inicia sesión.
+2. Al guardarse la cuenta, se abre el inicio de sesión con el mensaje de registro exitoso.
+3. Ingresa con el correo y contraseña que acabas de registrar. No se envía confirmación ni es necesario abrir un enlace.
 
-La recuperación de contraseña funciona del mismo modo. No compartas enlaces de verificación o recuperación.
+Las cuentas existentes mantienen sus datos, contraseñas y roles. No se marca un correo como verificado por crear la cuenta. Consulta [el cambio y sus riesgos](docs/REGISTRO_SIN_VERIFICACION.md).
+
+La recuperación de contraseña sigue requiriendo un enlace firmado enviado al correo principal de la cuenta. En desarrollo los correos se muestran en la terminal de Django; no llegan a Gmail sin SMTP. No compartas esos enlaces. Las solicitudes públicas enviadas sin cuenta mantienen su comprobación propia de correo.
 
 Si aparece un aviso de seguridad de sesión, recarga la página y vuelve a intentarlo. En desarrollo se permiten únicamente los orígenes `http://127.0.0.1:5173` y `http://localhost:5173`; todos los formularios siguen requiriendo token CSRF. Usa la misma dirección durante todo el recorrido y reinicia Django después de cambiar configuración.
 

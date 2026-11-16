@@ -80,7 +80,7 @@ def summary(request):
                 primary=Count('pk', filter=Q(status='confirmed', assignment='primary')),
                 backup=Count('pk', filter=Q(status='confirmed', assignment='backup')))
             result['metrics'] += [
-                {'label': 'Solicitudes pendientes', 'value': ServiceRequest.objects.filter(status__in=['pending', 'in_review'], email_verified_at__isnull=False).count(), 'target': 'operations'},
+                {'label': 'Solicitudes pendientes', 'value': ServiceRequest.objects.filter(Q(email_verified_at__isnull=False) | Q(requester__isnull=False), status__in=['pending', 'in_review']).count(), 'target': 'operations'},
                 {'label': 'Eventos abiertos', 'value': 0, 'target': 'operations'},
                 {'label': 'Postulaciones por revisar', 'value': totals['applied'], 'target': 'participants'},
                 {'label': 'Titulares confirmados', 'value': totals['primary'], 'target': 'participants'},

@@ -1,3 +1,5 @@
+> Registro actualizado el 15-11-2026: las cuentas pueden iniciar sesión sin verificar correo. La recuperación sigue requiriendo acceso al correo principal. Ver [alcance y riesgos](REGISTRO_SIN_VERIFICACION.md).
+
 # Administración de usuarios desde el portal
 
 > Actualización de acceso y funciones: el portal usa un inicio de sesión único para todos los roles. Las cuentas sin MFA configurado entran con contraseña; las que lo activaron validan el código en la misma pantalla. Django Admin conserva su requisito MFA. Los controles de roles y propiedad siguen vigentes. Consulta [dashboards y participación](PARTICIPACION.md) para el comportamiento actual, que reemplaza las referencias anteriores a redirección obligatoria y módulos de participación pendientes.
@@ -55,9 +57,9 @@ No hay borrado definitivo ni edición administrativa del correo en esta etapa. L
 | GET/POST | /api/management/users/ | Permiso de gestión + MFA |
 | GET/PATCH | /api/management/users/<uuid>/ | Permiso, MFA, revisión, protecciones de cuenta |
 | POST | /api/management/users/<uuid>/access-email/ | Permiso, MFA, motivo, destinatario acotado |
-| POST | /api/profile/onboarding/ | Titular autenticado, correo verificado y consentimientos |
-| GET/PUT | /api/requester/profile/ | Rol Solicitante, correo verificado, revisión y consentimientos |
-| GET/POST | /api/requester/requests/ | Rol Solicitante, perfil propio y correo verificado |
+| POST | /api/profile/onboarding/ | Titular autenticado, consentimientos, sin verificación obligatoria de correo |
+| GET/PUT | /api/requester/profile/ | Rol Solicitante, revisión y consentimientos, sin verificación obligatoria de correo |
+| GET/POST | /api/requester/requests/ | Rol Solicitante, perfil propio autenticado |
 | GET | /api/requester/requests/<uuid>/ | Solicitud asociada al titular; 404 para otra cuenta |
 
 Las solicitudes autenticadas toman contacto y entidad del perfil, conservan una instantánea y tienen una clave de envío idempotente. No se admite enviar propietario, correo, estado o datos de otra entidad. Una clave que corresponde a otra cuenta o a una solicitud pública devuelve 409. Las solicitudes públicas previas no se reclaman por coincidencia de correo. El historial del solicitante solo expone estados y fechas, sin actores ni motivos internos.

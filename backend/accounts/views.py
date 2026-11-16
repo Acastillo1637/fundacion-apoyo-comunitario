@@ -94,9 +94,9 @@ def register(request):
         return JsonResponse(serializer.errors, status=400)
     data = serializer.validated_data
     email = data['email'].lower()
-    generic = {'detail': 'Si el correo puede registrarse, recibirás un enlace de verificación. Revisa también spam.'}
+    duplicate = {'detail': 'No se puede crear otra cuenta con este correo. Inicia sesión o recupera tu contraseña.'}
     if get_user_model().objects.filter(email__iexact=email).exists():
-        return JsonResponse(generic, status=202)
+        return JsonResponse(duplicate, status=409)
     try:
         with transaction.atomic():
             user = get_user_model().objects.create_user(email=email, password=data['password'], first_name=data['first_name'], last_name=data['last_name'])
@@ -111,12 +111,11 @@ def register(request):
                     organization=data['organization'] if data['requester_type'] != 'person' else '',
                     phone=data['phone'], commune=data['commune'], privacy_accepted_at=now,
                     adult_confirmed_at=now, representative_confirmed_at=now if data['requester_type'] != 'person' else None)
-            address = EmailAddress.objects.create(user=user, email=email, primary=True, verified=False)
+            EmailAddress.objects.create(user=user, email=email, primary=True, verified=False)
             AuditEvent.objects.create(actor=user, action='account.registered')
     except IntegrityError:
-        return JsonResponse(generic, status=202)
-    address.send_confirmation(request, signup=True)
-    return JsonResponse(generic, status=202)
+        return JsonResponse(duplicate, status=409)
+    return JsonResponse({'detail': 'Cuenta creada correctamente. Ya puedes iniciar sesión.'}, status=201)
 
 
 @require_POST
@@ -129,8 +128,8 @@ def sign_in(request):
     if not isinstance(email, str) or not isinstance(password, str) or len(password) > 256:
         return JsonResponse({'detail': 'Credenciales no válidas.'}, status=400)
     user = authenticate(request, username=email.strip().lower(), password=password)
-    if user is None or not EmailAddress.objects.filter(user=user, verified=True).exists():
-        return JsonResponse({'detail': 'No pudimos iniciar sesión. Revisa tus datos y verifica tu correo.'}, status=400)
+    if user is None:
+        return JsonResponse({'detail': 'No pudimos iniciar sesión. Revisa tu correo y contraseña.'}, status=400)
     factor = user.authenticator_set.filter(type='totp').first()
     verified_factor = None
     if user.authenticator_set.exists():
@@ -201,8 +200,6 @@ def onboarding(request):
     from .management_serializers import OnboardingSerializer
     serializer = OnboardingSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    if not EmailAddress.objects.filter(user=request.user, verified=True).exists():
-        return Response({'detail': 'Verifica tu correo antes de completar el perfil.'}, status=403)
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=request.user.pk)
         now = timezone.now()
