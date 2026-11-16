@@ -34,7 +34,7 @@ export default function ReferenceMap({ points = [], selected, onSelect, onPick }
       const label = document.createElement('span');
       label.textContent = p.label || 'Referencia';
       L.circleMarker([Number(p.latitude), Number(p.longitude)], { radius: p.id === selected ? 12 : p.event ? 10 : 7,
-        color: p.event ? '#b42318' : p.id === selected ? '#004ddd' : '#087c64', weight: 3, fillOpacity: 0.7 })
+        color: p.event ? '#b42318' : p.id === selected ? '#004ddd' : p.eligible === false ? '#b7791f' : '#087c64', weight: 3, fillOpacity: 0.7 })
         .bindPopup(label).on('click', () => actions.current.onSelect?.(p.id)).addTo(layer.current);
     });
     const key = valid.map(p => `${p.id}:${p.latitude}:${p.longitude}`).join('|');

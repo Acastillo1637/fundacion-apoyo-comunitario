@@ -35,7 +35,7 @@ Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. 
 - Seguimiento manual de contactos WhatsApp, vencimientos, confirmación con revalidación y reemplazos.
 - Solicitudes de privacidad notificadas a todos los administradores generales activos y descarga de datos propios.
 - Logo oficial aportado y eslogan incorporados sin rediseñar el logo.
-- 286 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 32 del frontend.
+- 288 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 33 del frontend.
 
 Las optimizaciones de carga local y sus mediciones están documentadas en [Rendimiento](docs/RENDIMIENTO.md).
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.

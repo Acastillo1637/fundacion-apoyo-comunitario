@@ -59,3 +59,6 @@ Solicitud y revisión:
 ```
 
 Tipos `access`, `rectification`, `deletion`, `other`; revisión a `in_review`, `answered`, `rejected`. No se admite indicar otro propietario al crear. Las listas devuelven `results`, `page`, `total`; revisar la respuesta concreta para metadatos adicionales. Una revisión desactualizada produce 409; validación 400, acceso no autorizado 403, recurso inexistente 404. No registrar cuerpos con datos personales en los logs del proxy.
+
+
+Actualización 15-11-2026: al desactivar “Mostrar solo candidatos elegibles”, el mapa también representa los perfiles no elegibles de la página que tengan referencia registrada, en ámbar. No se les asigna puntuación ni se habilita su invitación. Sin coordenadas no se inventa un marcador; las actividades remotas siguen sin mostrar ubicaciones personales. El endpoint mantiene el permiso de coordinación en Django.

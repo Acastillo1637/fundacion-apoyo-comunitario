@@ -48,3 +48,6 @@ La solución actual no cobra por una API y no tiene automatización de WhatsApp 
 **Solicitudes de privacidad** permite registrar solicitudes y descargar los datos propios. Cada nueva solicitud notifica en la web a **todos los administradores generales activos**. La bandeja administrativa valida permisos en Django; voluntarios y solicitantes solo ven sus solicitudes. Las respuestas quedan trazadas y visibles al titular. Registrar una respuesta no ejecuta eliminación de datos.
 
 El plazo de conservación aún requiere aprobación institucional. No se creó un plazo ficticio ni una tarea de borrado automático. `DATA_RETENTION_NOTICE` debe contener el texto aprobado antes de publicar. La bandeja autenticada no resuelve por sí sola las solicitudes de personas sin cuenta: falta acordar ese canal institucional.
+
+
+Actualización 15-11-2026: al desactivar “Mostrar solo candidatos elegibles”, el mapa también representa los perfiles no elegibles de la página que tengan referencia registrada, en ámbar. No se les asigna puntuación ni se habilita su invitación. Sin coordenadas no se inventa un marcador; las actividades remotas siguen sin mostrar ubicaciones personales. El endpoint mantiene el permiso de coordinación en Django.

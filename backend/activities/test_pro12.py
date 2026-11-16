@@ -128,11 +128,14 @@ class Pro12ApiTests(TestCase):
         VolunteerSkill.objects.create(profile=self.owner, skill=skill)
         result = self.candidates(extra='eligible_only=1').json()
         self.assertEqual([row['id'] for row in result['results']], [self.owner.pk])
+        self.other.reference_latitude, self.other.reference_longitude = '-33.50', '-70.70'
+        self.other.save(update_fields=['reference_latitude','reference_longitude'])
         all_rows = self.candidates().json()['results']
         other = next(row for row in all_rows if row['id'] == self.other.pk)
         self.assertFalse(other['eligible'])
         self.assertIsNone(other['score'])
-        self.assertIsNone(other['location'])
+        self.assertIsNotNone(other['location'])
+        self.assertEqual(other['location']['latitude'],-33.5)
 
     def test_desired_skills_change_score_but_do_not_exclude(self):
         skill = Skill.objects.create(name='Habilidad deseable')
@@ -295,3 +298,55 @@ class Pro12ApiTests(TestCase):
         self.assertEqual(self.client.post(f'/api/activities/operations/contacts/{contact["id"]}/action/',{'revision':0,'action':'start'},content_type='application/json').status_code,403)
         other_event, other_position = event_fixture()
         self.assertEqual(self.staff.post(f'/api/activities/operations/events/{self.event.pk}/contacts/',{'profile_id':self.owner.pk,'position_id':other_position.pk},content_type='application/json').status_code,404)
+
+
+    def test_compact_participants_preserve_stats_without_loading_candidate_requirements(self):
+        Participation.objects.create(event=self.event,position=self.position,profile=self.owner,status='confirmed')
+        url=f'/api/activities/operations/events/{self.event.pk}/participants/?compact=1'
+        with patch('activities.participation.prepare_eligibility',side_effect=AssertionError('unneeded prefetch')):
+            response=self.staff.get(url)
+        self.assertEqual(response.status_code,200,response.content)
+        result=response.json()
+        self.assertEqual(result['stats']['confirmed'],1)
+        self.assertEqual(result['stats']['capacity'],self.position.capacity)
+        self.assertEqual(result['total'],1)
+        self.assertNotIn('eligible',result['results'][0])
+        self.assertEqual(self.client.get(url).status_code,403)
+        self.assertEqual(self.staff.get(url.replace('compact=1','compact=wrong')).status_code,400)
+
+    def test_postgresql_snapshot_matches_portable_rules_and_uses_three_queries(self):
+        from django.db import connection
+        if connection.vendor!='postgresql':
+            self.skipTest('PostgreSQL snapshot')
+        from types import SimpleNamespace
+        from rest_framework.request import Request
+        from rest_framework.test import APIRequestFactory
+        from .matching import ranked_candidates
+        from .matching_snapshot import positions
+        from .models import EventPosition
+        request=Request(APIRequestFactory().get('/',{'eligible_only':'0'}))
+        def compare():
+            with self.assertNumQueries(3):
+                optimized=ranked_candidates(request,positions().get(pk=self.position.pk)).data
+            with patch('activities.matching.connection',SimpleNamespace(vendor='sqlite')):
+                portable=ranked_candidates(request,EventPosition.objects.select_related('event').get(pk=self.position.pk)).data
+            self.assertEqual(optimized,portable)
+        compare()
+        skill=Skill.objects.create(name='Paridad de reglas')
+        doc_type=DocumentType.objects.create(name='Documento de paridad')
+        skill.required_documents.add(doc_type)
+        self.position.required_skills.add(skill)
+        VolunteerSkill.objects.create(profile=self.owner,skill=skill)
+        VolunteerDocument.objects.create(profile=self.owner,document_type=doc_type,version=1,
+            storage_key='parity-approved',size=1,mime_type='application/pdf',checksum='a'*64,
+            scan_status='clean',status='validated',expires_on=timezone.localdate()+timedelta(days=90))
+        compare()
+        VolunteerDocument.objects.create(profile=self.owner,document_type=doc_type,version=2,
+            storage_key='parity-pending',size=1,mime_type='application/pdf',checksum='b'*64,
+            scan_status='not_scanned',status='pending')
+        compare()
+        from volunteers.models import UnavailableDate
+        UnavailableDate.objects.create(profile=self.owner,date=timezone.localtime(self.event.starts_at).date())
+        overlap, overlap_position=event_fixture()
+        Participation.objects.create(event=overlap,position=overlap_position,profile=self.other,status='confirmed')
+        compare()

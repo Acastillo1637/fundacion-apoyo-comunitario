@@ -4,10 +4,11 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-let server, CandidateScore, CandidateMap, PrivacyNotice, PrivacyRequests, FoundationLogo, Auth;
+let server, CandidateScore, CandidateMap, PrivacyNotice, PrivacyRequests, FoundationLogo, Auth, candidatePoints;
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, hmr: { port: 24680 } }, appType: 'custom' });
   const candidates = await server.ssrLoadModule('/src/activities/CandidateMap.jsx');
+  candidatePoints = candidates.candidatePoints;
   CandidateScore = candidates.CandidateScore; CandidateMap = candidates.default;
   const privacy = await server.ssrLoadModule('/src/accounts/PrivacyRequests.jsx');
   PrivacyNotice = privacy.PrivacyNotice; PrivacyRequests = privacy.default;
@@ -59,4 +60,17 @@ test('el registro no solicita verificar correo y el login presenta el éxito de 
   const login=render(Auth,{mode:'login',brand:'Fundación',notice:'Cuenta creada correctamente. Ya puedes iniciar sesión.',navigate(){},onLogin(){}});
   assert.match(login,/Cuenta creada correctamente/);
   assert.match(login,/Olvidaste tu contraseña/);
+});
+
+
+test('el mapa incluye puntos no elegibles al desactivar el filtro y no inventa ubicaciones', () => {
+  const data={results:[
+    {id:1,name:'Elegible',eligible:true,score:80,distance_km:2,location:{latitude:-33.45,longitude:-70.66}},
+    {id:2,name:'Por revisar',eligible:false,score:null,distance_km:4,location:{latitude:-33.50,longitude:-70.70}},
+    {id:3,name:'Sin ubicación',eligible:false,score:null,distance_km:null,location:null}],event_location:{latitude:-33.44,longitude:-70.65}};
+  assert.deepEqual(candidatePoints(data).map(point=>point.id),[1,2,'event']);
+  assert.deepEqual(candidatePoints(data,true).map(point=>point.id),[1,'event']);
+  assert.match(candidatePoints(data)[1].label,/No elegible para esta función/);
+  assert.doesNotMatch(candidatePoints(data)[1].label,/null\/100/);
+  assert.deepEqual(candidatePoints({...data,event_location:{is_remote:true}}),[]);
 });

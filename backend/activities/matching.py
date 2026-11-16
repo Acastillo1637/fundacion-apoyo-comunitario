@@ -1,6 +1,6 @@
 import json
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import serializers
@@ -74,19 +74,23 @@ def ranked_candidates(request, position):
     from .views import pagination
     from .models import Participation
     policy = MatchingPolicy.objects.get(pk=1)
-    desired = set(position.desired_skills.filter(is_active=True).values_list('pk', flat=True))
-    required = set(position.required_skills.values_list('pk', flat=True))
-    reference = desired | required
-    relevant = Q(participations__attendance='present', participations__assignment='primary', participations__event__status='finished')
-    if reference:
-        relevant &= Q(participations__position__required_skills__in=reference) | Q(participations__position__desired_skills__in=reference)
+    if connection.vendor == 'postgresql':
+        from .matching_snapshot import candidates as read_snapshot
+        desired, required, profiles, registered = read_snapshot(position)
     else:
-        relevant &= Q(participations__pk__isnull=True)
-    profiles = list(VolunteerProfile.objects.filter(user__is_active=True, user__groups__name='Voluntario')
-        .select_related('user').annotate(relevant_experience=Count('participations', filter=relevant, distinct=True)).order_by('pk'))
-    prepare_eligibility(profiles, [position])
-    registered = set(Participation.objects.filter(event=position.event, status__in=['applied', 'confirmed', 'waitlisted', 'invited'])
-        .exclude(status='invited', expires_at__lte=timezone.now()).values_list('profile_id', flat=True))
+        desired = set(position.desired_skills.filter(is_active=True).values_list('pk', flat=True))
+        required = set(position.required_skills.values_list('pk', flat=True))
+        reference = desired | required
+        relevant = Q(participations__attendance='present', participations__assignment='primary', participations__event__status='finished')
+        if reference:
+            relevant &= Q(participations__position__required_skills__in=reference) | Q(participations__position__desired_skills__in=reference)
+        else:
+            relevant &= Q(participations__pk__isnull=True)
+        profiles = list(VolunteerProfile.objects.filter(user__is_active=True, user__groups__name='Voluntario')
+            .select_related('user').annotate(relevant_experience=Count('participations', filter=relevant, distinct=True)).order_by('pk'))
+        prepare_eligibility(profiles, [position])
+        registered = set(Participation.objects.filter(event=position.event, status__in=['applied', 'confirmed', 'waitlisted', 'invited'])
+            .exclude(status='invited', expires_at__lte=timezone.now()).values_list('profile_id', flat=True))
     result = []
     for profile in profiles:
         reasons = eligibility(profile, position, prepared=True)
@@ -113,7 +117,7 @@ def ranked_candidates(request, position):
             'score_components': contributions if not reasons else {}, 'recommendation_reasons': explanation if not reasons else [],
             'distance_km': distance, 'distance_type': 'straight_line_approximate',
             'location': {'latitude':float(profile.reference_latitude), 'longitude':float(profile.reference_longitude)}
-                if not reasons and not position.event.is_remote and profile.reference_latitude is not None else None,
+                if not position.event.is_remote and profile.reference_latitude is not None else None,
             'contact_allowed': bool(profile.whatsapp_opt_in_at and profile.phone)})
     result.sort(key=lambda row: (not row['eligible'], -(row['score'] or 0), row['distance_km'] if row['distance_km'] is not None else float('inf'), row['name'].casefold(), row['id']))
     mode = request.query_params.get('eligible_only', '')

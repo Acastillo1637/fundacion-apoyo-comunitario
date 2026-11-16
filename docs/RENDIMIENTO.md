@@ -28,3 +28,14 @@ Las acciones de participación también reúnen sus requisitos documentales en c
 Al volver a una sección, el frontend puede presentar una copia reciente de la respuesta mientras vuelve a consultarla. Esta copia vive únicamente en memoria, vence a los 60 segundos, tiene un máximo de 100 entradas y se copia antes de entregarla a formularios. Se descarta al comenzar y terminar cualquier escritura, al iniciar o cerrar sesión y ante un acceso denegado. Una respuesta antigua en vuelo no puede volver a poblarla después de guardar. Actualizar siempre consulta al servidor; no se sustituyen las comprobaciones del backend con datos de la copia.
 
 La primera carga aún depende de la conexión a Supabase. El pool sigue limitado a cuatro conexiones por proceso; no se aumentó para ocultar las demoras. No hay cambios de base de datos ni es necesario migrar datos para estas optimizaciones.
+
+
+## Matching y contadores — 15-11-2026
+
+La medición de lectura sobre el lote DEMO compartido encontró 15 consultas consecutivas de matching, con aproximadamente 130–160 ms por ida y vuelta a Supabase. Se agregó una lectura específica de PostgreSQL con subconsultas correlacionadas para reunir habilidades, últimos documentos relevantes, franjas compatibles, excepciones, cruces confirmados, experiencia y participación existente. Posición/requisitos, política y perfiles requieren tres consultas en total. SQLite mantiene el camino portátil.
+
+La misma función de elegibilidad procesa ambos caminos. Solo se agrupan lecturas de una recomendación; las escrituras, permisos, restricciones y comprobaciones transaccionales de invitación/confirmación siguen usando información actual. No se añadió caché de elegibilidad entre peticiones. Las pruebas comparan ambas respuestas con documentos heredados, versiones nuevas pendientes, indisponibilidad y cruces, y comprueban el límite de tres consultas en PostgreSQL.
+
+Comparación sobre los mismos 22 perfiles y una conexión ya abierta, dos lecturas por variante: camino anterior 2417/2401 ms y 15 consultas; agrupado 491/492 ms y tres consultas. Es el tiempo del cálculo/lectura, no una medición de toda la página ni una garantía para otras redes o cargas; el establecimiento inicial de conexión y la autenticación agregan tiempo.
+
+Los contadores de participantes se reúnen en un agregado y la capacidad se calcula con las funciones ya cargadas. El matching solicita `compact=1` en el listado de participantes, sin calcular otra vez la elegibilidad que ya obtiene de los candidatos. El registro completo de participantes conserva su evaluación normal. Al alternar el filtro, el mapa permanece montado durante la actualización, muestra el estado de carga y descarta respuestas anteriores que llegan fuera de orden. Los snapshots de presentación existentes mantienen su vencimiento y descarte tras escrituras; no autorizan operaciones.

@@ -1,12 +1,18 @@
 import ReferenceMap from '../maps/ReferenceMap';
 
-export default function CandidateMap({ data, selected, onSelect }) {
+export function candidatePoints(data, eligibleOnly = false) {
+  if (!data || data.event_location?.is_remote) return [];
+  const points = data.results.filter(row => row.location && (!eligibleOnly || row.eligible)).map(row => ({ id:row.id, ...row.location, eligible:row.eligible,
+    label:`${row.name}: ${row.eligible ? `${row.score}/100` : 'No elegible para esta función'} · ${row.distance_km === null ? 'distancia no disponible' : `${row.distance_km.toFixed(1)} km aprox. en línea recta`}` }));
+  if (data.event_location?.latitude !== null && data.event_location?.latitude !== undefined) points.push({ id:'event', ...data.event_location, event:true, label:'Actividad' });
+  return points;
+}
+
+export default function CandidateMap({ data, selected, onSelect, eligibleOnly = false }) {
   if (!data) return null;
   if (data.event_location?.is_remote) return <section className="panel"><p>Actividad remota: no se calculan distancias ni se muestran referencias personales.</p></section>;
-  const points = data.results.filter(row => row.eligible && row.location).map(row => ({ id:row.id, ...row.location,
-    label:`${row.name}: ${row.score}/100 · ${row.distance_km === null ? 'distancia no disponible' : `${row.distance_km.toFixed(1)} km aprox. en línea recta`}` }));
-  if (data.event_location?.latitude !== null && data.event_location?.latitude !== undefined) points.push({ id:'event', ...data.event_location, event:true, label:'Actividad' });
-  return <section className="panel candidate-map"><h2>Referencias de candidatos elegibles</h2><p>{data.distance_notice}</p><ReferenceMap points={points} selected={selected} onSelect={onSelect}/><small>Verde: candidato elegible. Azul: candidato seleccionado. Rojo: actividad. Se muestran los candidatos de esta página.</small></section>;
+  const missing = data.results.filter(row => (!eligibleOnly || row.eligible) && !row.location).length;
+  return <section className="panel candidate-map"><h2>Referencias de candidatos</h2><p>{data.distance_notice}</p><ReferenceMap points={candidatePoints(data, eligibleOnly)} selected={selected} onSelect={onSelect}/>{missing > 0 && <p className="help">{missing} perfiles de esta página no tienen ubicación registrada y no pueden mostrarse en el mapa.</p>}<small>Verde: elegible. Ámbar: no elegible. Azul: seleccionado. Rojo: actividad. Se muestran los candidatos de esta página con ubicación registrada.</small></section>;
 }
 
 export function CandidateScore({ item }) {

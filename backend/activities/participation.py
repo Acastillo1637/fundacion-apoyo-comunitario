@@ -100,7 +100,7 @@ def notify(profile, message):
     Notification.objects.create(user=profile.user, message=message[:300], target='participations')
 
 
-def data(item, operator=False, prepared=False):
+def data(item, operator=False, prepared=False, include_eligibility=True):
     expired = item.status == 'invited' and item.expires_at <= timezone.now()
     result = {'id': str(item.pk), 'event_id': str(item.event_id), 'title': item.event.title, 'public_description': item.event.public_description,
               'position': item.position.name, 'position_id': item.position_id,
@@ -112,7 +112,9 @@ def data(item, operator=False, prepared=False):
         result['address'] = item.event.address
     if operator:
         result.update(name=item.profile.user.get_full_name(), email=item.profile.user.email,
-                      profile_id=item.profile_id, eligible=not eligibility(item.profile, item.position, prepared))
+                      profile_id=item.profile_id)
+        if include_eligibility:
+            result['eligible'] = not eligibility(item.profile, item.position, prepared)
         if item.profile.whatsapp_opt_in_at and item.profile.phone:
             phone = ''.join(character for character in item.profile.phone if character.isdigit())
             if 8 <= len(phone) <= 15:
@@ -187,7 +189,8 @@ def event_participants(request, event_id):
         rows = all_rows
         assignment = request.query_params.get('assignment', '')
         status = request.query_params.get('status', '')
-        if assignment not in ['', 'primary', 'backup'] or status not in ['', 'confirmed']:
+        compact = request.query_params.get('compact', '0')
+        if compact not in ['0', '1'] or assignment not in ['', 'primary', 'backup'] or status not in ['', 'confirmed']:
             raise ValidationError('Filtro de participantes no válido.')
         if assignment:
             rows = rows.filter(assignment=assignment)
@@ -195,16 +198,23 @@ def event_participants(request, event_id):
             rows = rows.filter(status=status)
         page, items = pagination(request, rows)
         items = list(items)
-        prepare_eligibility([item.profile for item in items], [item.position for item in items])
-        from django.db.models import Sum, Count, Q
-        positions = event.positions.annotate(confirmed=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='primary')))
-        return Response({'results': [data(item, True, prepared=True) for item in items], 'total': rows.count(), 'page': page,
-                         'stats': {'capacity': event.positions.aggregate(total=Sum('capacity'))['total'] or 0,
-                                   'confirmed': all_rows.filter(status='confirmed', assignment='primary').count(),
-                                   'backups': all_rows.filter(status='confirmed', assignment='backup').count(),
-                                   'vacancies': [{'position_id': row.pk, 'name': row.name, 'available': row.capacity - row.confirmed} for row in positions if row.capacity > row.confirmed],
-                                   'waiting': all_rows.filter(status='waitlisted').count(),
-                                   'invited': all_rows.filter(status='invited', expires_at__gt=timezone.now()).count()}})
+        if compact == '0':
+            prepare_eligibility([item.profile for item in items], [item.position for item in items])
+        selected = Q()
+        if assignment:
+            selected &= Q(assignment=assignment)
+        if status:
+            selected &= Q(status=status)
+        totals = all_rows.aggregate(total=Count('pk', filter=selected),
+            confirmed=Count('pk', filter=Q(status='confirmed', assignment='primary')),
+            backups=Count('pk', filter=Q(status='confirmed', assignment='backup')),
+            waiting=Count('pk', filter=Q(status='waitlisted')),
+            invited=Count('pk', filter=Q(status='invited', expires_at__gt=timezone.now())))
+        positions = list(event.positions.annotate(confirmed=Count('participations', filter=Q(participations__status='confirmed', participations__assignment='primary'))))
+        return Response({'results': [data(item, True, prepared=compact == '0', include_eligibility=compact == '0') for item in items],
+                         'total': totals.pop('total'), 'page': page,
+                         'stats': {**totals, 'capacity': sum(position.capacity for position in positions),
+                                   'vacancies': [{'position_id': row.pk, 'name': row.name, 'available': row.capacity - row.confirmed} for row in positions if row.capacity > row.confirmed]}})
     serializer = InviteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
@@ -236,7 +246,10 @@ def event_participants(request, event_id):
 @api_view(['GET'])
 def candidates(request, event_id, position_id):
     require_operator(request)
-    position = get_object_or_404(EventPosition.objects.select_related('event'), pk=position_id, event_id=event_id)
+    from django.db import connection
+    from .matching_snapshot import positions
+    rows = positions() if connection.vendor == 'postgresql' else EventPosition.objects.select_related('event')
+    position = get_object_or_404(rows, pk=position_id, event_id=event_id)
     from .matching import ranked_candidates
     return ranked_candidates(request, position)
 
