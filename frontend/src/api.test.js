@@ -1,9 +1,19 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { api, readSnapshot } from './api.js';
+import { api, readSnapshot, clearPrivateData } from './api.js';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
+
+test('seguridad no conserva snapshots y el cierre limpia los datos anteriores', async () => {
+  globalThis.fetch=async()=>Response.json({email:'demo@example.org',totp_enabled:true});
+  await api('security/');
+  assert.equal(readSnapshot('security/'),null);
+  await api('private-dashboard/');
+  assert.ok(readSnapshot('private-dashboard/'));
+  clearPrivateData();
+  assert.equal(readSnapshot('private-dashboard/'),null);
+});
 
 test('las copias en memoria no comparten cambios del formulario y no evitan la consulta nueva', async () => {
   let calls = 0;
@@ -107,6 +117,13 @@ test('distingue errores de conexión y errores del servidor', async () => {
 test('conserva el mensaje JSON del backend', async () => {
   globalThis.fetch = async () => Response.json({ detail: 'Recarga tu sesión.', code: 'csrf_failed' }, { status: 403 });
   await assert.rejects(api('register/'), /Recarga tu sesión/);
+});
+
+test('muestra errores de validación DRF en listas sin aceptar listas como respuesta exitosa',async()=>{
+  globalThis.fetch=async()=>Response.json(['La contraseña actual no es correcta.'],{status:400});
+  await assert.rejects(api('security/action/',{method:'POST'}),/La contraseña actual no es correcta/);
+  globalThis.fetch=async()=>Response.json(['unexpected success']);
+  await assert.rejects(api('security/'),/respuesta inesperada/);
 });
 
 test('los archivos multipart conservan el boundary del navegador', async () => {

@@ -56,6 +56,13 @@ test('una cuenta con varios roles dispone de cambio explícito de espacio', () =
   assert.match(render('volunteer', { available_portals: ['volunteer', 'requester'] }), /Cambiar de espacio/);
 });
 
+test('seguridad y cierre están fuera del menú lateral y existe el menú de cuenta',()=>{
+  const html=render('administration',{can_manage_users:true,can_manage_catalogs:true});
+  const sidebar=html.match(/<aside[\s\S]*?<\/aside>/)[0];
+  assert.doesNotMatch(sidebar,/Seguridad de cuenta|Cerrar sesión|accounts\/2fa/);
+  assert.match(html,/Menú de cuenta/);
+});
+
 test('el dashboard muestra los datos conservados mientras actualiza', () => {
   const snapshot = { metrics: [{ label: 'Cuentas activas', value: 12, target: 'users' }], events: [], reviews: [], audit: [] };
   const html = renderToStaticMarkup(React.createElement(OperationalOverview, {

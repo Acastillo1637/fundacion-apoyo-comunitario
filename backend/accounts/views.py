@@ -50,11 +50,11 @@ def user_data(user):
             )}
 
 
-def limited(request, scope, limit):
+def limited(request, scope, limit, identity=None):
     # Claves sin datos de contacto/IP en claro; no se confía en X-Forwarded-For.
     now = timezone.now()
     window = int(now.timestamp()) // 900
-    raw = f'{scope}:{request.META.get("REMOTE_ADDR", "")}:{window}'
+    raw = f'{scope}:{identity if identity is not None else request.META.get("REMOTE_ADDR", "")}:{window}'
     key = hashlib.sha256(raw.encode()).hexdigest()
     # One atomic upsert, preserving a shared counter across workers/devices.
     # Both supported databases implement ON CONFLICT ... RETURNING.

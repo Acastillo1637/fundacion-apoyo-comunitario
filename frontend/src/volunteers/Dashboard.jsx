@@ -13,6 +13,8 @@ import LocationSettings from '../maps/LocationSettings';
 import MatchingConfiguration from '../activities/MatchingConfiguration';
 import { CommunicationPreferences } from '../activities/Contacts';
 import PrivacyRequests from '../accounts/PrivacyRequests';
+import AccountMenu from '../accounts/AccountMenu';
+import AccountSecurity from '../accounts/AccountSecurity';
 import { ShieldCheck } from 'lucide-react';
 import RequesterPortal from '../accounts/RequesterPortal';
 import OperationalOverview, { Avatar, PageHeading } from '../design/Overview';
@@ -33,12 +35,12 @@ const tabs = [
   { id: 'participations', label: 'Mis participaciones', icon: Users },
 ];
 
-const portalNames = { administration: 'Administración general', operations: 'Secretaría y operaciones', volunteer: 'Voluntariado', requester: 'Solicitante de apoyo' };
+const portalNames = { administration: 'Administración general', operations: 'Secretaría y operaciones', volunteer: 'Voluntariado', requester: 'Solicitante de apoyo', account:'Cuenta' };
 
-export default function Dashboard({ user, setUser, initialPortal, initialTab, foundation = 'Fundación Apoyo Comunitario', onPublic, onSignOut }) {
+export default function Dashboard({ user, setUser, initialPortal, initialTab, foundation = 'Fundación Apoyo Comunitario', onPublic, onSignOut, route, onRoute, confirmationToken, clearConfirmationURL }) {
   const portals = user.available_portals || [];
   const [selectedPortal, setPortal] = useState(initialPortal || portals[0]);
-  const portal = portals.includes(selectedPortal) ? selectedPortal : portals[0];
+  const portal = route?.portal || (portals.includes(selectedPortal) ? selectedPortal : portals[0]) || 'account';
   const [selectedTab, setTab] = useState(initialTab || '');
   const [mobileNav, setMobileNav] = useState(false), [sectionQuery, setSectionQuery] = useState(''), [unread, setUnread] = useState(0), [targetEvent, setTargetEvent] = useState(null);
   const baseNavigation = portal === 'volunteer' ? (user.has_volunteer_profile ? tabs : [{ id: 'onboarding', label: 'Incorporación como voluntario', icon: UserRound }])
@@ -56,7 +58,7 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
       ...(portal === 'operations' && user.can_review_documents ? [{ id: 'document-review', label: 'Revisión documental', icon: FileCheck2 }] : []),
     ];
   const navigation = [...baseNavigation, { id: 'notifications', label: 'Notificaciones', icon: Bell }, { id:'privacy-requests',label:'Solicitudes de privacidad',icon:ShieldCheck }, { id: 'help', label: 'Ayuda y coordinación', icon: CircleHelp }];
-  const tab = navigation.some(item => item.id === selectedTab) ? selectedTab : navigation[0]?.id;
+  const tab = route?.tab || (selectedTab === 'security' ? 'security' : navigation.some(item => item.id === selectedTab) ? selectedTab : navigation[0]?.id);
   const updateNotifications = useCallback(data => { setUnread(data.unread); }, []);
   useEffect(() => {
     let active = true;
@@ -64,37 +66,40 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
     return () => { active = false; };
   }, [portal, user.id, updateNotifications]);
   function navigate(target, eventId = null) {
-    if(target==='privacy-requests' && user.can_manage_users && portals.includes('administration')) setPortal('administration');
-    if (['operations', 'participants', 'matching', 'document-review'].includes(target) && portal === 'administration' && portals.includes('operations')) setPortal('operations');
-    if (target === 'my-requests' && portals.includes('requester')) setPortal('requester');
-    if (['documents', 'participations'].includes(target) && portals.includes('volunteer')) setPortal('volunteer');
-    setTab(target); setTargetEvent(eventId); setMobileNav(false);
+    let nextPortal=portal;
+    if(target==='privacy-requests' && user.can_manage_users && portals.includes('administration')) nextPortal='administration';
+    if (['operations', 'participants', 'matching', 'document-review','directory'].includes(target) && portals.includes('operations')) nextPortal='operations';
+    if (['users','catalogs','matching-settings'].includes(target) && portals.includes('administration')) nextPortal='administration';
+    if (['my-requests','new-request','requester-profile'].includes(target) && portals.includes('requester')) nextPortal='requester';
+    if (['documents','participations'].includes(target) && portals.includes('volunteer')) nextPortal='volunteer';
+    setMobileNav(false);
+    if(onRoute){onRoute(target,nextPortal,eventId);return;}
+    setPortal(nextPortal);setTab(target);setTargetEvent(eventId);
   }
   if (!portal) return <section className="wrap panel"><h1>Cuenta sin espacio asignado</h1><p>Solicita al administrador que revise tus roles de acceso.</p></section>;
   return <div className="app-layout stitch-workspace"><aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Navegación del espacio">
     <button className="workspace-brand" onClick={onPublic}><FoundationLogo/><span>{foundation}<small>{slogan}</small></span></button>
     <span className="workspace-status"><ShieldIcon/> Espacio de coordinación <span className="dot"/></span>
     <span className="eyebrow">{portalNames[portal]}</span>
-    {portals.length > 1 && <label className="field portal-switch">Cambiar de espacio<select value={portal} onChange={event => { setPortal(event.target.value); setTab(''); setMobileNav(false); }}>{portals.map(value => <option key={value} value={value}>{portalNames[value]}</option>)}</select></label>}
+    {portals.length > 1 && <label className="field portal-switch">Cambiar de espacio<select value={portal} onChange={event => { if(onRoute)onRoute('overview',event.target.value);else {setPortal(event.target.value);setTab('');} setMobileNav(false); }}>{portals.map(value => <option key={value} value={value}>{portalNames[value]}</option>)}</select></label>}
     {navigation.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-item ${tab === id ? 'active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon size={18}/>{label}</button>)}
     <div className="sidebar-note"><HeartHandshake size={23}/><strong>Personas que se unen.</strong><p>Comunidad, compromiso y tiempo para ayudar.</p><span className="sidebar-note-line"/></div>
-    <a className="nav-item" href="/accounts/2fa/"><Settings2 size={18}/>Seguridad de cuenta</a>
-    {onSignOut && <button className="nav-item" onClick={onSignOut}><LogOut size={18}/>Cerrar sesión</button>}
-  </aside><header className="workspace-topbar"><button className="icon-btn workspace-menu" aria-label="Abrir menú del espacio" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}><Menu size={22}/></button><span className="foundation-chip"><Building2 size={17}/>{foundation}</span><form className="workspace-search" onSubmit={event => { event.preventDefault(); const match = navigation.find(item => item.label.toLocaleLowerCase('es').includes(sectionQuery.toLocaleLowerCase('es'))); if (match) { navigate(match.id); setSectionQuery(''); } }}><Search size={16}/><input aria-label="Buscar sección" list="workspace-sections" placeholder="Ir a una sección…" value={sectionQuery} onChange={event => setSectionQuery(event.target.value)}/><datalist id="workspace-sections">{navigation.map(item => <option key={item.id} value={item.label}/>)}</datalist><button aria-label="Ir a la sección" type="submit"><ArrowRight size={15}/></button></form><div className="workspace-top-actions"><button className="icon-btn notification-button" aria-label={`Notificaciones: ${unread} sin leer`} onClick={() => navigate('notifications')}><Bell size={20}/>{unread > 0 && <span>{unread > 99 ? '99+' : unread}</span>}</button><button className="icon-btn" aria-label="Ayuda" onClick={() => navigate('help')}><CircleHelp size={20}/></button><button className="workspace-user" onClick={() => navigate(portal === 'volunteer' ? (user.has_volunteer_profile ? 'profile' : 'onboarding') : portal === 'requester' ? 'requester-profile' : 'staff-profile')}><span><strong>{user.first_name} {user.last_name}</strong><small>{portalNames[portal]}</small></span><Avatar name={`${user.first_name} ${user.last_name}`}/></button></div></header><section className="dashboard">
-    {!['staff-overview', 'overview'].includes(tab) && <PageHeading eyebrow={portalNames[portal]} title={navigation.find(item => item.id === tab)?.label || 'Mi espacio'} description={tab === 'matching' ? 'Encuentra personas con las habilidades, documentos y disponibilidad que necesita cada actividad.' : undefined}/>}
+  </aside><header className="workspace-topbar"><button className="icon-btn workspace-menu" aria-label="Abrir menú del espacio" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}><Menu size={22}/></button><span className="foundation-chip"><Building2 size={17}/>{foundation}</span><form className="workspace-search" onSubmit={event => { event.preventDefault(); const match = navigation.find(item => item.label.toLocaleLowerCase('es').includes(sectionQuery.toLocaleLowerCase('es'))); if (match) { navigate(match.id); setSectionQuery(''); } }}><Search size={16}/><input aria-label="Buscar sección" list="workspace-sections" placeholder="Ir a una sección…" value={sectionQuery} onChange={event => setSectionQuery(event.target.value)}/><datalist id="workspace-sections">{navigation.map(item => <option key={item.id} value={item.label}/>)}</datalist><button aria-label="Ir a la sección" type="submit"><ArrowRight size={15}/></button></form><div className="workspace-top-actions"><button className="icon-btn notification-button" aria-label={`Notificaciones: ${unread} sin leer`} onClick={() => navigate('notifications')}><Bell size={20}/>{unread > 0 && <span>{unread > 99 ? '99+' : unread}</span>}</button><button className="icon-btn" aria-label="Ayuda" onClick={() => navigate('help')}><CircleHelp size={20}/></button><AccountMenu user={user} role={portalNames[portal]} onProfile={() => navigate(portal === 'volunteer' ? (user.has_volunteer_profile ? 'profile' : 'onboarding') : portal === 'requester' ? 'requester-profile' : 'staff-profile')} onSecurity={()=>navigate('security')} onSignOut={onSignOut}/></div></header><section className="dashboard">
+    {!['staff-overview', 'overview'].includes(tab) && <PageHeading eyebrow={portalNames[portal]} title={tab==='security'?'Seguridad de cuenta':navigation.find(item => item.id === tab)?.label || 'Mi espacio'} description={tab === 'matching' ? 'Encuentra personas con las habilidades, documentos y disponibilidad que necesita cada actividad.' : undefined}/>}
+    {tab==='security'&&<AccountSecurity onUserChanged={setUser} confirmationToken={confirmationToken} clearConfirmationURL={clearConfirmationURL}/>}
     {tab === 'help' && <section className="panel"><h2>Tu equipo y tu comunidad, en un mismo lugar</h2><p>Usa el menú lateral para revisar tus tareas. Si tienes varios roles, cambia de espacio para acceder a sus funciones.</p><div className="stitch-help-grid"><article><CalendarDays/><h3>Actividades e invitaciones</h3><p>Consulta fechas y requisitos. Un cupo queda confirmado cuando tu participación cambia a Confirmado.</p></article><article><FileCheck2/><h3>Documentos privados</h3><p>Carga tus antecedentes y consulta las observaciones del equipo autorizado.</p></article><article><Settings2/><h3>Acceso a tu cuenta</h3><p>Puedes recuperar tu contraseña desde Iniciar sesión y configurar un segundo factor en Seguridad de cuenta.</p></article></div></section>}
-    {portal === 'requester' && !['notifications', 'help','privacy-requests'].includes(tab) && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={setTab}/>}
+    {portal === 'requester' && !['notifications', 'help','privacy-requests','security'].includes(tab) && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={navigate}/>}
     {tab === 'staff-overview' && <OperationalOverview portal={portal} navigate={navigate} user={user}/>}
     {tab === 'staff-profile' && <StaffProfile user={user} setUser={setUser}/>}
     {tab === 'notifications' && <Notifications initialData={readSnapshot('activities/notifications/')} onUpdate={updateNotifications} onNavigate={navigate}/>}
     {tab === 'catalogs' && user.can_manage_catalogs && <Catalogs/>}
     {tab === 'matching-settings' && user.can_manage_users && <MatchingConfiguration/>}
     {tab === 'privacy-requests' && <PrivacyRequests admin={portal==='administration'&&user.can_manage_users}/>}
-    {['participants', 'matching'].includes(tab) && user.can_manage_activities && <Participants key={`${tab}-${targetEvent || ''}`} initialEventId={targetEvent} mode={tab}/>}
+    {['participants', 'matching'].includes(tab) && user.can_manage_activities && <Participants key={`${tab}-${route?.eventId || targetEvent || ''}`} initialEventId={route?.eventId || targetEvent} mode={tab}/>}
     {tab === 'directory' && user.can_manage_activities && <Directory/>}
     {portal === 'volunteer' && <>
       {tab === 'overview' && <VolunteerHome user={user} navigate={navigate}/>}
-      {tab === 'onboarding' && <VolunteerOnboarding onComplete={updated => { setUser(updated); setTab('overview'); }}/>}
+      {tab === 'onboarding' && <VolunteerOnboarding onComplete={updated => { setUser(updated); navigate('overview'); }}/>}
       {tab === 'profile' && <Profile setUser={setUser}/>}
       {tab === 'qualifications' && <Qualifications/>}
       {tab === 'availability' && <Availability/>}

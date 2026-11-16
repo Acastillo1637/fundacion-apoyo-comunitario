@@ -35,7 +35,7 @@ Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. 
 - Seguimiento manual de contactos WhatsApp, vencimientos, confirmación con revalidación y reemplazos.
 - Solicitudes de privacidad notificadas a todos los administradores generales activos y descarga de datos propios.
 - Logo oficial aportado y eslogan incorporados sin rediseñar el logo.
-- 288 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 33 del frontend.
+- 302 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 45 del frontend.
 
 Las optimizaciones de carga local y sus mediciones están documentadas en [Rendimiento](docs/RENDIMIENTO.md).
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
@@ -45,6 +45,14 @@ Las optimizaciones de carga local y sus mediciones están documentadas en [Rendi
 Consulta [matching, mapas y WhatsApp](docs/MATCHING_MAPAS_WHATSAPP.md), [API](docs/API_PRO12.md), [despliegue y recuperación](docs/DESPLIEGUE_PRO12.md) y [pruebas, seguridad y límites reales](docs/VALIDACION_SEGURIDAD_PRO12.md).
 
 **Después de actualizar:** instala `backend/requirements.lock` en el entorno virtual, ejecuta `npm ci` dentro de `frontend` y reinicia ambos servidores. `scripts/start-backend.ps1` aplica las migraciones de Supabase cuando existe `.env.shared`. No vuelvas a importar los datos ni crees otra base.
+
+## Navegación y seguridad de cuenta
+
+Cada sección tiene su URL: `/dashboard`, `/mi-cuenta`, `/usuarios`, `/catalogos`, `/matching`, `/notificaciones` y `/seguridad`, entre otras. F5 mantiene la sección; mientras se comprueba la sesión solo aparece el estado de carga. Atrás y Adelante conservan la navegación.
+
+En la esquina superior derecha, abre el menú de tu avatar para **Mi cuenta**, **Seguridad de cuenta** y **Cerrar sesión**. Seguridad incluye contraseña, cambio/comprobación de correo, aplicación 2FA y códigos de recuperación. Estas opciones ya no están al pie del lateral. [Guía de uso, archivos, pruebas y configuración](docs/NAVEGACION_SEGURIDAD.md).
+
+Después de actualizar: `npm ci` en `frontend` y reiniciar ambos servidores. El script habitual de backend aplica la migración aditiva `accounts.0010_pendingemailchange`. El registro sigue sin pedir confirmación de correo; activar 2FA mantiene la comprobación de buzón por seguridad.
 
 ## Cómo abrirlo en tu computador
 
@@ -60,7 +68,7 @@ Las solicitudes enviadas desde una cuenta de solicitante usan sus datos guardado
 
 Después de actualizar el código, reinicia el backend con `scripts/start-backend.ps1` para aplicar las migraciones y crear el nuevo rol **Solicitante**. El administrador puede asignarlo a una cuenta existente; el titular completa sus datos y consentimientos al ingresar.
 
-Instrucciones para **Windows y PowerShell**. Necesitas Python 3.13 y Node.js 22.12 o superior.
+Instrucciones para **Windows y PowerShell**. Necesitas Python 3.13 y Node.js 22.22.2 o Node.js 24.15 o superior.
 
 Mantén **dos terminales abiertas**: una ejecuta Django y otra React. No necesitas Docker ni contratar un servidor para probar esta versión.
 

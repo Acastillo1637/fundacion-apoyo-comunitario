@@ -7,9 +7,12 @@ from . import overview
 from . import geography
 from . import health
 from . import privacy
+from . import account_security
 from activities import contacts, matching
 
 urlpatterns = [
+    path('security/', account_security.status),
+    path('security/action/', account_security.action),
     path('privacy/requests/', privacy.requests),
     path('privacy/requests/<int:request_id>/review/', privacy.review),
     path('privacy/export/', privacy.export_own),

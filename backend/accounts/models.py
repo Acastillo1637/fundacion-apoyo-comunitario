@@ -115,6 +115,13 @@ class RateBucket(models.Model):
     expires_at = models.DateTimeField()
 
 
+class PendingEmailChange(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='pending_email_change')
+    email = models.EmailField()
+    nonce = models.UUIDField(default=uuid.uuid4)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
 class PrivacyRequest(models.Model):
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='privacy_requests')
     kind = models.CharField(max_length=20, choices=[('access','Acceso a mis datos'), ('rectification','Rectificación'), ('deletion','Eliminación'), ('other','Otra solicitud de privacidad')])

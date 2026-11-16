@@ -17,6 +17,8 @@ function invalidateReads() {
   pendingReads.clear();
 }
 
+export function clearPrivateData() { invalidateReads(); }
+
 export function api(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const shareable = method === 'GET' && Object.keys(options).every(key => key === 'method');
@@ -27,7 +29,7 @@ export function api(path, options = {}) {
   if (pendingReads.has(path)) return pendingReads.get(path);
   const startedGeneration = generation;
   const pending = sendRequest(path, options).then(data => {
-    if (generation === startedGeneration && path !== 'session/') {
+    if (generation === startedGeneration && path !== 'session/' && !path.startsWith('security/')) {
       if (snapshots.size >= 100) snapshots.delete(snapshots.keys().next().value);
       snapshots.set(path, { data: structuredClone(data), at: Date.now() });
     }
@@ -79,7 +81,7 @@ async function sendRequest(path, options = {}) {
     }
     throw new Error('El servidor devolvió una respuesta inesperada. Recarga la página y verifica que Django esté iniciado.');
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+  if (!data || typeof data !== 'object' || (response.ok && Array.isArray(data))) {
     throw new Error('El servidor devolvió una respuesta inesperada. Recarga la página.');
   }
   if (data.csrf_token) csrfToken = data.csrf_token;

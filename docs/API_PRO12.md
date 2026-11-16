@@ -62,3 +62,8 @@ Tipos `access`, `rectification`, `deletion`, `other`; revisión a `in_review`, `
 
 
 Actualización 15-11-2026: al desactivar “Mostrar solo candidatos elegibles”, el mapa también representa los perfiles no elegibles de la página que tengan referencia registrada, en ámbar. No se les asigna puntuación ni se habilita su invitación. Sin coordenadas no se inventa un marcador; las actividades remotas siguen sin mostrar ubicaciones personales. El endpoint mantiene el permiso de coordinación en Django.
+
+
+## Navegación y seguridad de cuenta
+
+`GET /api/security/` consulta exclusivamente el estado de la cuenta propia. `POST /api/security/action/` gestiona contraseña, solicitud/confirmación de correo, TOTP y recuperación con credenciales actuales y CSRF. No acepta un identificador de otro usuario; los detalles y acciones están en [Navegación y seguridad](NAVEGACION_SEGURIDAD.md). Las rutas React se sirven con fallback a `index.html`, manteniendo `/api`, `/accounts`, `/admin` y `/static` para Django/estáticos.
