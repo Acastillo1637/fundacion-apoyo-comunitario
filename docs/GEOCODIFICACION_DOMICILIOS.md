@@ -12,6 +12,8 @@ La dirección solo existe en el formulario y durante la solicitud del backend. N
 
 Los perfiles antiguos sin ubicación deben completar este paso una vez. No se les inventan domicilios ni coordenadas a partir de sus nombres o comunas. El mapa conserva sus filtros y muestra los candidatos de la página actual con referencia disponible.
 
+Excepción exclusiva de demostración autorizada: `seed_demo_locations --apply` asigna puntos sintéticos a los 18 perfiles identificados del lote `community-demo-v1` que todavía no tienen coordenadas. El sector lleva el prefijo `DEMO` y una dirección expresamente ficticia; no es un domicilio verificado ni un resultado de geocodificación. Exige DEBUG, valida IDs y correos reservados, respalda los valores anteriores en `backups/demo-locations/`, registra auditoría y conserva cualquier referencia existente. No modifica cuentas reales ni requisitos de elegibilidad.
+
 ## API y protecciones
 
 `GET /api/volunteer/location/` informa `address_geocoding_enabled` sin devolver la clave. `POST /api/volunteer/location/address/` recibe `address`, `commune`, `sector`, `revision`, `consent` y, solo para confirmar una opción, `choice`.
