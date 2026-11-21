@@ -21,10 +21,12 @@ React/Vite y Django/DRF conservan la arquitectura existente; PostgreSQL en Supab
 
 [Auditoría inicial y cierre](AUDITORIA_PRO12.md), [algoritmo y proveedores](MATCHING_MAPAS_WHATSAPP.md), [API](API_PRO12.md), [despliegue/recuperación](DESPLIEGUE_PRO12.md) y [validación/seguridad](VALIDACION_SEGURIDAD_PRO12.md).
 
-302 pruebas backend satisfactorias sobre PostgreSQL local, 45 frontend y compilación correcta. El flujo integral automatizado es de API; la revisión de navegador cubre escenarios críticos, no todas las combinaciones. Cero vulnerabilidades conocidas en las auditorías de dependencias de esta fecha no implica ausencia de vulnerabilidades.
+315 pruebas backend satisfactorias sobre PostgreSQL local, 55 frontend y compilación correcta (cierre 21-11-2026). El flujo integral automatizado es de API; la revisión de navegador cubre escenarios críticos, no todas las combinaciones. Cero vulnerabilidades conocidas en las auditorías de dependencias de esta fecha no implica ausencia de vulnerabilidades.
 
 ## Límites reales
 
-No se publicó en hosting ni se verificó correo SMTP real, antivirus de producción o certificados del hosting. WhatsApp no envía automáticamente ni confirma entregas. No hay rutas ni tiempos de traslado; Nominatim está desactivado hasta aceptación informada y sus respuestas se probaron con simulación. Faltan plazo institucional de conservación, canal para personas sin cuenta, política MFA de producción, monitoreo y respaldo externo programado. Los archivos privados no se replican por compartir la base.
+No se publicó en hosting ni se verificó correo SMTP real, antivirus de producción o certificados del hosting. WhatsApp no envía automáticamente ni confirma entregas. No hay rutas ni tiempos de traslado; Nominatim público está desactivado hasta aceptación informada. El cálculo de referencias por domicilio con Geoapify sí está integrado y su conexión se comprobó con un lugar público. Faltan plazo institucional de conservación, canal para personas sin cuenta, política MFA de producción, monitoreo y respaldo externo programado. Los archivos privados no se replican por compartir la base.
 
 No se afirma cumplimiento normativo, invulnerabilidad ni certificación de accesibilidad. No introducir datos personales reales antes de resolver los pendientes de publicación.
+
+Revisión de cierre: [búsquedas, filtros, notificaciones, comprobaciones y límites de publicación](CIERRE_WEB.md).

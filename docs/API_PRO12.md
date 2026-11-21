@@ -2,6 +2,8 @@
 
 Base `/api/`. JSON UTF-8; sesión Django en cookie HttpOnly. Las escrituras requieren CSRF (`X-CSRFToken`) y sesión autenticada. Se mantienen las API anteriores descritas en ACTIVIDADES, DOCUMENTOS, PARTICIPACION y USUARIOS. No existe autenticación con claves públicas de Supabase.
 
+Actualización 21-11-2026: los listados de operaciones `activities/operations/requests/` y `activities/operations/events/` aceptan `q` (máximo 120 caracteres), `status` y `period=upcoming|past`; los filtros se aplican antes de paginar, también con `compact=1`. `activities/notifications/` acepta `page` y `unread_only=0|1`; devuelve `results`, `total`, `page`, `page_size=30` y `unread` global. POST admite exclusivamente `{read_id: ID_PROPIO}` o `{read_all:true}`. El ID ajeno devuelve 404; filtros, páginas o cuerpos inválidos devuelven 400.
+
 | Método y ruta | Autorización y propósito |
 |---|---|
 | GET/PUT `volunteer/location/` | Solo voluntario sobre su propio perfil. Comuna, sector, coordenadas aproximadas y revisión. |

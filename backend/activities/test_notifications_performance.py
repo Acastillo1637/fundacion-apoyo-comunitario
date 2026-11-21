@@ -18,7 +18,7 @@ class NotificationPerformanceTests(TestCase):
             return notifications(request).data
 
     def test_empty_notifications_need_one_query(self):
-        self.assertEqual(self.get_notifications(), {'unread': 0, 'results': []})
+        self.assertEqual(self.get_notifications(), {'unread': 0, 'results': [], 'page': 1, 'page_size': 30, 'total': 0})
 
     def test_unread_total_includes_older_rows_outside_latest_thirty(self):
         Notification.objects.bulk_create([Notification(user=self.user, message=f'Anterior {index}') for index in range(7)])

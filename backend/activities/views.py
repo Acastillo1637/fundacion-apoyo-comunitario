@@ -7,7 +7,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from rest_framework.authentication import SessionAuthentication
@@ -32,6 +32,29 @@ def pagination(request, queryset):
     except ValueError:
         raise ValidationError('Página no válida.')
     return page, queryset[(page - 1) * 20:page * 20]
+
+
+def filter_operations(request, queryset, model):
+    status = request.query_params.get('status', '')
+    query = request.query_params.get('q', '').strip()
+    period = request.query_params.get('period', '')
+    if status and status not in model.Status.values:
+        raise ValidationError('Estado no válido.')
+    if len(query) > 120 or period not in ['', 'upcoming', 'past']:
+        raise ValidationError('Filtros no válidos. La búsqueda admite hasta 120 caracteres.')
+    if status:
+        queryset = queryset.filter(status=status)
+    if query:
+        fields = ['title', 'commune'] if model is Event else ['organization', 'contact_name', 'commune']
+        condition = Q()
+        for field in fields:
+            condition |= Q(**{field + '__icontains': query})
+        queryset = queryset.filter(condition)
+    if period == 'upcoming':
+        queryset = queryset.filter(starts_at__gt=timezone.now())
+    elif period == 'past':
+        queryset = queryset.filter(ends_at__lte=timezone.now())
+    return queryset
 
 
 @api_view(['GET'])
@@ -121,12 +144,7 @@ def verify_request(request):
 @api_view(['GET'])
 def requests(request):
     require_operator(request)
-    queryset = ServiceRequest.objects.all()
-    status = request.query_params.get('status')
-    if status:
-        if status not in ServiceRequest.Status.values:
-            raise ValidationError('Estado no válido.')
-        queryset = queryset.filter(status=status)
+    queryset = filter_operations(request, ServiceRequest.objects.all(), ServiceRequest)
     page, rows = pagination(request, queryset)
     return Response({'results': [request_data(item) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
 
@@ -166,12 +184,13 @@ def events(request):
         from .models import EventPosition
         from .services import event_card
         capacity = EventPosition.objects.filter(event_id=OuterRef('pk')).order_by().values('event_id').annotate(total=Sum('capacity')).values('total')
-        queryset = Event.objects.annotate(total_capacity=Subquery(capacity))
+        queryset = filter_operations(request, Event.objects.annotate(total_capacity=Subquery(capacity)), Event)
         page, rows = pagination(request, queryset)
         return Response({'results': [event_card(item) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
     queryset = Event.objects.prefetch_related(
         'positions__required_skills__required_documents', 'positions__required_documents', 'positions__desired_skills', 'transitions',
         Prefetch('changes', queryset=EventChange.objects.select_related('actor').all()[:20], to_attr='loaded_changes'))
+    queryset = filter_operations(request, queryset, Event)
     page, rows = pagination(request, queryset)
     return Response({'results': [event_data(item, private=True) for item in rows], 'page': page, 'page_size': 20, 'total': queryset.count()})
 

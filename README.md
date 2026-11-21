@@ -35,12 +35,14 @@ Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. 
 - Seguimiento manual de contactos WhatsApp, vencimientos, confirmación con revalidación y reemplazos.
 - Solicitudes de privacidad notificadas a todos los administradores generales activos y descarga de datos propios.
 - Logo oficial aportado y eslogan incorporados sin rediseñar el logo.
-- 302 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 45 del frontend.
+- 315 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 55 del frontend.
+
+El [cierre de revisión del 21-11-2026](docs/CIERRE_WEB.md) incluye búsquedas y filtros de solicitudes/convocatorias, historial paginado de notificaciones, lectura individual y evidencia móvil.
 
 Las optimizaciones de carga local y sus mediciones están documentadas en [Rendimiento](docs/RENDIMIENTO.md).
 - Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
 
-**Antes de publicar:** configurar dominio/HTTPS, SMTP, ClamAV, volumen privado, copias externas y plazo de conservación aprobado. WhatsApp usa enlaces oficiales y envío humano; la búsqueda externa de lugares está desactivada por defecto.
+**Antes de publicar:** configurar dominio/HTTPS, SMTP, ClamAV, volumen privado, copias externas y plazo de conservación aprobado. WhatsApp usa enlaces oficiales y envío humano. La búsqueda pública de lugares está desactivada por defecto; el cálculo privado por dirección usa Geoapify cuando está configurado.
 
 Consulta [matching, mapas y WhatsApp](docs/MATCHING_MAPAS_WHATSAPP.md), [API](docs/API_PRO12.md), [despliegue y recuperación](docs/DESPLIEGUE_PRO12.md) y [pruebas, seguridad y límites reales](docs/VALIDACION_SEGURIDAD_PRO12.md).
 

@@ -1,5 +1,7 @@
 # Verificación y límites de seguridad — 14-11-2026
 
+Actualización de cierre 21-11-2026: [315 pruebas PostgreSQL, 55 frontend, auditorías actuales y revisión de navegador](CIERRE_WEB.md). Los resultados fechados más abajo corresponden a la revisión histórica del 14-11. El registro y login actuales no exigen verificar el correo; [comportamiento y riesgos de esa decisión](REGISTRO_SIN_VERIFICACION.md). El cálculo privado de referencias mediante Geoapify está integrado con consentimiento; no utiliza Nominatim público para domicilios.
+
 ## Resultados reproducibles
 
 | Comprobación | Resultado |

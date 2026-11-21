@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, CalendarDays, Check, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { api, readSnapshot } from '../api';
 import LocationPicker from '../maps/LocationPicker';
+import ListFilters from './ListFilters';
+import { emptyFilters, requestStates, eventStates, operationPath } from './list-filters';
 import { EventLocation } from '../maps/LocationSettings';
 import { CalendarDays as ScheduleIcon, MessageSquare, MapPin, ShieldCheck } from 'lucide-react';
 
@@ -10,6 +12,8 @@ const eventLabels = { draft: 'Borrador', open: 'Abierto', finished: 'Finalizado'
 
 export default function Operations() {
   const [section, setSection] = useState('requests');
+  const [filters, setFilters] = useState(emptyFilters);
+  const listVersion = useRef(0);
   const [data, setData] = useState(() => readSnapshot('activities/operations/requests/?page=1&compact=1'));
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
@@ -20,16 +24,17 @@ export default function Operations() {
   const [message, setMessage] = useState('');
 
   async function load() {
+    const version = ++listVersion.current;
     setBusy(true); setError('');
     try {
       const [list, catalogs] = await Promise.all([
-        api(`activities/operations/${section}/?page=${page}&compact=1`).then(result => { setData(result); return result; }), options || api('activities/operations/options/'),
+        api(operationPath(section,page,filters)), options || api('activities/operations/options/'),
       ]);
-      setData(list); setOptions(catalogs);
-    } catch (err) { setError(err.message); }
-    finally { setBusy(false); }
+      if (version === listVersion.current) { setData(list); setOptions(catalogs); }
+    } catch (err) { if (version === listVersion.current) setError(err.message); }
+    finally { if (version === listVersion.current) setBusy(false); }
   }
-  useEffect(() => { setSelected(null); setData(readSnapshot(`activities/operations/${section}/?page=${page}&compact=1`)); setMessage(''); load(); }, [section, page]);
+  useEffect(() => { setSelected(null); setData(readSnapshot(operationPath(section,page,filters))); setMessage(''); load(); return () => { listVersion.current++; }; }, [section, page, filters]);
 
   async function open(id) {
     setBusy(true); setError(''); setMode('detail'); setMessage('');
@@ -39,6 +44,7 @@ export default function Operations() {
   }
 
   async function transition(status, reason) {
+    if (['cancelled','finished','rejected'].includes(status) && !window.confirm(status === 'cancelled' ? '¿Confirmas cancelar la actividad? Se notificará a sus participantes.' : status === 'finished' ? '¿Confirmas finalizar esta actividad? Revisa primero su asistencia.' : '¿Confirmas rechazar esta solicitud con el motivo indicado?')) return;
     setBusy(true); setError(''); setMessage('');
     try {
       const result = await api(`activities/operations/${section}/${selected.id}/transition/`, {
@@ -46,7 +52,7 @@ export default function Operations() {
       });
       setSelected(result);
       setMessage('Cambio de estado registrado.');
-      setData(await api(`activities/operations/${section}/?page=${page}&compact=1`));
+      setData(await api(operationPath(section,page,filters)));
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -55,7 +61,7 @@ export default function Operations() {
     setBusy(true); setError(''); setMessage('');
     try {
       const result = await api(`activities/operations/events/${selected.id}/`, { method: 'PATCH', body: JSON.stringify({ ...body, revision: selected.revision }) });
-      setSelected(result); setMessage('Información actualizada. Si cambió el título o la descripción pública, se generaron los avisos correspondientes.'); return true;
+      setSelected(result); setData(await api(operationPath(section,page,filters))); setMessage('Información actualizada. Si cambió el título o la descripción pública, se generaron los avisos correspondientes.'); return true;
     } catch (err) { setError(err.message); return false; }
     finally { setBusy(false); }
   }
@@ -73,11 +79,11 @@ export default function Operations() {
   }
 
   return <section className="operation-space">
-    <div className="panel"><div className="panel-heading"><h2>Solicitudes y eventos</h2><button className="text-button" disabled={busy} onClick={() => { setSelected(null); load(); }}><RefreshCw size={15}/> Recargar</button></div><p className="section-description">La decisión y publicación corresponden al equipo. La información de contacto y la dirección exacta son privadas.</p><div className="operation-tabs"><button className={`button ${section === 'requests' ? 'primary' : 'secondary'}`} onClick={() => { setPage(1); setSection('requests'); }} disabled={busy}>Solicitudes</button><button className={`button ${section === 'events' ? 'primary' : 'secondary'}`} onClick={() => { setPage(1); setSection('events'); }} disabled={busy}>Eventos</button></div></div>
+    <div className="panel"><div className="panel-heading"><h2>Solicitudes y eventos</h2><button className="text-button" disabled={busy} onClick={() => { setSelected(null); load(); }}><RefreshCw size={15}/> Recargar</button></div><p className="section-description">La decisión y publicación corresponden al equipo. La información de contacto y la dirección exacta son privadas.</p><div className="operation-tabs"><button className={`button ${section === 'requests' ? 'primary' : 'secondary'}`} onClick={() => { setPage(1); setFilters(emptyFilters); setSection('requests'); }} disabled={busy}>Solicitudes</button><button className={`button ${section === 'events' ? 'primary' : 'secondary'}`} onClick={() => { setPage(1); setFilters(emptyFilters); setSection('events'); }} disabled={busy}>Eventos</button></div><ListFilters value={filters} states={section === 'requests' ? requestStates : eventStates} busy={busy} onApply={value => { setFilters(value); setPage(1); }}/></div>
     {error && <p role="alert" className="error">{error}</p>}{message && <p role="status" className="success">{message}</p>}
     {selected ? <div className={mode === 'editor' ? 'planning-wrapper' : 'panel'}><button className="text-button" disabled={busy} onClick={() => { setSelected(null); setMode('detail'); setError(''); }}><ArrowLeft size={16}/> Volver a la lista</button>
       {mode === 'editor' ? <EventEditor key={selected.id} source={selected} editing={section === 'events'} options={options} busy={busy} onSave={saveEvent}/> : section === 'requests' ? <RequestDetail item={selected} busy={busy} onTransition={transition} onCreate={() => setMode('editor')}/> : <EventDetail item={selected} onLocationSaved={setSelected} busy={busy} onSaveInformation={saveInformation} onTransition={transition} onEdit={() => setMode('editor')}/>}
-    </div> : <div className="panel">{busy && !data && <p role="status">Cargando…</p>}{data?.results.length === 0 && <div className="empty-state"><p>No hay registros en esta página.</p></div>}<div className="operation-list">{data?.results.map(item => <article className="operation-item" key={item.id}><div><span className="tag">{section === 'requests' ? requestLabels[item.status] : eventLabels[item.status]}</span><h3>{section === 'requests' ? item.organization || item.contact_name : item.title}</h3><p>{item.commune} · {item.date.split('-').reverse().join('/')} · {item.start_time}–{item.end_time}</p>{section === 'requests' && <small className="help">{item.from_account ? 'Solicitud desde cuenta registrada' : item.email_verified ? 'Correo verificado' : 'Correo pendiente de verificación'}</small>}</div><button className="button secondary small" disabled={busy} onClick={() => open(item.id)}>Ver detalle</button></article>)}</div>{data && <div className="form-actions"><button className="button secondary" disabled={busy || page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button><span className="help">Página {page} · {data.total} registros</span><button className="button secondary" disabled={busy || page * 20 >= data.total} onClick={() => setPage(current => current + 1)}>Siguiente</button></div>}</div>}
+    </div> : <div className="panel">{busy && <p role="status">Actualizando registros…</p>}{data?.results.length === 0 && <div className="empty-state"><p>No hay registros que coincidan con estos filtros.</p></div>}<div className="operation-list">{data?.results.map(item => <article className="operation-item" key={item.id}><div><span className="tag">{section === 'requests' ? requestLabels[item.status] : eventLabels[item.status]}</span><h3>{section === 'requests' ? item.organization || item.contact_name : item.title}</h3><p>{item.commune} · {item.date.split('-').reverse().join('/')} · {item.start_time}–{item.end_time}</p>{section === 'requests' && <small className="help">{item.from_account ? 'Solicitud desde cuenta registrada' : item.email_verified ? 'Correo verificado' : 'Correo pendiente de verificación'}</small>}</div><button className="button secondary small" disabled={busy} onClick={() => open(item.id)}>Ver detalle</button></article>)}</div>{data && <div className="form-actions"><button className="button secondary" disabled={busy || page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button><span className="help">Página {page} · {data.total} registros</span><button className="button secondary" disabled={busy || page * 20 >= data.total} onClick={() => setPage(current => current + 1)}>Siguiente</button></div>}</div>}
   </section>;
 }
 

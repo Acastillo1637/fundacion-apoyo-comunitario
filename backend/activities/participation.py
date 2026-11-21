@@ -330,21 +330,50 @@ def decision(request, participation_id):
     return Response(data(item, operator))
 
 
+class NotificationReadSerializer(StrictSerializer):
+    read_all = serializers.BooleanField(required=False)
+    read_id = serializers.IntegerField(min_value=1, required=False)
+
+    def validate(self, values):
+        if not (set(values) == {'read_id'} or values == {'read_all': True}):
+            raise ValidationError('Indica una notificación o marca todas como leídas.')
+        return values
+
+
 @api_view(['GET', 'POST'])
 def notifications(request):
+    try:
+        page = int(request.query_params.get('page', 1))
+        if not 1 <= page <= 100000:
+            raise ValueError()
+    except ValueError:
+        raise ValidationError('Página no válida.')
+    unread_only = request.query_params.get('unread_only', '0')
+    if unread_only not in ['0', '1']:
+        raise ValidationError('Filtro de lectura no válido.')
     if request.method == 'POST':
-        if request.data != {'read_all': True}:
-            raise ValidationError('Solicitud no válida.')
-        request.user.notifications.filter(read_at__isnull=True).update(read_at=timezone.now())
+        serializer = NotificationReadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get('read_all'):
+            request.user.notifications.filter(read_at__isnull=True).update(read_at=timezone.now())
+        else:
+            item = get_object_or_404(request.user.notifications, pk=serializer.validated_data['read_id'])
+            request.user.notifications.filter(pk=item.pk, read_at__isnull=True).update(read_at=timezone.now())
     rows = request.user.notifications.all()
+    if unread_only == '1':
+        rows = rows.filter(read_at__isnull=True)
     # The window counts every unread notification before LIMIT, in the same
     # round trip as the latest 30 rows (including when older rows are unread).
-    results = list(rows.annotate(unread_total=Window(Count('pk', filter=Q(read_at__isnull=True))))[:30].values(
-        'id', 'message', 'target', 'read_at', 'created_at', 'unread_total'))
-    unread = results[0]['unread_total'] if results else 0
+    results = list(rows.annotate(unread_total=Window(Count('pk', filter=Q(read_at__isnull=True))),
+                                 result_total=Window(Count('pk')))[(page-1)*30:page*30].values(
+        'id', 'message', 'target', 'read_at', 'created_at', 'unread_total', 'result_total'))
+    totals = results[0] if results else (rows.aggregate(unread_total=Count('pk', filter=Q(read_at__isnull=True)),
+                                                     result_total=Count('pk')) if page > 1 else {'unread_total': 0, 'result_total': 0})
+    unread, total = totals['unread_total'], totals['result_total']
     for item in results:
         item.pop('unread_total')
-    return Response({'unread': unread, 'results': results})
+        item.pop('result_total')
+    return Response({'unread': unread, 'results': results, 'page': page, 'page_size': 30, 'total': total})
 
 
 @api_view(['GET'])

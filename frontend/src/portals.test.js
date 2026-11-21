@@ -48,7 +48,7 @@ test('administración usa catálogos dentro de la web', () => {
 
 test('notificaciones no renderiza simultáneamente el resumen', () => {
   const html = render('volunteer', {}, { initialTab: 'notifications' });
-  assert.match(html, /Marcar leídas/);
+  assert.match(html, /Marcar todas leídas/);
   assert.doesNotMatch(html, /Ayudemos al equipo a conocerte/);
 });
 
