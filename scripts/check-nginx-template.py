@@ -19,6 +19,6 @@ with tempfile.TemporaryDirectory(prefix='fundacion-nginx-') as directory:
     template = template.replace('/etc/letsencrypt/live/voluntariado.example.org/', str(folder)+'/')
     template = template.replace('/var/log/nginx/fundacion-access.log', str(folder/'access.log'))
     config = folder/'nginx.conf'
-    config.write_text(f'error_log stderr;\npid {folder}/nginx.pid;\nevents {{}}\nhttp {{\n{template}\n}}\n', encoding='utf-8')
+    config.write_text(f'error_log stderr;\npid {folder}/nginx.pid;\nevents {{}}\nhttp {{\naccess_log off;\n{template}\n}}\n', encoding='utf-8')
     subprocess.run(['nginx', '-e', 'stderr', '-t', '-p', str(folder), '-c', str(config)], check=True)
     print('Plantilla Nginx válida; certificado ficticio eliminado al finalizar.')
