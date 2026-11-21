@@ -2,9 +2,9 @@
 
 ## Acceso único
 
-Todos los roles ingresan desde **Iniciar sesión** en React. Una cuenta con correo verificado y sin segundo factor configurado entra con correo y contraseña. Los roles administrativos ya no redirigen a otro formulario.
+Todos los roles ingresan desde **Iniciar sesión** en React. Una cuenta activa sin segundo factor configurado entra con correo y contraseña, sin confirmación obligatoria del correo. Los roles administrativos ya no redirigen a otro formulario.
 
-Si el titular activó TOTP o códigos de recuperación, el formulario pide el código en la misma pantalla. No se inicia una sesión antes de comprobarlo. Se usan los validadores de allauth, con protección contra reutilización; no se desactiva un factor existente. La configuración opcional de seguridad y Django Admin conservan las vistas de allauth; Django Admin sigue exigiendo MFA. Las APIs del portal exigen sus permisos y un registro de autenticación por contraseña válido para esa identidad, o MFA cuando está configurado.
+Si el titular activó TOTP o códigos de recuperación, el formulario pide el código en la misma pantalla. No se inicia una sesión antes de comprobarlo. Se usan los validadores de allauth, con protección contra reutilización; no se desactiva un factor existente. La seguridad de cuenta se administra desde React mediante los endpoints Django que reutilizan allauth; Django Admin conserva sus controles adicionales de MFA. Ver [seguridad de cuenta](NAVEGACION_SEGURIDAD.md). Las APIs del portal exigen sus permisos y un registro de autenticación por contraseña válido para esa identidad, o MFA cuando está configurado.
 
 ## Espacios funcionales
 

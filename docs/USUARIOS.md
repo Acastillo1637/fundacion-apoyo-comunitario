@@ -1,12 +1,9 @@
-> Registro actualizado el 15-11-2026: las cuentas pueden iniciar sesión sin verificar correo. La recuperación sigue requiriendo acceso al correo principal. Ver [alcance y riesgos](REGISTRO_SIN_VERIFICACION.md).
-
 # Administración de usuarios desde el portal
 
-> Actualización de acceso y funciones: el portal usa un inicio de sesión único para todos los roles. Las cuentas sin MFA configurado entran con contraseña; las que lo activaron validan el código en la misma pantalla. Django Admin conserva su requisito MFA. Los controles de roles y propiedad siguen vigentes. Consulta [dashboards y participación](PARTICIPACION.md) para el comportamiento actual, que reemplaza las referencias anteriores a redirección obligatoria y módulos de participación pendientes.
 
 ## Funciones y permisos
 
-La sección React **Usuarios** permite listar, buscar por nombre/correo, filtrar, consultar detalle, invitar cuentas, modificar nombre/apellido, asignar roles, activar/desactivar y enviar recuperación. Requiere el permiso accounts.manage_accounts y MFA vinculado al usuario de la sesión. setup_roles lo concede únicamente al grupo Administrador general; el superusuario técnico también lo posee por definición de Django.
+La sección React **Usuarios** permite listar, buscar por nombre/correo, filtrar, consultar detalle, invitar cuentas, modificar nombre/apellido, asignar roles, activar/desactivar y enviar recuperación. Requiere el permiso `accounts.manage_accounts` y una sesión autenticada mediante el portal; si la cuenta tiene MFA configurado, debe completarlo. setup_roles lo concede únicamente al grupo Administrador general; el superusuario técnico también lo posee por definición de Django.
 
 Se muestran datos básicos y estado de correo/MFA; no se devuelven hashes, contraseñas, tokens, documentos, teléfonos ni domicilios. La lista pagina de 20 en 20 y limita la búsqueda a 100 caracteres. El historial muestra los 30 cambios administrativos más recientes.
 
@@ -16,9 +13,9 @@ Solicitante dispone de un perfil independiente para persona, empresa o instituci
 
 ## Altas por invitación
 
-Una cuenta nueva comienza sin contraseña utilizable ni correo verificado. Se crea EmailAddress sin verificación y se solicita un enlace usando el flujo de recuperación de allauth, dirigido explícitamente al usuario creado. El titular establece su contraseña y verifica su correo. Las cuentas privilegiadas deben configurar y usar MFA antes de operar.
+Una cuenta nueva comienza sin contraseña utilizable ni correo verificado. Se crea EmailAddress sin verificación y se solicita un enlace usando el flujo de recuperación de allauth, dirigido explícitamente al usuario creado. El titular establece su contraseña mediante el enlace. No se exige confirmar correo para entrar. El portal exige MFA si ya está configurado; imponer enrolamiento a todo el personal sigue siendo una decisión de producción. Ver [registro y riesgos](REGISTRO_SIN_VERIFICACION.md).
 
-El administrador no puede aceptar la mayoría de edad o los consentimientos por otra persona: no se crea un VolunteerProfile durante el alta. El titular autenticado y con correo verificado completa su incorporación. El endpoint es idempotente y no sobrescribe consentimientos existentes.
+El administrador no puede aceptar la mayoría de edad o los consentimientos por otra persona: no se crea un VolunteerProfile durante el alta. El titular autenticado completa personalmente su incorporación, sin verificación obligatoria de correo. El endpoint es idempotente y no sobrescribe consentimientos existentes.
 
 La creación comprueba correo en User y EmailAddress, para no confundir alias de otras cuentas. Si falla SMTP, la cuenta queda disponible con estado de envío fallido y se permite reintentar desde el detalle. Los enlaces no se entregan al administrador en el JSON; aparecen solo en el correo o, en desarrollo, en la terminal. El adaptador usa PUBLIC_APP_URL válido para dirigir los enlaces al portal en lugar del puerto del backend.
 
@@ -54,9 +51,9 @@ No hay borrado definitivo ni edición administrativa del correo en esta etapa. L
 
 | Método | Ruta | Control |
 | --- | --- | --- |
-| GET/POST | /api/management/users/ | Permiso de gestión + MFA |
-| GET/PATCH | /api/management/users/<uuid>/ | Permiso, MFA, revisión, protecciones de cuenta |
-| POST | /api/management/users/<uuid>/access-email/ | Permiso, MFA, motivo, destinatario acotado |
+| GET/POST | /api/management/users/ | Permiso de gestión + sesión del portal |
+| GET/PATCH | /api/management/users/<uuid>/ | Permiso, sesión del portal, revisión, protecciones de cuenta |
+| POST | /api/management/users/<uuid>/access-email/ | Permiso, sesión del portal, motivo, destinatario acotado |
 | POST | /api/profile/onboarding/ | Titular autenticado, consentimientos, sin verificación obligatoria de correo |
 | GET/PUT | /api/requester/profile/ | Rol Solicitante, revisión y consentimientos, sin verificación obligatoria de correo |
 | GET/POST | /api/requester/requests/ | Rol Solicitante, perfil propio autenticado |
@@ -70,4 +67,4 @@ Cobertura: permisos, MFA, CSRF, filtros, campos prohibidos, roles, autorrestricc
 
 Una prueba con PostgreSQL enfrenta dos administradores que intentan retirarse mutuamente: una operación obtiene 200 y la otra 403, conservando un administrador activo. Cada worker cierra su propia conexión antes de limpiar la base de pruebas.
 
-Pendiente la verificación visual/móvil completa y las pruebas de operación con SMTP real.
+La revisión visual puntual y la cobertura vigente figuran en [validación](VALIDACION_SEGURIDAD_PRO12.md). No se ha comprobado SMTP real ni todos los dispositivos.

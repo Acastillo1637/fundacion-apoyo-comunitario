@@ -1,305 +1,95 @@
 # Fundación Apoyo Comunitario
 
-Plataforma web para organizar voluntarios y su participación en actividades de la fundación.
-
 **Conectamos personas, multiplicamos la ayuda.**
 
-Plataforma integrada de demostración y desarrollo colaborativo sobre Supabase. Incluye gestión por roles, actividades, documentos privados, recomendaciones con mapas, contactos manuales por WhatsApp y trazabilidad. La publicación en internet requiere completar la configuración institucional y de producción.
+Sistema de gestión de voluntariados PRO-12: React/Vite, Django REST Framework y PostgreSQL en Supabase. La autenticación pertenece a Django; no se usa Supabase Auth. El código funciona en desarrollo y está preparado para instalarse, pero todavía no hay hosting contratado ni publicación verificada.
 
-## Lo que ya funciona
+## Ejecutar en Windows
 
-- Portal responsive inspirado en Stitch.
-- Registro con declaración de mayoría de edad y acceso inmediato, sin verificación obligatoria de correo.
-- Inicio/cierre de sesión y recuperación de contraseña.
-- Edición del nombre, apellido, teléfono y comuna del usuario conectado.
-- Selección de habilidades, profesiones y oficios desde catálogos administrables.
-- Franjas semanales y fechas completas no disponibles, con validación de superposiciones.
-- Catálogos con activación/desactivación y asociación de requisitos documentales.
-- Permisos backend y acceso unificado; segundo factor en la misma pantalla si está configurado.
-- Carga privada de PDF, JPEG y PNG, con versiones, descarga autorizada y revisión documental.
-- Formulario público de solicitud y verificación de correo del solicitante.
-- Revisión administrativa, eventos en borrador, publicación y cancelación.
-- Cupos por función, requisitos y listado público sin datos de contacto o dirección exacta.
-- Administración de usuarios desde React: altas por invitación, búsqueda, roles, estado e historial.
-- Espacios separados para voluntariado, solicitantes, secretaría y administración, con selector para cuentas con varios roles.
-- Perfil de solicitante para persona natural, empresa o institución; nueva solicitud y seguimiento desde su cuenta.
-- Dashboards con cantidades reales, postulaciones, candidatos, invitaciones, lista de espera, participantes, asistencia y notificaciones.
-- Catálogos y restricciones administrables desde React.
-- Restricciones con fecha opcional de término, historial y control de cambios simultáneos.
-- Notificaciones de revisión documental y acceso directo al detalle desde los avisos.
-- Respaldos con aceptación propia y activación manual mediante una nueva invitación como titular.
-- Edición de información de convocatorias publicadas, con motivo, historial y avisos internos.
-- Datos de demostración con usuarios, entidades y convocatorias ficticias; consulta [contenido y accesos](docs/DATOS_DEMO.md).
-- Matching determinista con pesos administrables, experiencia verificada, habilidades deseables y distancias Haversine.
-- Ubicaciones aproximadas, mapas interactivos y selección sincronizada de candidatos elegibles.
-- Seguimiento manual de contactos WhatsApp, vencimientos, confirmación con revalidación y reemplazos.
-- Solicitudes de privacidad notificadas a todos los administradores generales activos y descarga de datos propios.
-- Logo oficial aportado y eslogan incorporados sin rediseñar el logo.
-- 326 pruebas backend sobre PostgreSQL, incluidas siete de concurrencia, y 55 del frontend.
+Requisitos: Python 3.13 y Node.js 22.22.2 o 24.15 o superior. Ejecuta desde la raíz del repositorio; usa dos terminales.
 
-El [cierre de revisión del 21-11-2026](docs/CIERRE_WEB.md) incluye búsquedas y filtros de solicitudes/convocatorias, historial paginado de notificaciones, lectura individual y evidencia móvil.
-
-Las optimizaciones de carga local y sus mediciones están documentadas en [Rendimiento](docs/RENDIMIENTO.md).
-- Diseño basado en las 11 pantallas aprobadas de Stitch, con barra lateral que reserva su columna y menú móvil que desplaza el contenido.
-
-**Antes de publicar:** configurar dominio/HTTPS, SMTP, ClamAV, volumen privado, copias externas y plazo de conservación aprobado. WhatsApp usa enlaces oficiales y envío humano. La búsqueda pública de lugares está desactivada por defecto; el cálculo privado por dirección usa Geoapify cuando está configurado.
-
-Para preparar el hosting: [paquete de instalación, requisitos del plan y verificación de producción](docs/PREPARAR_HOSTING.md).
-
-Consulta [matching, mapas y WhatsApp](docs/MATCHING_MAPAS_WHATSAPP.md), [API](docs/API_PRO12.md), [despliegue y recuperación](docs/DESPLIEGUE_PRO12.md) y [pruebas, seguridad y límites reales](docs/VALIDACION_SEGURIDAD_PRO12.md).
-
-El voluntario puede [calcular su ubicación aproximada por dirección con Geoapify](docs/GEOCODIFICACION_DOMICILIOS.md). Requiere `GEOAPIFY_API_KEY` solo en el backend y consentimiento explícito; el domicilio completo no se guarda.
-
-**Después de actualizar:** instala `backend/requirements.lock` en el entorno virtual, ejecuta `npm ci` dentro de `frontend` y reinicia ambos servidores. `scripts/start-backend.ps1` aplica las migraciones de Supabase cuando existe `.env.shared`. No vuelvas a importar los datos ni crees otra base.
-
-## Navegación y seguridad de cuenta
-
-Cada sección tiene su URL: `/dashboard`, `/mi-cuenta`, `/usuarios`, `/catalogos`, `/matching`, `/notificaciones` y `/seguridad`, entre otras. F5 mantiene la sección; mientras se comprueba la sesión solo aparece el estado de carga. Atrás y Adelante conservan la navegación.
-
-En la esquina superior derecha, abre el menú de tu avatar para **Mi cuenta**, **Seguridad de cuenta** y **Cerrar sesión**. Seguridad incluye contraseña, cambio/comprobación de correo, aplicación 2FA y códigos de recuperación. Estas opciones ya no están al pie del lateral. [Guía de uso, archivos, pruebas y configuración](docs/NAVEGACION_SEGURIDAD.md).
-
-Después de actualizar: `npm ci` en `frontend` y reiniciar ambos servidores. El script habitual de backend aplica la migración aditiva `accounts.0010_pendingemailchange`. El registro sigue sin pedir confirmación de correo; activar 2FA mantiene la comprobación de buzón por seguridad.
-
-## Cómo abrirlo en tu computador
-
-**Para compartir datos con Almendra:** sigue [la configuración de PostgreSQL compartido](docs/BASE_COMPARTIDA.md). `start-backend.ps1` usa Supabase si encuentra `.env.shared`; sin ese archivo mantiene SQLite local. `manage-shared.ps1` administra la base compartida y `manage-local.ps1` conserva el modo local aislado.
-
-### Tipos de cuenta
-
-Al registrarte puedes elegir **Voluntario** (habilidades, disponibilidad, documentos y oportunidades) o **Solicitante** (datos de contacto, empresa o institución y solicitudes propias). También puedes abrir **Solicitar apoyo → Crear cuenta de solicitante**. Las entidades deben indicar un contacto mayor de edad y declarar que está autorizado para representarlas. Una cuenta representa a una persona o entidad.
-
-Los roles **Secretaría** y **Administrador general** se asignan desde la administración de usuarios. Secretaría gestiona solicitudes, eventos y revisión documental; administración gestiona cuentas y catálogos. Si tienes varios roles, usa **Cambiar de espacio** en el menú lateral. Tener un registro de perfil antiguo no concede por sí solo acceso al espacio de voluntariado.
-
-Las solicitudes enviadas desde una cuenta de solicitante usan sus datos guardados y su correo verificado. Las solicitudes públicas previas no se vinculan automáticamente por coincidencia de correo. El seguimiento muestra estados y fechas; las notas internas no se muestran al solicitante.
-
-Después de actualizar el código, reinicia el backend con `scripts/start-backend.ps1` para aplicar las migraciones y crear el nuevo rol **Solicitante**. El administrador puede asignarlo a una cuenta existente; el titular completa sus datos y consentimientos al ingresar.
-
-Instrucciones para **Windows y PowerShell**. Necesitas Python 3.13 y Node.js 22.22.2 o Node.js 24.15 o superior.
-
-Mantén **dos terminales abiertas**: una ejecuta Django y otra React. No necesitas Docker ni contratar un servidor para probar esta versión.
-
-### 1. Abre la carpeta del proyecto
-
-En VS Code abre la carpeta que contiene este README. Si usas la ubicación original, en PowerShell ejecuta:
-
-```powershell
-cd 'D:\Visual Studio code\Fundacion_Voluntarios'
-```
-
-Si descargaste el repositorio en otra carpeta, usa esa ubicación. Los siguientes comandos parten desde la raíz del proyecto.
-
-### 2. Instala las dependencias de Python
-
-Esto se hace la primera vez o cuando cambien las dependencias:
+Primera instalación o cambio de dependencias:
 
 ```powershell
 python -m venv .venv
-python -m pip --python .venv install -r backend/requirements.lock
+.venv\Scripts\python.exe -m pip install -r backend/requirements.lock
+npm --prefix frontend ci
 ```
 
-Si el primer comando falla en `ensurepip`, utiliza esta alternativa:
+Si ya tienes `.env.shared`, consérvalo: no crees otra base ni vuelvas a importar los datos. Para conectar otro equipo, copia `config/shared-database.env.example` a `.env.shared` y completa los datos por un canal privado. Consulta [base compartida](docs/BASE_COMPARTIDA.md).
+
+Terminal 1 — Django:
 
 ```powershell
-python -m venv --without-pip .venv
-python -m pip --python .venv install -r backend/requirements.lock
+powershell -ExecutionPolicy Bypass -File scripts/start-backend.ps1
 ```
 
-`.venv` guarda las dependencias de Python del proyecto. No se sube a GitHub.
-
-### 3. Inicia Django — terminal 1
+Terminal 2 — React:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1
+npm --prefix frontend run dev
 ```
 
-El script prepara la base de datos local, crea los grupos de permisos y arranca Django en `http://127.0.0.1:8000`. Deja esta terminal abierta.
+Abre **http://127.0.0.1:5173/**. Django escucha en 8000; Vite dirige las llamadas al backend. Detén ambos con `Ctrl+C`. `ExecutionPolicy Bypass` afecta únicamente al proceso iniciado.
 
-`-ExecutionPolicy Bypass` afecta solo a ese proceso; no cambia permanentemente la política de Windows.
-
-### 4. Inicia React — terminal 2
-
-Abre otra terminal en la raíz del proyecto:
+El inicio detecta `.env.shared` y usa Supabase. En ese modo **no aplica migraciones ni crea roles automáticamente**. Tras actualizar, una persona revisa el plan y ejecuta, con respaldo cuando corresponda:
 
 ```powershell
-cd frontend
-npm ci
-npm run dev
+powershell -ExecutionPolicy Bypass -File scripts/manage-shared.ps1 migrate --plan
+powershell -ExecutionPolicy Bypass -File scripts/manage-shared.ps1 migrate
+powershell -ExecutionPolicy Bypass -File scripts/manage-shared.ps1 setup_roles
 ```
 
-`npm ci` instala las dependencias de JavaScript. Solo necesitas repetirlo cuando descargues cambios en las dependencias.
+Sin `.env.shared`, el inicio usa SQLite local y prepara sus tablas/roles. SQLite está reservado al desarrollo y las pruebas.
 
-### 5. Abre la aplicación
+## Configuración de cada entorno
 
-Visita **http://127.0.0.1:5173/** en tu navegador.
+| Entorno | Configuración | Cómo se carga |
+|---|---|---|
+| Desarrollo con Supabase | `.env.shared`, desde `config/shared-database.env.example` | Scripts `start-backend.ps1` o `manage-shared.ps1` |
+| Pruebas/local aislado | Variables temporales de `manage-local.ps1` | Siempre SQLite; nunca la base compartida |
+| Hosting | `.env.example` copiado fuera de la web, por ejemplo `/etc/fundacion/backend.env` | Servicio del hosting/systemd o `production-manage.py --env-file` |
 
-Usa siempre esa dirección. React se comunica con Django a través de ella. Si Django está apagado, aparecerá un aviso y no podrás registrarte.
+Django no carga automáticamente archivos `.env`. No copies la plantilla de producción a `.env.shared`: tienen propósitos y lectores diferentes. Las claves nunca llevan prefijo `VITE_` ni se suben a GitHub. [Variables, formatos y valores necesarios](docs/CONFIGURACION.md).
 
-Para detener el proyecto, presiona **Ctrl + C** en cada terminal.
+## Funciones disponibles
 
-## Cómo probar el registro
+- Registro adulto de voluntarios y solicitantes, acceso inmediato sin confirmación obligatoria de correo, recuperación y seguridad de cuenta con MFA opcional en el portal.
+- Espacios por rol: voluntariado, solicitante, secretaría y administración. Usuarios, catálogos, restricciones y auditoría desde la web.
+- Habilidades, profesiones, disponibilidad, ubicación aproximada, consentimiento de contacto y documentos privados versionados.
+- Solicitudes, convocatorias, requisitos y cupos por función; postulaciones, invitaciones, asistencia, espera y respaldos.
+- Matching determinista configurable, distancias aproximadas en línea recta y mapa sincronizado. Geoapify calcula referencias por dirección con consentimiento; no se conserva el domicilio completo.
+- WhatsApp por enlaces oficiales: envío humano y seguimiento manual, sin automatización ni confirmación de entrega.
+- Notificaciones con historial y lectura individual; solicitudes de privacidad para todos los administradores activos y exportación de datos propios.
 
-1. Pulsa **Ser voluntario** y completa el registro con datos ficticios.
-2. Al guardarse la cuenta, se abre el inicio de sesión con el mensaje de registro exitoso.
-3. Ingresa con el correo y contraseña que acabas de registrar. No se envía confirmación ni es necesario abrir un enlace.
+La solicitud pública anónima mantiene su verificación independiente. En desarrollo los correos aparecen en la terminal: **no llegan a Gmail sin SMTP**. Los permisos, privacidad y límites están descritos en las [guías de módulos](docs/README.md).
 
-Las cuentas existentes mantienen sus datos, contraseñas y roles. No se marca un correo como verificado por crear la cuenta. Consulta [el cambio y sus riesgos](docs/REGISTRO_SIN_VERIFICACION.md).
+Los archivos privados viven fuera de PostgreSQL. Compartir Supabase no comparte PDF/imágenes entre equipos. No publiques `backend/private_media/` ni los respaldos.
 
-La recuperación de contraseña sigue requiriendo un enlace firmado enviado al correo principal de la cuenta. En desarrollo los correos se muestran en la terminal de Django; no llegan a Gmail sin SMTP. No compartas esos enlaces. Las solicitudes públicas enviadas sin cuenta mantienen su comprobación propia de correo.
+## Probar y administrar
 
-Si aparece un aviso de seguridad de sesión, recarga la página y vuelve a intentarlo. En desarrollo se permiten únicamente los orígenes `http://127.0.0.1:5173` y `http://localhost:5173`; todos los formularios siguen requiriendo token CSRF. Usa la misma dirección durante todo el recorrido y reinicia Django después de cambiar configuración.
+Usa datos ficticios. Los accesos generados y respaldos se guardan de forma privada, fuera de Git; no hay una contraseña universal. [Datos de demostración](docs/DATOS_DEMO.md).
 
-El aviso de privacidad definitivo y el envío de correo real se configurarán antes de producción.
-
-## Cómo probar habilidades y disponibilidad
-
-Si estás actualizando una copia que ya tenías, detén Django con **Ctrl + C** y vuelve a ejecutar el comando del paso 3. El script aplicará las migraciones nuevas y actualizará los grupos de permisos.
-
-En otra terminal, desde la raíz, puedes cargar ejemplos de catálogos:
+El administrador asigna roles desde la web; el registro público no permite elegir privilegios administrativos. Cada titular acepta sus propios consentimientos. Django Admin conserva controles adicionales de MFA y no es la interfaz habitual de secretaría. [Usuarios](docs/USUARIOS.md) y [seguridad de cuenta](docs/NAVEGACION_SEGURIDAD.md).
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\manage-local.ps1 seed_catalogs
+powershell -ExecutionPolicy Bypass -File scripts/check-backend.ps1
+npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
-Este comando añade ejemplos editables de habilidades y profesiones; no crea usuarios ni usa datos personales. Solo funciona en desarrollo y no impone los requisitos documentales reales de la fundación.
+El primer comando usa SQLite y omite comprobaciones exclusivas de PostgreSQL. GitHub Actions ejecuta la suite completa sobre PostgreSQL aislado, auditorías de dependencias, frontend, Gunicorn y validación Nginx. Nunca ejecutes pruebas sobre `.env.shared`. [Resultados y alcance de validación](docs/VALIDACION_SEGURIDAD_PRO12.md).
 
-Después de entrar al portal:
-
-1. Abre **Habilidades y profesión**, selecciona opciones y guarda.
-2. Abre **Disponibilidad**, agrega una franja, por ejemplo lunes de 18:00 a 22:00, y guarda.
-3. Puedes agregar varios rangos en un día, siempre que no se superpongan.
-4. Agrega una fecha en la que no puedas participar: bloqueará ese día completo.
-5. Recarga para comprobar que los cambios se conservaron.
-
-Los horarios corresponden a **Santiago de Chile**. Cada franja empieza y termina dentro del mismo día. No se solicitan tiempos de traslado. Declarar una profesión no significa acreditarla.
-
-Si otra sesión guardó cambios antes que tú, verás un aviso: pulsa **Recargar**, revisa la información y vuelve a editar. Recargar descarta los cambios que aún no guardaste.
-
-## Cómo administrar los catálogos
-
-La primera interfaz administrativa usa el panel de Django; allí puedes crear, editar y desactivar habilidades, profesiones y tipos documentales. No se permite borrarlos desde el panel para conservar sus referencias.
-
-Para crear tu cuenta administrativa local:
+## Preparar el hosting
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\manage-local.ps1 createsuperuser
+.venv\Scripts\python.exe scripts/build-release.py
 ```
 
-Introduce tú mismo el correo y la contraseña en la terminal. Luego:
+Con un checkout limpio y las dependencias instaladas, crea un ZIP identificado por commit en `backups/releases/`, con frontend/estáticos compilados y manifiesto SHA-256. Excluye secretos, base de datos y documentos. La plantilla única de producción es **`.env.example`**.
 
-1. Visita **http://127.0.0.1:5173/accounts/login/** y verifica tu correo cuando se solicite. El enlace estará en la terminal de Django.
-2. Configura una aplicación autenticadora en **http://127.0.0.1:5173/accounts/2fa/** y conserva los códigos de recuperación de forma privada.
-3. Cierra sesión y vuelve a entrar completando el segundo factor.
-4. Visita **http://127.0.0.1:5173/admin/volunteers/**.
+Faltan el proveedor/plan, dominio/HTTPS, SMTP real, antivirus/almacenamiento privado, copias externas y aprobación del plazo de conservación. Supabase continúa como base definitiva. [Instalación, requisitos del plan y recuperación](docs/DESPLIEGUE_PRO12.md).
 
-El acceso administrativo requiere MFA. Los demás usuarios necesitan además los permisos específicos y habilitación de acceso al panel; pertenecer a un grupo por sí solo no concede todos los privilegios. El superusuario es una cuenta técnica de desarrollo, no la cuenta habitual de la secretaria.
+## Documentación
 
-## Cómo probar documentos privados
-
-Si actualizaste el proyecto, instala primero las nuevas dependencias y reinicia Django:
-
-```powershell
-python -m pip --python .venv install -r backend/requirements.lock
-powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1
-```
-
-El script aplica las migraciones y asigna el permiso documental a los grupos administrativos existentes.
-
-1. Entra como voluntario y abre **Mis documentos**.
-2. Elige un tipo documental y carga un **PDF o imagen ficticia** de hasta 10 MB.
-3. Comprueba el estado pendiente, el historial y la descarga.
-4. Para revisar, entra con **otra cuenta** que tenga permiso documental, y abre **Revisión documental**. Un administrador no puede revisar sus propios archivos.
-5. Descarga el archivo, valida o rechaza e indica observación y vencimiento cuando corresponda. El rechazo exige un motivo.
-6. Vuelve a la cuenta del voluntario para consultar la decisión. Cargar otra versión no borra el historial y exige una nueva revisión.
-
-Cada voluntario tiene una cuota inicial de 50 MB incluyendo versiones históricas, y un máximo de 100 versiones. El documento vence al terminar su fecha de validez en Santiago de Chile. Las habilidades y profesiones todavía no se marcan automáticamente como acreditadas; el circuito de participación evalúa los documentos vigentes exigidos por cada función.
-
-Los archivos se guardan en `backend/private_media/documents/`, fuera de las rutas públicas y excluidos de Git. No publiques esa carpeta ni la configures como `/media/` público.
-
-**Antivirus:** ClamAV no está instalado en el entorno local. Los archivos de prueba muestran "Sin análisis antimalware". En producción las cargas exigen ClamAV disponible en una red interna; si no está configurado, se rechazan con 503. Las validaciones de estructura no garantizan ausencia de malware. Consulta [el diseño documental](docs/DOCUMENTOS.md).
-
-## Cómo probar solicitudes y eventos
-
-Reinicia Django con el script del paso 3 para aplicar las migraciones y permisos nuevos. Mantén React ejecutándose en la otra terminal.
-
-1. Desde el menú de la web abre **Solicitar apoyo**. No necesitas iniciar sesión.
-2. Completa el formulario con datos ficticios, una fecha futura y horarios dentro del mismo día.
-3. Envía la solicitud y revisa el mensaje en la **terminal de Django**. No llega a Gmail en este entorno.
-4. Copia el enlace completo, incluido el fragmento `#confirm-request=...`, ábrelo y pulsa **Confirmar mi correo**. Esa verificación no aprueba la solicitud.
-5. Entra desde **Iniciar sesión** con una cuenta de coordinación y abre **Solicitudes y eventos**. Si activaste segundo factor, introduce su código en la misma pantalla.
-6. Abre la solicitud, pulsa **Comenzar revisión** y después aprueba o rechaza. Rechazar exige una justificación; aprobar exige correo verificado.
-7. Desde una solicitud aprobada pulsa **Crear evento**. Revisa fecha/dirección y redacta una descripción pública sin información personal.
-8. Define una o varias funciones, sus cupos y requisitos; guarda como borrador.
-9. En **Eventos**, abre el borrador y pulsa **Abrir convocatoria**.
-10. Comprueba la publicación en **Oportunidades** o en la página de inicio: se muestran comuna y requisitos, pero no dirección exacta ni contacto del solicitante.
-
-Una solicitud puede generar varios eventos. Los borradores se pueden editar. En una convocatoria abierta que aún no comienza, **Editar información publicada** permite corregir título, descripción pública y notas internas con motivo e historial. Los cambios públicos generan avisos internos para participantes vinculados y el solicitante; los horarios, ubicación, funciones, cupos y requisitos siguen protegidos. Se puede cancelar con motivo; finalizar exige que haya terminado el horario. Los voluntarios pueden postular; la coordinación puede confirmar postulaciones e invitar candidatos desde **Participantes y asistencia**. Los cupos se asignan al confirmar, con lista de espera si están completos.
-
-Para producción se necesita `PUBLIC_APP_URL` con el dominio HTTPS real, además de un servicio de correo configurado. No uses una dirección enviada por el visitante para construir enlaces. Más detalles en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
-
-## Cómo administrar usuarios desde la web
-
-Reinicia Django con el script de inicio para aplicar las migraciones y permisos. Entra desde **Iniciar sesión** con una cuenta del grupo **Administrador general**. Si tiene segundo factor configurado, introduce el código en la misma pantalla.
-
-1. Abre **Usuarios** en el menú lateral.
-2. Busca por nombre o correo y filtra por rol o estado.
-3. Pulsa **Administrar** para editar nombre/apellido, activar o desactivar y asignar los roles aprobados.
-4. Indica un motivo y confirma los cambios. Los cambios de acceso y roles invalidan las sesiones anteriores del titular.
-5. **Crear cuenta** envía un enlace para que el destinatario elija su contraseña. Nunca escribes una contraseña por él. En desarrollo el mensaje aparece en la terminal de Django.
-6. El botón **Enviar enlace de acceso** permite reintentar el envío o ayudar a recuperar acceso; no cambia la contraseña automáticamente.
-
-Los enlaces nuevos usan el dominio o puerto configurado para el portal. El destinatario todavía debe verificar el correo. Si será voluntario, verá **Mi incorporación** para confirmar personalmente su mayoría de edad y los consentimientos antes de crear su perfil.
-
-No puedes cambiar tus propios roles/estado ni modificar otras cuentas técnicas desde esta sección. La secretaría y los voluntarios no tienen acceso a este módulo. El correo de una cuenta existente no se edita aquí, ya que requiere un flujo de reverificación. Se usa desactivación y no borrado definitivo para conservar la trazabilidad.
-
-Consulta [controles y endpoints de administración](docs/USUARIOS.md).
-
-## Base de datos
-
-- **Base definitiva:** PostgreSQL administrado en **Supabase**, tanto para la arquitectura de producción como para el trabajo colaborativo actual.
-- **Hosting:** ejecutará la aplicación y se conectará a Supabase; no se trasladará la base al servidor web.
-- **Pruebas aisladas:** SQLite local y PostgreSQL desechable en integración continua. Producción no permite SQLite.
-
-Consulta la [decisión de arquitectura y el texto para el informe](docs/ARQUITECTURA_BD.md). Las credenciales y los respaldos no se suben al repositorio. Los documentos privados requieren almacenamiento aparte de PostgreSQL.
-
-## Cómo ejecutar las pruebas
-
-Desde la raíz, en una terminal adicional:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\check-backend.ps1
-```
-
-Para comprobar la compilación de React:
-
-```powershell
-cd frontend
-npm run build
-npm test
-```
-
-Las pruebas comprueban permisos, perfil propio, CSRF, registro sin privilegios, correo verificado, recuperación, catálogos, horarios, fechas, límites y prevención de sobrescrituras entre sesiones.
-
-## Carpetas
-
-| Carpeta | Para qué sirve |
-| --- | --- |
-| `backend/` | Django, API, usuarios, permisos y migraciones |
-| `frontend/` | React, pantallas y estilos |
-| `scripts/` | Inicio local y pruebas |
-| `docs/` | Decisiones técnicas y pendientes |
-| `.github/workflows/` | Comprobaciones automáticas en GitHub |
-
-## GitHub y publicación
-
-GitHub guarda el código y su historial. **Subirlo no publica la aplicación en Internet.** El despliegue en V2Networks se hará después, con dominio y HTTPS. El backend del hosting se conectará a PostgreSQL en Supabase, que permanece como base definitiva.
-
-No subas `.env`, contraseñas, claves privadas, bases de datos, documentos personales ni backups. `.env.example` contiene nombres de variables sin secretos reales.
-
-## Pendientes antes de publicar
-
-- Aprobar el plazo de conservación y el canal para solicitudes de personas sin cuenta. La bandeja interna ya notifica a todos los administradores activos.
-- Configurar SMTP real, dominio, HTTPS, antivirus y almacenamiento privado persistente; probar esos servicios en el hosting elegido.
-- Definir recuperación de administradores, política de enrolamiento MFA, monitoreo y copias externas programadas.
-- Completar la evaluación institucional de privacidad y revisión de accesibilidad/dispositivos. Las pruebas no equivalen a certificación legal ni a un pentest externo.
-
-Las funcionalidades verificadas y las limitaciones se detallan en [la entrega técnica](docs/IMPLEMENTACION.md).
+El [índice de documentación](docs/README.md) distingue guías vigentes de registros históricos. Cada tema tiene una guía principal; las evidencias y resultados antiguos se conservan con su contexto, sin presentarlos como estado actual.

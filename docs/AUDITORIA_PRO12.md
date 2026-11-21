@@ -1,3 +1,5 @@
+> Registro histórico de la auditoría inicial. Sus pendientes y decisiones de esa fecha no representan el estado actual; consultar [el índice vigente](README.md) y [validación](VALIDACION_SEGURIDAD_PRO12.md).
+
 # Auditoría de PRO-12 — 14 de noviembre de 2026
 
 ## Punto de partida

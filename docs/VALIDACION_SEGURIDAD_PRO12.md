@@ -1,48 +1,58 @@
-# Verificación y límites de seguridad — 14-11-2026
+# Validación y límites de seguridad
 
-Actualización de cierre 21-11-2026: [315 pruebas PostgreSQL, 55 frontend, auditorías actuales y revisión de navegador](CIERRE_WEB.md). Los resultados fechados más abajo corresponden a la revisión histórica del 14-11. El registro y login actuales no exigen verificar el correo; [comportamiento y riesgos de esa decisión](REGISTRO_SIN_VERIFICACION.md). El cálculo privado de referencias mediante Geoapify está integrado con consentimiento; no utiliza Nominatim público para domicilios.
+Esta guía resume el estado comprobado. Los informes de auditoría y cierre conservan sus cifras históricas; no son instrucciones de configuración.
 
-## Resultados reproducibles
+## Comprobaciones reproducibles
 
-| Comprobación | Resultado |
+| Comprobación | Último resultado registrado |
 |---|---|
-| Suite completa Django sobre PostgreSQL 17 local aislado | 281 pruebas satisfactorias, sin omisiones. Incluye siete pruebas PostgreSQL de concurrencia. |
-| Componentes y API cliente Node | 31 pruebas satisfactorias. |
-| Compilación Vite | Correcta; Leaflet separado mediante importación dinámica. |
-| Django `check` y detección de migraciones | Sin problemas; no faltan migraciones de modelos. |
-| Dependencias Python fijadas, incluido Gunicorn 27.0.1 | Cero vulnerabilidades conocidas según pip-audit en esta fecha. Se actualizaron DRF y Pillow tras detectar avisos en las versiones anteriores. |
-| Dependencias npm | Cero vulnerabilidades conocidas en la auditoría realizada. |
-| Recuperación local | 49 tablas con contenido idéntico entre origen y destino separado; archivo ficticio idéntico; destino con tablas rechazado. |
-| Migraciones compartidas | Aplicadas en Supabase después de respaldo privado del esquema de aplicación. Sin eliminación de datos existentes. |
+| Backend, PostgreSQL 17 local aislado | 328 pruebas satisfactorias tras la limpieza documental; incluye concurrencia, permisos, diagnóstico y coherencia de plantillas de configuración. |
+| Frontend Node | 55 pruebas satisfactorias. |
+| Compilación Vite | Correcta; mapas cargados por separado. |
+| Django y modelos | Check sin problemas; sin migraciones faltantes. |
+| Documentación y configuración | 21 Markdown sin enlaces locales rotos; plantillas comprobadas contra los nombres admitidos por sus lectores. |
+| Dependencias | Auditorías sin vulnerabilidades conocidas en la entrega anterior; no equivalen a ausencia de fallos. CI vuelve a consultarlas en cada ejecución. |
+| Nginx | Plantilla comprobada en Linux, con certificados ficticios, logs y puertos temporales. No instalada en un hosting real. |
+| Paquete de instalación | 344 archivos y hashes verificados en el paquete del commit `f7aa5c9`; secretos configurados ausentes. Un paquete nuevo lleva su propio manifiesto. |
+| Recuperación | Prueba histórica: 49 tablas y un archivo ficticio idénticos tras restaurar en destino vacío; se rechazó un destino poblado. |
 
-Comandos: `scripts/check-backend.ps1` prueba SQLite (las pruebas exclusivas PostgreSQL se omiten allí); para concurrencia usar una **base PostgreSQL local/CI aislada**, con usuario que pueda crear la base temporal de pruebas, nunca `.env.shared`. Ejecutar `python backend/manage.py test accounts volunteers documents activities` con las variables de esa base. `npm --prefix frontend test` y `npm --prefix frontend run build`. Auditoría: `pip-audit -r backend/requirements.production.lock --no-deps --disable-pip` en Linux y `npm --prefix frontend audit --audit-level=high`. Las versiones están fijadas; no tienen hashes de distribución en el lock.
+La [validación de la preparación para hosting](https://github.com/Acastillo1637/fundacion-apoyo-comunitario/actions/runs/44869055115) aprobó backend, frontend y despliegue. La evidencia de navegador se encuentra en el [cierre web](CIERRE_WEB.md) y [seguridad de cuenta](NAVEGACION_SEGURIDAD.md).
 
-CI ejecuta PostgreSQL 17, permisos, migraciones, pruebas, auditorías, frontend y una comprobación WSGI de Gunicorn. El arranque WSGI se comprobó satisfactoriamente en Linux mediante [GitHub Actions del commit 3375156](https://github.com/Acastillo1637/fundacion-apoyo-comunitario/actions/runs/43640659435); backend, frontend y auditorías finalizaron correctamente. Las plantillas de Nginx/systemd no se instalaron en un hosting real. No presentar auditorías de dependencias como prueba de ausencia de fallos en el código.
+Para repetir:
 
-## Cobertura funcional
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/check-backend.ps1
+npm --prefix frontend test
+npm --prefix frontend run build
+.venv\Scripts\python.exe scripts/check-docs.py
+```
 
-`test_pro12_flow.py` recorre por la API registro real de cuenta ficticia, verificación de email en memoria, login, habilidades, disponibilidad, ubicación, archivo privado, aprobación, actividad georreferenciada con requisitos, ranking, datos de mapa autorizados, enlace WhatsApp, estados manuales simulados explícitamente como datos ficticios, confirmación, cancelación y reemplazo con trazabilidad. Es un flujo integral de API: no es una prueba automatizada de navegador ni acredita envío real de correo o mensajes.
+El script backend usa SQLite: omite pruebas que requieren PostgreSQL. La suite completa debe ejecutarse con las variables de una base PostgreSQL **local o CI desechable**, nunca con `.env.shared`. CI instala los locks, ejecuta pruebas y auditorías, comprueba Gunicorn y Nginx y valida enlaces documentales. No se publican credenciales ni resultados ficticios.
 
-`test_pro12.py` cubre Haversine, coordenadas incorrectas, ranking antes de paginar, experiencia con asistencia, actividades remotas, falta de ubicación, vencimiento documental antes del evento, pesos/revisión/permisos, geocodificador desactivado/cache/fallo y contactos/consentimiento/cupos. `test_pro12_concurrency.py` comprueba dos confirmaciones simultáneas con un solo cupo y el límite global del geocodificador. `test_privacy.py` verifica notificación a todos los administradores activos, aislamiento entre titulares, revisión con permisos, versión, exportación sin secretos y controles de despliegue.
+## Cobertura y controles
 
-La revisión manual de navegador sobre datos sintéticos locales comprobó login con cuenta existente, rechazo de pesos que no suman 100 y guardado válido auditado, ranking/distancias, selección bidireccional mapa/listado y preparación de WhatsApp con aviso de intento. No se envió mensaje. Se revisaron 1366×900 y 390×844; en móvil el documento no excedió el ancho de pantalla. No equivale a revisar todos los dispositivos/pantallas ni a una evaluación completa WCAG.
+- Registro/login sin confirmación obligatoria de correo, contraseñas validadas, límites de intentos, CSRF y sesiones revocables. Recuperación al buzón principal mediante enlace firmado y caducable; ver [riesgos aceptados de no verificar al registrar](REGISTRO_SIN_VERIFICACION.md).
+- MFA exigido en el portal cuando está enrolado y comprobación actual de contraseña/factor en operaciones sensibles. Django Admin mantiene sus controles adicionales. No se impone enrolamiento a todo el personal desde React.
+- Permisos por rol y objeto en backend; pruebas contra propietarios/IDs manipulados, autorrevisión y cambios indebidos de privilegios. Ocultar botones no se considera control suficiente.
+- Confirmaciones, cupos y cambios con transacciones, bloqueos, revisiones y restricciones; pruebas concurrentes reales sobre PostgreSQL. El ranking no reserva cupos.
+- Matching: documentos aprobados vigentes para la fecha, disponibilidad completa, excepciones y cruces; orden global previo a paginar, pesos administrables y distancias Haversine. No hay IA generativa, rutas ni tiempos inventados.
+- Archivos: límites de tipo, tamaño y cuota, parser en proceso separado, versiones privadas y descarga autorizada. Antimalware de producción requiere ClamAV real; los tests usan dobles controlados.
+- Geocodificación domiciliaria con consentimiento y Geoapify en el backend, referencia redondeada y domicilio completo no persistido. Nominatim público permanece separado y no admite domicilios.
+- WhatsApp: enlaces oficiales y seguimiento manual; intento, envío confirmado manualmente y respuesta son eventos distintos. Pruebas sin enviar mensajes reales.
+- SQL mediante ORM o parámetros; React escapa textos y Leaflet usa `textContent`. No se realizó pentest externo completo ni certificación OWASP.
+- Despliegue: DEBUG desactivado, HTTPS/cookies seguras, TLS PostgreSQL, entorno privado y chequeos de correo/directorios/antivirus. La configuración y los secretos reales siguen pendientes del hosting.
 
-Evidencias sintéticas: [mapa escritorio](evidencias/matching-escritorio.png), [vista móvil](evidencias/matching-movil.png). Los pesos modificados durante la prueba pertenecen solo a la base local ficticia; Supabase conserva su política propia.
+El flujo integral de `test_pro12_flow.py` es una prueba de API, no una automatización completa de navegador: registro, perfil, documentos/revisión, actividad, matching, datos de mapa, WhatsApp, aceptación manual, confirmación, cancelación y reemplazo con trazabilidad. Las pruebas de geocodificación usan datos ficticios; la conexión real de Geoapify se comprobó con un lugar público, sin domicilios privados.
 
-## Controles y riesgo residual
+## Límites reales
 
-| Área | Verificación / límite |
-|---|---|
-| Acceso por objeto / BOLA | Dueño en perfiles, ubicaciones, exportación y solicitudes; permisos de coordinación en candidatos/contactos; administradores en política y bandeja global. Pruebas con perfiles ajenos e IDs manipulados. |
-| Autenticación | Contraseñas con hash Django, correo verificado, límites de intentos y sesiones con CSRF. Si una cuenta tiene MFA, se exige en el portal; administración Django conserva el control MFA. El portal no obliga a enrolar MFA a todo el personal: decisión heredada del alcance, riesgo pendiente de producción. |
-| Integridad | Bloqueos de evento/usuario/perfil, transacciones, revisiones optimistas, restricciones de base y pruebas de cupos concurrentes. Ranking no reserva cupos. |
-| Inyección / XSS | ORM parametrizado, validación backend estricta y React con escape; etiquetas Leaflet mediante `textContent`, sin interpolar HTML de usuarios. No se hizo un pentest externo completo. |
-| Archivos | Tipos/tamaño/cuota, archivos privados, versiones y acceso autorizado. El análisis de producción requiere ClamAV real; las pruebas usan archivos ficticios y simulación del analizador. Compartir PostgreSQL no replica esos archivos. |
-| Configuración | HTTPS/cookies seguras con DEBUG false, CSRF de mismo origen, secretos fuera de Git, errores de proveedores sanitizados. No hay CORS abierto. Verificar configuración real del proxy y CA PostgreSQL en hosting. |
-| Servicios externos | Mapas sin nombres/documentos; búsqueda optativa de lugares públicos; caché y límite global. El proveedor ve IP/área visualizada y, si se habilita búsqueda, la consulta enviada. Evitar datos confidenciales sigue siendo una responsabilidad operativa. |
-| Datos y privacidad | Bandeja distribuida a todos los administradores generales activos y exportación propia. La respuesta manual no ejecuta borrado. Plazos, atención de personas sin cuenta, procedimiento de eliminación y revisión institucional siguen pendientes. |
+Faltan hosting, SMTP con entrega comprobada, certificado/dominio, antivirus de producción, almacenamiento privado compartido y operación de copias externas. Los tests y comprobaciones simuladas no acreditan esos servicios. Compartir PostgreSQL no replica los archivos.
 
-## Referencias normativas, sin certificación de cumplimiento
+La bandeja de privacidad notifica a todos los administradores activos y permite exportar datos propios. No ejecuta borrado automático; conservación, atención a personas sin cuenta y procedimientos institucionales requieren aprobación. La modificación logística general de convocatorias con participantes aún no tiene reconfirmación; se conservan sus restricciones.
+
+Las revisiones visuales cubren escenarios concretos de escritorio y móvil, no todos los dispositivos ni conformidad WCAG. Una auditoría de dependencias sin avisos no prueba invulnerabilidad ni cumplimiento normativo.
+
+## Referencias normativas de la evaluación histórica
 
 La [Ley 19.628](https://www.bcn.cl/leychile/Navegar?dt=open&idLey=19628) es referencia para el tratamiento de datos personales. La [Ley 21.719](https://www.bcn.cl/balance-legislativo/detalle/ficha_LEY_21719_2024-12-13) introduce el nuevo marco con entrada en vigor el 1 de diciembre de 2026: la publicación prevista debe evaluar esa transición. Faltan acuerdos institucionales, conservación, canales y evaluación del tratamiento; no se declara cumplimiento legal.
 

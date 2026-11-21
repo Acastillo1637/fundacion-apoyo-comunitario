@@ -37,6 +37,7 @@ def main():
     args = parser.parse_args()
     if subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT).strip():
         parser.error('Guarda los cambios en un commit antes de crear un paquete identificable.')
+    subprocess.run([sys.executable, str(ROOT / 'scripts' / 'check-docs.py')], cwd=ROOT, check=True)
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     subprocess.run(['npm.cmd' if os.name == 'nt' else 'npm', 'run', 'build'], cwd=ROOT / 'frontend', check=True)
     # Collect only static assets with an isolated development environment; no DB access.

@@ -1,6 +1,5 @@
 # Gestión documental privada
 
-> Actualización de acceso y funciones: el portal usa un inicio de sesión único para todos los roles. Las cuentas sin MFA configurado entran con contraseña; las que lo activaron validan el código en la misma pantalla. Django Admin conserva su requisito MFA. Los controles de roles y propiedad siguen vigentes. Consulta [dashboards y participación](PARTICIPACION.md) para el comportamiento actual, que reemplaza las referencias anteriores a redirección obligatoria y módulos de participación pendientes.
 
 ## Flujo y modelo
 
@@ -10,7 +9,7 @@ El estado de revisión es pendiente, validado o rechazado. La revisión guarda a
 
 Las versiones se numeran por perfil y tipo. La carga bloquea el perfil en una transacción, controla cuota, guarda el archivo y registra el alta con auditoría. Una excepción posterior elimina el archivo recién creado. Una caída abrupta del proceso puede dejar un objeto huérfano: antes de producción se requiere reconciliación y respaldo consistente de archivos/metadatos.
 
-La revisión también bloquea el perfil y la versión, verifica permiso y MFA, y prohíbe revisar documentos propios. Solo se revisa la última versión y una decisión no se sobrescribe. Una nueva carga comienza pendiente; la validación histórica no se aplica a la nueva versión.
+La revisión también bloquea el perfil y la versión, verifica permiso y sesión del portal (MFA si está configurado), y prohíbe revisar documentos propios. Solo se revisa la última versión y una decisión no se sobrescribe. Una nueva carga comienza pendiente; la validación histórica no se aplica a la nueva versión.
 
 ## Acceso
 
@@ -18,7 +17,7 @@ La revisión también bloquea el perfil y la versión, verifica permiso y MFA, y
 | --- | --- |
 | Listar, cargar y ver requisitos propios | Sesión y perfil propio |
 | Descargar archivo propio | Propietario autenticado |
-| Consultar cola, descargar ajenos y revisar | Permiso `documents.review_volunteerdocument` + MFA en la sesión |
+| Consultar cola, descargar ajenos y revisar | Permiso `documents.review_volunteerdocument` + sesión del portal; MFA si está configurado |
 | Modificar revisiones o archivos desde Django Admin | Deshabilitado; el panel ofrece consulta autorizada |
 
 Los grupos Secretaría y Administrador general reciben el permiso documental mediante `setup_roles`. El acceso depende del permiso específico, no solo del nombre del rol. La cola no incluye documentos propios ni versiones superadas y pagina de 20 en 20. Incluye solo nombre del voluntario, sin domicilios ni datos de contacto.
@@ -62,4 +61,4 @@ Eventos de auditoría: carga, descarga, validación y rechazo, con actor/recurso
 
 Se prueban formatos falsos, PDF activo/cifrado, límites, carga múltiple, CSRF, perfiles ajenos, MFA, autorrevisión, versiones, expiración, cuota, requisitos y fallos/detecciones del scanner. Las pruebas con archivos necesitan un directorio temporal escribible; el sandbox de Windows impidió esa escritura y se ejecutaron fuera de él.
 
-Falta revisión visual/móvil completa. No se ha automatizado la acreditación de habilidades/profesiones, la consulta de requisitos por evento ni notificaciones internas; esos flujos se añadirán en sus módulos.
+El matching evalúa los requisitos documentales de funciones, habilidades y profesiones, y las revisiones generan notificaciones internas. No se transforma una declaración de profesión en una acreditación universal. Ver [matching](MATCHING_MAPAS_WHATSAPP.md) y [validación](VALIDACION_SEGURIDAD_PRO12.md); no se acredita una revisión completa de todos los dispositivos ni un antivirus real desplegado.

@@ -2,17 +2,17 @@
 
 ## Alcance
 
-Un voluntario autenticado edita únicamente sus propias declaraciones y horarios. Django obtiene el perfil desde la sesión; los endpoints no aceptan propietarios enviados por el navegador. La gestión de archivos se documenta en [DOCUMENTOS.md](DOCUMENTOS.md); matching y participaciones siguen pendientes.
+Un voluntario autenticado edita únicamente sus propias declaraciones y horarios. Django obtiene el perfil desde la sesión; los endpoints no aceptan propietarios enviados por el navegador. La gestión de archivos se documenta en [DOCUMENTOS.md](DOCUMENTOS.md); el [matching](MATCHING_MAPAS_WHATSAPP.md) y las [participaciones](PARTICIPACION.md) usan estas declaraciones.
 
 ## Catálogos
 
-`Skill`, `Profession` y `DocumentType` tienen nombre único sin distinguir mayúsculas, descripción y bandera activa. Los catálogos se administran en Django Admin con permiso por modelo y MFA. Las escrituras registran actor, acción, recurso y fecha; no se copian datos personales a la auditoría.
+`Skill`, `Profession` y `DocumentType` tienen nombre único sin distinguir mayúsculas, descripción y bandera activa. Los catálogos se administran desde **Administración → Catálogos** con permisos específicos; Django Admin conserva su acceso técnico protegido. Las escrituras registran actor, acción, recurso y fecha; no se copian datos personales a la auditoría.
 
-Se usa el panel incluido en Django para no introducir otra tecnología ni una segunda interfaz administrativa antes de completar la operación. No ofrece borrado de catálogos: se desactivan para conservar relaciones. Los cambios también quedan en el historial propio de Django Admin.
+Se crean, editan y desactivan opciones desde la web; no se borran para conservar relaciones e historial. Las restricciones de permisos se comprueban en Django, no solo en React.
 
-`VolunteerSkill` y `VolunteerProfession` guardan la declaración y su fecha. No tienen un booleano de acreditación editable por el voluntario. La validación futura se derivará de documentos y requisitos vigentes.
+`VolunteerSkill` y `VolunteerProfession` guardan la declaración y su fecha. No tienen un booleano de acreditación editable por el voluntario. El cumplimiento se determina con documentos y requisitos vigentes al evaluar la participación.
 
-Una opción desactivada ya elegida se muestra y puede conservarse o retirarse; no se puede añadir de nuevo. Las relaciones usan PROTECT para impedir eliminar accidentalmente una opción aún declarada. La carga de requisitos documentales funciona en el catálogo; la revisión del archivo vendrá en el módulo documental.
+Una opción desactivada ya elegida se muestra y puede conservarse o retirarse; no se puede añadir de nuevo. Las relaciones usan PROTECT para impedir eliminar accidentalmente una opción aún declarada. La carga de requisitos documentales funciona en el catálogo; la revisión de archivos está disponible en el módulo documental.
 
 `seed_catalogs` añade ejemplos explícitos, editables y solo en desarrollo; no se ejecuta automáticamente ni crea usuarios. Los nombres de ejemplo no están incrustados en los formularios o en el algoritmo.
 
@@ -25,7 +25,7 @@ Una opción desactivada ya elegida se muestra y puede conservarse o retirarse; n
 - Máximo de 42 franjas y 60 fechas por perfil en una actualización.
 - La lista vacía significa que no existe disponibilidad declarada.
 - Las fechas pasadas se pueden quitar; no hay una regla que impida conservarlas al guardar.
-- El futuro matching deberá aplicar excepciones antes de comprobar las franjas, convertir el evento a America/Santiago y considerar cambios de hora. Esta etapa guarda y valida los datos, todavía no evalúa eventos.
+- El matching aplica excepciones, convierte el horario de la actividad a America/Santiago y exige disponibilidad para toda la franja, sin compromisos confirmados superpuestos.
 
 No se solicitan tiempos de traslado ni se confirma asistencia al guardar disponibilidad.
 
@@ -51,4 +51,4 @@ Las restricciones de base de datos impiden duplicados y duraciones inválidas. L
 
 La suite comprueba permisos, CSRF, perfiles ajenos, campos de acreditación inyectados, catálogos inactivos, requisitos, fechas, límites, rollback y revisión obsoleta. Incluye dos actualizaciones concurrentes en PostgreSQL: una debe obtener 200 y la otra 409. Esa prueba se omite en SQLite.
 
-La comprobación visual de las pantallas nuevas quedó pendiente: la herramienta no pudo determinar de forma fiable la URL del navegador Windows y detuvo la interacción. La compilación de React no sustituye la verificación visual ni las pruebas móviles y de accesibilidad.
+Consultar [resultados y límites de revisión visual](VALIDACION_SEGURIDAD_PRO12.md). La compilación y una prueba puntual de navegador no certifican todos los dispositivos ni accesibilidad completa.

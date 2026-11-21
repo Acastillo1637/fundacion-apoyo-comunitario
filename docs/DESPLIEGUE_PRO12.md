@@ -1,47 +1,80 @@
-> Actualización 21-11-2026: [preparación del hosting y paquete verificable](PREPARAR_HOSTING.md), SMTP STARTTLS/587 o TLS implícito/465, wrapper de comandos con entorno privado y diagnóstico `preflight_production --services`. El proveedor sigue sin contratarse; no se ha publicado.
+# Hosting, despliegue y recuperación
 
-# Operación y despliegue
+Todavía no hay proveedor contratado. La instalación de referencia usa Linux, Nginx, Gunicorn y systemd. No se instaló en un servidor externo ni se contrató un servicio. PostgreSQL permanece en Supabase: no necesitas exportarlo al hosting para usar la aplicación.
 
-## Estado
+## Requisitos que debe confirmar el proveedor
 
-Supabase PostgreSQL es la base definitiva. Django conserva autenticación, permisos y migraciones. Los archivos privados están en disco del backend; no en la base ni en Supabase Storage. Compartir la base no comparte los archivos físicos: ambos desarrolladores necesitan el mismo almacenamiento privado autorizado o una copia privada de esos archivos. No se habilitó ningún servicio pagado ni se publicó una web durante esta entrega.
+- Python 3.13 persistente con WSGI, entorno virtual, instalación de `backend/requirements.production.lock`, comandos administrativos y acceso a logs por SSH o un procedimiento administrado equivalente.
+- Frontend compilado y estáticos Django bajo el mismo dominio HTTPS; `/api/`, `/accounts/` y `/admin/` dirigidos al backend. Alojar solamente HTML/PHP no cubre estas necesidades.
+- Conexiones salientes hacia Supabase por TLS, Geoapify y SMTP seguro; dominio, certificado y configuración del proxy.
+- Documentos privados en almacenamiento persistente fuera de la web, con copia externa. Compartir PostgreSQL no comparte archivos: deben trasladarse y verificarse por separado.
+- ClamAV interno con firmas actualizadas o capacidad de instalarlo. No exponer el puerto 3310 a internet. Las cargas fallan de forma cerrada cuando no puede analizarse un archivo.
+- Recursos para aplicación y antivirus. ClamAV recomienda al menos 3 GiB de RAM en Linux con sus firmas estándar, más los recursos de las otras aplicaciones. [Requisitos oficiales](https://docs.clamav.net/).
 
-El hosting necesita Python 3.13 con proceso WSGI persistente, proxy HTTPS, conexión saliente PostgreSQL/SMTP, volumen privado persistente y ClamAV accesible en red interna. Un hosting únicamente estático o PHP no ejecuta Django. React puede servirse como estáticos, preferentemente bajo el mismo dominio que la API para no necesitar CORS abierto.
+Un VPS con administración permite instalar esta arquitectura. Un hosting compartido solo sirve si el proveedor confirma todas las capacidades; tener cPanel o SSL por sí solo no lo demuestra. No se afirma compatible un plan sin revisarlo.
 
-## Instalación Linux de referencia
+## Paquete para subir
 
-Los archivos `deploy/*.example` son plantillas, no configuración aplicada. Sustituir dominio, rutas, usuario del servicio y certificados. Preparar una cuenta de servicio sin privilegios y un volumen `/var/lib/fundacion/documents` con permisos exclusivos del backend. El usuario de Nginx solo lee React y estáticos; nunca documentos.
+Desde un checkout limpio, con dependencias locales instaladas:
 
-```bash
-python3.13 -m venv .venv
-.venv/bin/pip install -r backend/requirements.production.lock
-npm --prefix frontend ci
-npm --prefix frontend run build
+```powershell
+.venv\Scripts\python.exe scripts/build-release.py
 ```
 
-El servidor debe cargar las variables de `.env.example` mediante su gestor de secretos/servicios. Django no lee automáticamente ese archivo. Guardar el archivo real fuera del checkout, con permisos 600, sin incorporarlo a Git. Cargarlo también en la consola administrativa antes de los comandos siguientes, sin imprimir sus valores.
+Genera `backups/releases/fundacion-COMMIT.zip` y `.zip.sha256`. Compila React y recopila estáticos con configuración temporal aislada, sin consultar Supabase. Incluye backend, frontend compilado, estáticos, dependencias fijadas, scripts, plantillas, documentación y `RELEASE_MANIFEST.json` con hashes.
 
-Requisitos de configuración:
+Excluye `.env.shared`, archivos `.env` reales, base SQLite, backups, documentos privados, claves/certificados locales, entorno virtual y `node_modules`. Las dependencias Python se instalan en Linux destino. No reemplaza un ZIP existente del mismo commit. El paquete no es una copia de seguridad de datos.
 
-- `DJANGO_DEBUG=false`, clave única privada, `PUBLIC_APP_URL=https://dominio-real`, `DJANGO_ALLOWED_HOSTS=dominio-real`; orígenes CSRF HTTPS explícitos. No usar `*` ni habilitar CORS indiscriminadamente.
-- Supabase por TLS. Preferir `POSTGRES_SSLMODE=verify-full` con `POSTGRES_SSLROOTCERT` del proveedor. `require` cifra pero no proporciona la misma verificación explícita de identidad. Confirmar compatibilidad del hostname del endpoint y CA en el hosting.
-- Pooler Supabase transaccional para la aplicación según BASE_COMPARTIDA; herramientas de respaldo usan conexión de sesión/directa. Dimensionar trabajadores/pool respecto del límite del proyecto. Comenzar con un trabajador y cuatro hilos; medir antes de ampliar.
-- SMTP real, remitente autorizado y configuración DNS que indique el proveedor. En local el backend de consola no envía a Gmail. La recuperación real sigue pendiente hasta configurar SMTP.
-- `PRIVATE_DOCUMENT_ROOT=/var/lib/fundacion/documents`; copia externa cifrada, sin acceso público. ClamAV interno con firmas actualizadas: en producción los uploads fallan de forma cerrada si no se puede analizar.
-- `DATA_RETENTION_NOTICE` institucional aprobado. No se ha fijado aún el plazo. Las solicitudes de privacidad se notifican a todos los administradores activos dentro de la web; no dependen de un correo único.
-- `DJANGO_TRUST_PROXY=true` solamente detrás del proxy propio que sobrescribe `X-Forwarded-Proto`. Bloquear acceso público al puerto WSGI; solo Nginx escucha internet. Con la configuración de ejemplo, el servicio escucha en localhost.
-- Mantener la búsqueda externa de lugares desactivada hasta aceptación administrativa consciente; revisar políticas OSM y capacidad. Se puede usar el mapa/las coordenadas sin geocodificación.
+## Configuración privada
 
-Antes del cambio de versión, generar respaldo de base y documentos, verificar su manifiesto y probar recuperación en un destino separado. Después:
+Copiar `.env.example` a `/etc/fundacion/backend.env`, propiedad del usuario del servicio y modo `600`, fuera de la web. Completar dominio/hosts HTTPS, conexión Supabase/TLS, SMTP, remitente autorizado, ruta privada, ClamAV y texto de conservación aprobado.
+
+**Si conservas la base actual, conserva también su `DJANGO_SECRET_KEY` privada.** Cambiarla sin un procedimiento de rotación afecta firmas/sesiones y puede afectar secretos 2FA cifrados. No generar otra simplemente por pasar al hosting; no enviarla por chat o Git.
+
+SMTP/587: `EMAIL_USE_TLS=true`, `EMAIL_USE_SSL=false`. TLS implícito/465: invertir los valores. No activar ambos. El proveedor debe autorizar `DEFAULT_FROM_EMAIL` y entregar los registros SPF/DKIM/DMARC correspondientes. No se inventaron registros DNS ni credenciales. [Configuración Django](https://docs.djangoproject.com/en/5.2/ref/settings/#email-use-tls).
+
+## Instalación de referencia
+
+Verificar el SHA-256 del ZIP antes de extraerlo en el directorio de instalación. Crear usuario de servicio y directorio privado persistente con permisos exclusivos, fuera del árbol público y de las carpetas reemplazadas al actualizar. Conservar la instalación anterior y sus datos hasta comprobar la nueva.
+
+Ejemplo, ajustando rutas al plan real y ejecutando comandos Django como usuario `fundacion`:
 
 ```bash
-.venv/bin/python backend/manage.py check --deploy --fail-level WARNING
-.venv/bin/python backend/manage.py migrate --plan
-.venv/bin/python backend/manage.py migrate
-.venv/bin/python backend/manage.py collectstatic --noinput
+python3.13 -m venv /srv/fundacion/.venv
+/srv/fundacion/.venv/bin/pip install -r /srv/fundacion/backend/requirements.production.lock
+cd /srv/fundacion
+.venv/bin/python scripts/production-manage.py --env-file /etc/fundacion/backend.env check --deploy
+.venv/bin/python scripts/production-manage.py --env-file /etc/fundacion/backend.env preflight_production
+.venv/bin/python scripts/production-manage.py --env-file /etc/fundacion/backend.env migrate --plan
 ```
 
-La comprobación de despliegue falla si faltan dominio HTTPS, conservación, SMTP, antivirus o separación de archivos privados; los avisos estándar de Django también deben revisarse. No silenciar esos controles para publicar. Crear el servicio desde la plantilla solo después de revisar rutas/permisos, instalar certificado y validar `nginx -t`. Verificar desde un dispositivo externo login, CSRF, descarga privada, subida analizada y recuperación por correo. No usar `runserver` ni Vite como servidores públicos.
+El wrapper lee exclusivamente variables admitidas, rechaza duplicados y no evalúa expresiones de shell. No realiza acciones implícitas. Antes de aplicar migraciones, generar/verificar respaldo de base y documentos según [el procedimiento de recuperación](#respaldo-y-recuperación-en-windows), revisar el plan y ejecutar `migrate` explícitamente con el mismo wrapper. No importar ni sobrescribir las tablas de Supabase. `setup_roles` solo se ejecuta explícitamente si la instalación lo necesita; no recrear cuentas existentes.
+
+El ZIP trae estáticos; se pueden regenerar con `collectstatic --noinput` mediante el wrapper. Con servicios configurados:
+
+```bash
+.venv/bin/python scripts/production-manage.py --env-file /etc/fundacion/backend.env preflight_production --services
+```
+
+El diagnóstico JSON devuelve código distinto de cero ante bloqueos: configuración, modo producción, frontend, estáticos, directorio privado, CA configurada, conexión PostgreSQL, migraciones pendientes, handshake/autenticación SMTP y respuesta PONG de ClamAV. `--strict` considera también los avisos como bloqueos. Ejecutarlo con la identidad real del servicio. No imprime claves, modifica datos, crea archivos de prueba ni envía correos. El éxito no acredita entrega SMTP, DNS, certificado público, firmas del antivirus o restauración de copias.
+
+Adaptar `deploy/fundacion.service.example` y `deploy/nginx.conf.example` a dominio, rutas y certificados reales. Revisar conflictos con otros sitios por `default_server`. La plantilla rechaza hosts HTTP inesperados, no expone documentos privados, da 404 a assets inexistentes y diferencia caché larga de assets con hash frente a `index.html`. CI comprueba sintaxis con certificados ficticios descartables; nunca usarlos en producción.
+
+Validar `nginx -t` antes de habilitar la configuración. Gunicorn escucha localhost; ClamAV debe ser interno. Dominio, certificado, firewall, credenciales y límites se verifican en el hosting real. No usar `runserver` ni Vite como servidores públicos.
+
+## Comprobación final en destino
+
+1. `/api/health/live/` y `/api/health/ready/` por HTTPS.
+2. Login/logout, roles, CSRF y recuperación de contraseña con entrega real a una cuenta autorizada.
+3. Carga analizada y descarga privada; rechazo desde otro usuario y sin sesión. Verificar archivos existentes trasladados.
+4. Matching, mapa, ubicación y enlaces WhatsApp con datos de prueba; abrir un enlace no significa enviar un mensaje.
+5. Copia externa verificada, restauración en destino separado y supervisión de espacio, servicio, SMTP y antivirus.
+
+Siguen pendientes datos reales: proveedor/plan, dominio, SMTP, credenciales/CA, traslado de documentos, política institucional y operación de copias. No se desactivaron controles para simular una publicación terminada.
+
+Fuentes consultadas el 21-11-2026: [despliegue Django 5.2](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/), [SMTP Django](https://docs.djangoproject.com/en/5.2/ref/settings/#email-use-ssl) y [ClamAV](https://docs.clamav.net/).
+
+Validación de la preparación inicial (commit `f7aa5c9`): 326 pruebas backend satisfactorias en PostgreSQL aislado, sin omisiones; once corresponden al diagnóstico, configuración y empaquetado. Django check y detección de migraciones sin cambios pendientes. Las pruebas de servicios usan dobles de prueba: no acreditan un proveedor SMTP, antivirus o hosting real. Consultar [validación vigente](VALIDACION_SEGURIDAD_PRO12.md).
 
 ## Respaldo y recuperación en Windows
 

@@ -1,3 +1,5 @@
+> Registro histórico del cierre del commit `4499c75`. Las cifras corresponden a esa ejecución; consultar [validación vigente](VALIDACION_SEGURIDAD_PRO12.md) para el estado posterior.
+
 # Cierre de revisión web — 21-11-2026
 
 ## Diagnóstico y cambios realizados
