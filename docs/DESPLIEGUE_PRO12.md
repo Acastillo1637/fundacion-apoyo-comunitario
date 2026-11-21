@@ -1,3 +1,5 @@
+> Actualización 21-11-2026: [preparación del hosting y paquete verificable](PREPARAR_HOSTING.md), SMTP STARTTLS/587 o TLS implícito/465, wrapper de comandos con entorno privado y diagnóstico `preflight_production --services`. El proveedor sigue sin contratarse; no se ha publicado.
+
 # Operación y despliegue
 
 ## Estado

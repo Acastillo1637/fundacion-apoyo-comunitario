@@ -8,7 +8,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'false').lower() == 'true'
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 if not SECRET_KEY:
     raise ImproperlyConfigured('Define DJANGO_SECRET_KEY en el entorno.')
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
 FOUNDATION_NAME = os.environ.get('FOUNDATION_NAME', 'Fundación Apoyo Comunitario')
 DATA_RETENTION_NOTICE = os.environ.get('DATA_RETENTION_NOTICE', '')
 CSRF_TRUSTED_ORIGINS = [
@@ -99,7 +99,10 @@ EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = True
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'false').lower() == 'true'
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'false' if EMAIL_USE_SSL else 'true').lower() == 'true'
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured('EMAIL_USE_TLS y EMAIL_USE_SSL son excluyentes: activa solo uno.')
 EMAIL_TIMEOUT = 10
 PUBLIC_APP_URL = (os.environ.get('PUBLIC_APP_URL') or ('http://127.0.0.1:5173' if DEBUG else '')).rstrip('/')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@localhost')
