@@ -126,6 +126,8 @@ def ranked_candidates(request, position):
     if mode == '1':
         result = [row for row in result if row['eligible']]
     page, rows = pagination(request, result)
+    from .contacts import candidate_contacts
+    candidate_contacts(rows, position.event)
     return Response({'results':rows, 'total':len(result), 'page':page, 'policy':policy_data(policy),
         'event_location': {'latitude':position.event.latitude, 'longitude':position.event.longitude, 'is_remote':position.event.is_remote},
         'distance_notice':'Estimación en línea recta entre referencias geográficas; no es una ruta ni un tiempo de traslado.'})

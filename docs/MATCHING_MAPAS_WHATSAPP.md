@@ -37,6 +37,19 @@ Fuentes consultadas el 14-11-2026: [política Nominatim](https://operations.osmf
 
 ## WhatsApp y trazabilidad
 
+### Flujo manual de envío — actualizado 25-11-2026
+
+1. **Contactar por WhatsApp** recupera o crea un único seguimiento por evento/voluntario y solicita abrir el enlace. Registra `start`, actor y fecha/hora del servidor. El estado de envío permanece pendiente; no se registra `sent` por abrir una ventana.
+2. **Volver a abrir WhatsApp** reutiliza ese seguimiento y registra otro intento de apertura, sin crear otra invitación ni marcar envío. Si el navegador bloquea la ventana, el botón sigue disponible para reintentar. Se conservan consentimiento, permisos y vencimiento; una ronda vencida debe renovarse explícitamente.
+3. **Confirmar envío** es una acción separada y explícita de secretaría, disponible en la tarjeta y en el seguimiento. Registra `sent` con responsable y fecha/hora; la referencia es opcional, y si se escribe debe tener al menos ocho caracteres. No registra aceptación, no crea participación y no asigna cupos.
+4. **Registrar aceptación** sigue siendo una acción diferente. **Confirmar participación** vuelve a comprobar disponibilidad, requisitos y cupos. Registrar posteriormente un envío no sobrescribe una aceptación ya registrada.
+
+El estado visible se reconstruye de `ContactChange` al consultar la API; no depende del estado temporal de React. Tanto el matching como el seguimiento muestran la última apertura y confirmación de la ronda actual tras recargar. Reabrir después de un envío confirmado conserva su confirmación; repetirla se rechaza sin otra transición. La lectura por lotes conserva la confirmación aunque haya más de veinte aperturas posteriores.
+
+Una ventana abierta solo demuestra que se solicitó abrir un enlace: no acredita entrega, lectura ni envío real. La confirmación es una declaración del personal autorizado, no una verificación de WhatsApp. El historial anterior no se reescribe; una nueva ronda mantiene los registros previos y reinicia únicamente sus indicadores actuales. No se añaden servicios, dependencias de pago ni API de WhatsApp.
+
+La comprobación de interfaz usó datos ficticios en PostgreSQL local: estado pendiente antes de confirmar, botones diferenciados y lectura de la confirmación persistida tras abrir nuevamente la pantalla. El diálogo nativo produjo un bloqueo de la herramienta del navegador; la recarga se verificó en una pestaña nueva. Los tests de componentes ejercitan la confirmación/cancelación del diálogo; los de API comprueban auditoría, responsables distintos, concurrencia, no duplicación y ausencia de asignación de cupos. No se envió ningún mensaje externo. [Evidencia local ficticia](evidencias/whatsapp-envio-manual.jpg).
+
 Estados: pendiente de contacto, contacto iniciado, envío confirmado manualmente, aceptada, rechazada, sin respuesta y cancelada. Historial con actor, fecha, versión y referencia. Vencimiento: 48 horas o inicio de la actividad. Una nueva ronda exige revalidación y conserva el historial anterior.
 
 `contacts.py` separa preparación del enlace de las transiciones del seguimiento y de la asignación de cupos. `whatsapp_link` normaliza teléfonos y personaliza nombre, actividad, fecha/hora de Santiago y comuna; no incluye dirección privada. Exige consentimiento vigente y número utilizable. La preparación no equivale a envío ni entrega. Retirar el consentimiento impide generar nuevos enlaces.

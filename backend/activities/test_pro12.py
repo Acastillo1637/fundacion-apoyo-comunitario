@@ -314,7 +314,7 @@ class Pro12ApiTests(TestCase):
         self.assertEqual(self.client.get(url).status_code,403)
         self.assertEqual(self.staff.get(url.replace('compact=1','compact=wrong')).status_code,400)
 
-    def test_postgresql_snapshot_matches_portable_rules_and_uses_three_queries(self):
+    def test_postgresql_snapshot_matches_portable_rules_with_batched_contact_lookup(self):
         from django.db import connection
         if connection.vendor!='postgresql':
             self.skipTest('PostgreSQL snapshot')
@@ -326,7 +326,9 @@ class Pro12ApiTests(TestCase):
         from .models import EventPosition
         request=Request(APIRequestFactory().get('/',{'eligible_only':'0'}))
         def compare():
-            with self.assertNumQueries(3):
+            # Three ranking queries plus one batched contact lookup. Audit
+            # delivery rows add one constant query only when contacts exist.
+            with self.assertNumQueries(4):
                 optimized=ranked_candidates(request,positions().get(pk=self.position.pk)).data
             with patch('activities.matching.connection',SimpleNamespace(vendor='sqlite')):
                 portable=ranked_candidates(request,EventPosition.objects.select_related('event').get(pk=self.position.pk)).data

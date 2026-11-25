@@ -4,6 +4,8 @@ Base `/api/`. JSON UTF-8; sesión Django en cookie HttpOnly. Las escrituras requ
 
 Actualización 21-11-2026: los listados de operaciones `activities/operations/requests/` y `activities/operations/events/` aceptan `q` (máximo 120 caracteres), `status` y `period=upcoming|past`; los filtros se aplican antes de paginar, también con `compact=1`. `activities/notifications/` acepta `page` y `unread_only=0|1`; devuelve `results`, `total`, `page`, `page_size=30` y `unread` global. POST admite exclusivamente `{read_id: ID_PROPIO}` o `{read_all:true}`. El ID ajeno devuelve 404; filtros, páginas o cuerpos inválidos devuelven 400.
 
+WhatsApp, 25-11-2026: contactos y candidatos autorizados incluyen `delivery`: `opened` y `sent` contienen `at`, `actor_id` y `actor`, o `null`; `send_confirmed` distingue confirmación manual y `can_confirm_send` indica si puede registrarse. Candidatos incluyen un resumen `contact` o `null`. Son datos de la ronda actual, reconstruidos desde la auditoría. `action=start` registra solo apertura solicitada y devuelve `whatsapp_url`; `action=sent` exige una apertura previa, no cambia aceptaciones ni cupos y registra la confirmación manual. Una confirmación repetida devuelve 409. Se conservan revisiones, CSRF y permisos operativos; propietario, responsable y timestamps no se aceptan del cliente.
+
 | Método y ruta | Autorización y propósito |
 |---|---|
 | GET/PUT `volunteer/location/` | Solo voluntario sobre su propio perfil. Comuna, sector, coordenadas aproximadas y revisión. |

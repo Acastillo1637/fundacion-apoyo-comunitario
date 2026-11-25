@@ -4,7 +4,8 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import OuterRef, Prefetch, Subquery
+from django.db.models import F, OuterRef, Prefetch, Subquery, Window
+from django.db.models.functions import RowNumber
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -87,13 +88,56 @@ def preferences(request):
     return Response(preference_data(profile))
 
 
+def load_delivery(contacts):
+    """At most three audit rows per contact, irrespective of repeated openings."""
+    contacts = list(contacts)
+    by_id = {contact.pk: contact for contact in contacts}
+    for contact in contacts:
+        contact.delivery_events = {}
+    if not contacts:
+        return
+    rows = ContactChange.objects.filter(contact_id__in=by_id, action__in=['start', 'sent', 'reopen']).annotate(
+        latest=Window(RowNumber(), partition_by=[F('contact_id'), F('action')],
+                      order_by=[F('created_at').desc(), F('pk').desc()])).filter(latest=1).select_related('actor')
+    for row in rows:
+        by_id[row.contact_id].delivery_events[row.action] = row
+
+
+def delivery_data(contact):
+    if not hasattr(contact, 'delivery_events'):
+        load_delivery([contact])
+    events = contact.delivery_events
+    reopened = events.get('reopen')
+    def current(action):
+        row = events.get(action)
+        return row if row and (not reopened or (row.created_at, row.pk) > (reopened.created_at, reopened.pk)) else None
+    opened, sent = current('start'), current('sent')
+    def details(row):
+        return {'at': row.created_at, 'actor_id': str(row.actor_id),
+                'actor': row.actor.get_full_name() or 'Personal autorizado'} if row else None
+    return {'opened': details(opened), 'sent': details(sent), 'send_confirmed': bool(sent),
+            'can_confirm_send': bool(opened and not sent and contact.status in ['contact_started', 'no_response', 'accepted'])}
+
+
+def candidate_contacts(rows, event):
+    contacts = list(ContactInvitation.objects.filter(event=event, profile_id__in=[row['id'] for row in rows]))
+    load_delivery(contacts)
+    mapped = {contact.profile_id: {'id': contact.pk, 'status': contact.status, 'revision': contact.revision,
+                                  'expires_at': contact.expires_at,
+                                  'delivery': delivery_data(contact)} for contact in contacts}
+    for row in rows:
+        row['contact'] = mapped.get(row['id'])
+
+
 def contact_data(contact):
     return {'id':contact.pk, 'profile_id':contact.profile_id, 'name':contact.profile.user.get_full_name(),
             'position_id':contact.position_id, 'position':contact.position.name, 'status':contact.status,
             'revision':contact.revision, 'updated_at':contact.updated_at, 'expires_at':contact.expires_at,
+            'delivery': delivery_data(contact),
             'participation_status': contact.participation_status if hasattr(contact, 'participation_status') else Participation.objects.filter(event_id=contact.event_id, profile_id=contact.profile_id).values_list('status', flat=True).first(),
             'history':[{'action':row.action, 'from':row.from_status, 'to':row.to_status,
-                        'note':row.note, 'at':row.created_at, 'actor':row.actor.get_full_name()}
+                        'note':row.note, 'at':row.created_at, 'actor_id':str(row.actor_id),
+                        'actor':row.actor.get_full_name() or 'Personal autorizado'}
                        for row in (contact.loaded_changes if hasattr(contact,'loaded_changes') else contact.changes.select_related('actor')[:20])]}
 
 
@@ -112,6 +156,8 @@ def event_contacts(request, event_id):
             Participation.objects.filter(event_id=OuterRef('event_id'), profile_id=OuterRef('profile_id')).values('status')[:1])).prefetch_related(
                 Prefetch('changes',queryset=ContactChange.objects.select_related('actor').order_by('-created_at','-pk')[:20],to_attr='loaded_changes'))
         page, items = pagination(request, rows)
+        items = list(items)
+        load_delivery(items)
         return Response({'results':[contact_data(item) for item in items], 'total':rows.count(), 'page':page})
     serializer = ContactSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -177,7 +223,19 @@ def contact_action(request, contact_id):
             if contact.status not in ['pending_contact', 'contact_started', 'sent', 'no_response']:
                 raise ValidationError('Este contacto ya tiene una respuesta final.')
             url = whatsapp_link(profile, event)
-            contact.status = 'contact_started'
+            if contact.status == 'pending_contact':
+                contact.status = 'contact_started'
+        elif action == 'sent':
+            delivery = delivery_data(contact)
+            if delivery['send_confirmed']:
+                raise Conflict('El envío de esta ronda ya fue confirmado.')
+            if not delivery['can_confirm_send']:
+                raise ValidationError('Abre primero WhatsApp para esta ronda antes de confirmar el envío.')
+            values['note'] = values['note'].strip() or 'Envío por WhatsApp confirmado manualmente por coordinación.'
+            if len(values['note']) < 8:
+                raise ValidationError('La referencia opcional debe tener al menos 8 caracteres.')
+            if contact.status != 'accepted':
+                contact.status = 'sent'
         elif action == 'confirm':
             if contact.status != 'accepted' or len(values['note'].strip()) < 8:
                 raise ValidationError('Registra la aceptación y una referencia de consentimiento antes de confirmar.')
@@ -213,6 +271,7 @@ def contact_action(request, contact_id):
         ContactChange.objects.create(contact=contact, actor=request.user, from_status=previous, to_status=contact.status,
                                      action=action, note=values['note'])
         AuditEvent.objects.create(actor=request.user, action=f'contact.{action}', resource=f'contact:{contact.pk}')
+    load_delivery([contact])
     result = contact_data(contact)
     if url:
         result['whatsapp_url'] = url
