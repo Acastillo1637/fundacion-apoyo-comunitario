@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Award, CalendarDays, HeartHandshake, Mail, MapPin, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, Award, CalendarDays, HeartHandshake, Mail, MapPin, ShieldCheck } from 'lucide-react';
 import { api } from '../api';
 import { PageHeading } from './Overview';
 import { FoundationLogo, slogan } from './Brand';

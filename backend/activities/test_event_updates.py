@@ -5,6 +5,7 @@ from allauth.account.models import EmailAddress
 from django.contrib.auth.models import Group, Permission
 from django.test import Client, TestCase
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from accounts.models import AuditEvent, RequesterProfile, User
 from volunteers.tests import make_profile
@@ -26,6 +27,12 @@ class PublishedInformationTests(TestCase):
     def update(self, **changes):
         return self.staff.patch(self.path, {'revision': 0, 'reason': 'Corrección informativa de prueba.',
             'title': 'Título actualizado de la actividad', **changes}, content_type='application/json')
+
+    def test_detail_includes_timezone_aware_schedule_for_location_and_finish_controls(self):
+        response = self.staff.get(self.path)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(parse_datetime(response.json()['starts_at']), self.event.starts_at)
+        self.assertEqual(parse_datetime(response.json()['ends_at']), self.event.ends_at)
 
     def test_public_update_preserves_schedule_positions_and_participants(self):
         start, end, address = self.event.starts_at, self.event.ends_at, self.event.address

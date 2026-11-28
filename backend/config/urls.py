@@ -8,6 +8,8 @@ security_redirect = RedirectView.as_view(url='/seguridad', permanent=False, http
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/login/', RedirectView.as_view(url='/iniciar-sesion', permanent=False,
+        http_method_names=['get', 'head', 'options'])),
     *[path('accounts/'+suffix, security_redirect) for suffix in [
         '2fa/', '2fa/totp/activate/', '2fa/totp/deactivate/',
         '2fa/recovery-codes/', '2fa/recovery-codes/generate/', '2fa/recovery-codes/download/',

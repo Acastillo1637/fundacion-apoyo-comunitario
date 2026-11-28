@@ -34,6 +34,11 @@ export default function App() {
     window.addEventListener('pageshow',restored);window.addEventListener('pagehide',leaving);
     return()=>{window.removeEventListener('pageshow',restored);window.removeEventListener('pagehide',leaving);};
   },[]);
+  useEffect(()=>{
+    if(status==='ready' && location.pathname==='/' && ['#como-funciona','#seguridad'].includes(location.hash)) {
+      document.getElementById(location.hash.slice(1))?.scrollIntoView?.({block:'start'});
+    }
+  },[status,location.pathname,location.hash]);
   function navigate(next){
     const path=publicPaths[next] || next;
     routerNavigate(path,{state:next==='login-registered'?{registered:true}:null});
@@ -62,7 +67,7 @@ export default function App() {
     {!workspace&&<header className="header"><button className="brand" onClick={()=>navigate('home')}><FoundationLogo/><span>{brand}<small>{slogan}</small></span></button>
       <button className="mobile-menu icon-btn" aria-label={menu?'Cerrar menú':'Abrir menú'} aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
       <nav aria-label="Navegación principal" className={menu?'top-nav open':'top-nav'}><button className="text-button" onClick={()=>navigate('request')}>Solicitar apoyo</button>
-        {user?<><button className="text-button" onClick={()=>navigate('/dashboard')}>Mi espacio</button><AccountMenu user={user} role={(user.roles||[]).join(' · ') || 'Cuenta'} onProfile={()=>navigate('/mi-cuenta')} onSecurity={()=>navigate('/seguridad')} onSignOut={signOut}/></>:<><button className="text-button" onClick={()=>navigate('home')}>Nuestra comunidad</button><button className="text-button" onClick={()=>navigate('login')}>Iniciar sesión</button><button className="button primary small" onClick={()=>navigate('register')}>Ser voluntario<ArrowUpRight size={16}/></button></>}
+        {user?<><button className="text-button" onClick={()=>navigate('/dashboard')}>Mi espacio</button><AccountMenu user={user} role={(user.roles||[]).join(' · ') || 'Cuenta'} onProfile={()=>navigate('/mi-cuenta')} onSecurity={()=>navigate('/seguridad')} onSignOut={signOut}/></>:<><button className="text-button" onClick={()=>navigate('/#como-funciona')}>Nuestra comunidad</button><button className="text-button" onClick={()=>navigate('login')}>Iniciar sesión</button><button className="button primary small" onClick={()=>navigate('register')}>Ser voluntario<ArrowUpRight size={16}/></button></>}
       </nav></header>}
     {error&&<p className="error global-error" role="alert">{error}</p>}
     <main id="main" className={workspace?'workspace-main':'public-main'}>
@@ -72,7 +77,7 @@ export default function App() {
         confirmationToken={pathname==='/seguridad/verificar-correo'?new URLSearchParams(location.search).get('token'):null}
         clearConfirmationURL={()=>routerNavigate(sectionURL('security',route.portal),{replace:true})}/>}
       {publicView==='home'&&<Landing brand={brand} ready navigate={navigate}/>}
-      {publicView==='privacy'&&<PrivacyNotice retentionNotice={session?.retention_notice} development={session?.development}/>}
+      {publicView==='privacy'&&<PrivacyNotice retentionNotice={session?.retention_notice}/>}
       {['login','register','register-requester'].includes(publicView)&&!user&&<Auth key={publicView} mode={publicView==='login'?'login':'register'} notice={location.state?.registered?'Cuenta creada correctamente. Ya puedes iniciar sesión.':''}
         initialType={publicView==='register-requester'?'requester':'volunteer'} brand={brand} navigate={navigate}
         onLogin={updated=>{onUserChanged(updated);routerNavigate(safeReturnTo(updated,location.state?.from),{replace:true,state:null});}}/>}

@@ -78,3 +78,5 @@ Frontend: `App.jsx`, `main.jsx`, `routing.js`, `volunteers/Dashboard.jsx`, `acco
 Referencias primarias: [React Router 7](https://reactrouter.com/7.18.5/start/declarative/installation), [configuración MFA de allauth](https://docs.allauth.org/en/latest/mfa/configuration.html) y código de allauth 65.21.1 instalado en el entorno. No se usa una API MFA o proveedor de identidad diferente.
 
 Las tarjetas de Ayuda y coordinación son enlaces de navegación completos, operables con teclado y con una URL real. En el espacio de voluntario llevan a Mis participaciones, Mis documentos y Seguridad de cuenta. Para los demás perfiles solo se ofrecen destinos admitidos por sus permisos.
+
+La revisión del 27 de noviembre corrigió también Nuestra comunidad para abrir `/#como-funciona`. La selección de una convocatoria en Matching y Participantes actualiza `?evento=...`; recargar conserva el evento y Cambiar evento limpia ese parámetro. El antiguo `/accounts/login/` redirige a `/iniciar-sesion` y no acepta escrituras. Las respuestas privadas de API no se almacenan en cachés de navegador o proxies. Ver la [revisión de seguridad y duplicación](VALIDACION_SEGURIDAD_PRO12.md).

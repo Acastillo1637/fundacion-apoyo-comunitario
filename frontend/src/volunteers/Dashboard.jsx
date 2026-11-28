@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, Building2, CircleHelp, LogOut, Menu, Network, Search, ArrowRight, Award, CalendarDays, Check, ChevronRight, Clock3, FileCheck2, HeartHandshake, LayoutDashboard, MapPin, Settings2, UserRound, Users } from 'lucide-react';
+import { Bell, Building2, CircleHelp, Menu, Network, Search, ArrowRight, Award, CalendarDays, Check, Clock3, FileCheck2, HeartHandshake, LayoutDashboard, MapPin, Settings2, UserRound, Users } from 'lucide-react';
 import { api, readSnapshot } from '../api';
 import { sectionURL } from '../routing';
 import Qualifications from './Qualifications';
@@ -20,11 +20,11 @@ import AccountMenu from '../accounts/AccountMenu';
 import AccountSecurity from '../accounts/AccountSecurity';
 import { ShieldCheck } from 'lucide-react';
 import RequesterPortal from '../accounts/RequesterPortal';
-import OperationalOverview, { Avatar, PageHeading } from '../design/Overview';
+import OperationalOverview, { PageHeading } from '../design/Overview';
 import VolunteerHome from '../design/VolunteerHome';
 import Directory from '../design/Directory';
 import Participants, { MyParticipations, Notifications } from '../activities/Participation';
-import { Catalogs, StaffProfile, VolunteerDirectory, WorkspaceSummary } from '../accounts/Workspace';
+import { Catalogs, StaffProfile } from '../accounts/Workspace';
 
 const tabs = [
   { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
@@ -98,7 +98,7 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
     {tab === 'catalogs' && user.can_manage_catalogs && <Catalogs/>}
     {tab === 'matching-settings' && user.can_manage_users && <MatchingConfiguration/>}
     {tab === 'privacy-requests' && <PrivacyRequests admin={portal==='administration'&&user.can_manage_users}/>}
-    {['participants', 'matching'].includes(tab) && user.can_manage_activities && <Participants key={`${tab}-${route?.eventId || targetEvent || ''}`} initialEventId={route?.eventId || targetEvent} mode={tab}/>}
+    {['participants', 'matching'].includes(tab) && user.can_manage_activities && <Participants key={`${tab}-${route?.eventId || targetEvent || ''}`} initialEventId={route?.eventId || targetEvent} mode={tab} onEventChange={id => navigate(tab, id)}/>}
     {tab === 'directory' && user.can_manage_activities && <Directory/>}
     {portal === 'volunteer' && <>
       {tab === 'overview' && <VolunteerHome user={user} navigate={navigate}/>}

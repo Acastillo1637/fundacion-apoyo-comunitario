@@ -124,3 +124,15 @@ test('ayuda ofrece solo secciones disponibles para el perfil actual',()=>{
   assert.match(pending,/href="\/incorporacion"/);
   assert.doesNotMatch(pending,/href="\/mis-participaciones"/);
 });
+
+test('Nuestra comunidad abre y desplaza a la sección de la portada desde el acceso',async()=>{
+  const original=globalThis.fetch,originalScroll=dom.window.HTMLElement.prototype.scrollIntoView;
+  const scrolled=[];globalThis.fetch=async url=>Response.json(url==='/api/session/'?{user:null,csrf_token:'test'}:{results:[],total:0});
+  dom.window.HTMLElement.prototype.scrollIntoView=function(){scrolled.push(this.id);};
+  if(root)await act(()=>root.unmount());root=createRoot(host);
+  try{
+    await act(()=>root.render(React.createElement(MemoryRouter,{initialEntries:['/iniciar-sesion']},React.createElement(App))));
+    const link=[...host.querySelectorAll('button')].find(node=>node.textContent==='Nuestra comunidad');assert.ok(link);
+    await act(()=>link.click());assert.ok(host.querySelector('#como-funciona'));assert.deepEqual(scrolled,['como-funciona']);
+  }finally{await act(()=>root.unmount());root=null;globalThis.fetch=original;dom.window.HTMLElement.prototype.scrollIntoView=originalScroll;}
+});

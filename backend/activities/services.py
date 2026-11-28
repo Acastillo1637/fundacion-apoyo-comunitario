@@ -52,6 +52,7 @@ def event_data(item, private=False):
         'id': str(item.pk), 'title': item.title, 'public_description': item.public_description,
         'commune': item.commune, 'status': item.status, **schedule_data(item),
         'capacity': sum(position.capacity for position in positions), 'is_remote':item.is_remote,
+        'starts_at': item.starts_at, 'ends_at': item.ends_at,
         'positions': [
             {'id': position.pk, 'name': position.name, 'capacity': position.capacity,
              'required_skills': [{'id': skill.pk, 'name': skill.name} for skill in position.required_skills.all()],
