@@ -17,6 +17,14 @@ CSRF_TRUSTED_ORIGINS = [
         'http://127.0.0.1:5173,http://localhost:5173' if DEBUG else '',
     ).split(',') if origin.strip()
 ]
+if DEBUG:
+    # Vite can use 5174 when another local instance already occupies 5173.
+    # Cookies are shared across ports, but Django checks the complete origin.
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
+        *CSRF_TRUSTED_ORIGINS,
+        'http://127.0.0.1:5173', 'http://localhost:5173',
+        'http://127.0.0.1:5174', 'http://localhost:5174',
+    ]))
 CSRF_FAILURE_VIEW = 'accounts.views.csrf_failure'
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',

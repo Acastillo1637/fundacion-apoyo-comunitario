@@ -45,3 +45,9 @@ La aplicación local y sus flujos comprobados están integrados. La publicación
 Las modificaciones logísticas de una convocatoria publicada (horarios, funciones, cupos y requisitos con participantes vinculados) no tienen un flujo general de reconfirmación; se conservan las restricciones actuales para proteger asignaciones. Sí existen edición de borradores, cambios públicos auditados y actualización autorizada de ubicación. No se implementó borrado automático de expedientes ni se eligió un plazo institucional sin aprobación.
 
 Estos requisitos externos y decisiones pendientes se conservan explícitos en [despliegue](DESPLIEGUE_PRO12.md) y [seguridad](VALIDACION_SEGURIDAD_PRO12.md). No se declara despliegue realizado, entrega de correo verificada, cumplimiento legal o ausencia total de errores.
+
+## Cierre del acceso local — 28-11-2026
+
+Se completó la corrección que había quedado sin publicar: el origen local de Vite en el puerto 5174 ya pasa la validación CSRF, igual que 5173, cuando DEBUG está activado. La lista de producción permanece explícita y no incorpora estos orígenes. Los archivos de ejemplo aclaran la separación entre desarrollo compartido y hosting. No se modifican usuarios, contraseñas, consentimientos ni datos de Supabase; no hay migraciones nuevas. El detalle y las pruebas de rechazo se documentan en [navegación y seguridad](NAVEGACION_SEGURIDAD.md).
+
+Validación de este cierre: 44 pruebas de autenticación, seguridad y CSRF aprobadas en base local aislada; 75 pruebas frontend aprobadas; compilación Vite correcta; 21 documentos Markdown sin enlaces locales rotos. La auditoría integral previa de 356 pruebas PostgreSQL se conserva como evidencia anterior y no se presenta como una nueva ejecución de esta corrección.
