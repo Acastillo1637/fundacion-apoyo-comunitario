@@ -9,6 +9,8 @@ from pathlib import Path
 
 from rest_framework import serializers
 from rest_framework.decorators import api_view
+from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 
@@ -29,5 +31,7 @@ def validate_commune(value):
 
 
 @api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def catalogue(request):
     return Response({'communes': COMMUNES})

@@ -16,6 +16,8 @@ class AccountTests(TestCase):
         VolunteerProfile.objects.create(user=self.user, adult_confirmed_at=timezone.now(), privacy_accepted_at=timezone.now())
 
     def post(self, endpoint, data, client=None):
+        if endpoint == '/api/register/':
+            data = {'phone': '+56912345678', 'commune': 'Renca', 'whatsapp': True, **data}
         return (client or self.client).post(endpoint, json.dumps(data), content_type='application/json')
 
     def test_registration_never_grants_privileges(self):

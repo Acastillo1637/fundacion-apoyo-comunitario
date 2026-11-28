@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from .communes import validate_commune
+from .phones import ChileanMobileField
 
 
 class RegistrationSerializer(serializers.Serializer):
@@ -23,6 +24,13 @@ class RegistrationSerializer(serializers.Serializer):
     def validate(self, attrs):
         if not attrs['adult'] or not attrs['privacy']:
             raise serializers.ValidationError('Debes ser mayor de edad y aceptar el aviso de privacidad.')
+        if attrs['account_type'] == 'volunteer':
+            if not attrs['whatsapp']:
+                raise serializers.ValidationError({'whatsapp': 'Debes autorizar el contacto por WhatsApp para coordinar tu participación.'})
+            profile = ProfileSerializer(data={name: attrs[name] for name in
+                ['first_name', 'last_name', 'phone', 'commune'] if name in attrs})
+            profile.is_valid(raise_exception=True)
+            attrs.update(profile.validated_data)
         if attrs['account_type'] == 'requester':
             if not attrs.get('requester_type') or not attrs.get('phone'):
                 raise serializers.ValidationError('Indica el tipo de solicitante y un teléfono de contacto.')
@@ -39,8 +47,7 @@ class RegistrationSerializer(serializers.Serializer):
 class ProfileSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=80)
     last_name = serializers.CharField(max_length=80)
-    phone = serializers.RegexField(r'^\+?[0-9]{8,12}$', max_length=12,
-        error_messages={'invalid': 'Ingresa un teléfono válido sin espacios, por ejemplo +56912345678.'})
+    phone = ChileanMobileField()
     commune = serializers.CharField(max_length=80)
 
     def validate_commune(self, value):

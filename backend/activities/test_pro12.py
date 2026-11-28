@@ -246,7 +246,7 @@ class Pro12ApiTests(TestCase):
 
     def test_withdrawing_consent_prevents_contact(self):
         contact = self.contact()
-        response = self.client.put('/api/volunteer/contact-preferences/',{'phone':'+56912345678','whatsapp':False,'revision':0},content_type='application/json')
+        response = self.client.post('/api/volunteer/contact-preferences/withdraw/',{'revision':0},content_type='application/json')
         self.assertEqual(response.status_code,200,response.content)
         self.assertEqual(self.action(contact,'start').status_code,400)
         self.assertEqual(self.staff.post(f'/api/operations/volunteers/{self.owner.pk}/whatsapp/',{},content_type='application/json').status_code,400)

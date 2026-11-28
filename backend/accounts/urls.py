@@ -24,6 +24,7 @@ urlpatterns = [
     path('volunteer/location/', geography.own_location),
     path('volunteer/location/address/', address_geocoding.resolve_address),
     path('volunteer/contact-preferences/', contacts.preferences),
+    path('volunteer/contact-preferences/withdraw/', contacts.withdraw_consent),
     path('maps/search/', geography.geocode),
     path('maps/config/', geography.map_config),
     path('management/matching-policy/', matching.configuration),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import WhatsAppPhoneField from '../volunteers/WhatsAppPhoneField';
 import { Pagination } from './Participation';
 
 export const contactExpired = (item, now = Date.now()) => Boolean(item.expires_at && new Date(item.expires_at).getTime() <= now);
@@ -84,5 +85,5 @@ export function CommunicationPreferences() {
     try { const { consent_at, ...values } = data; setData(await api('volunteer/contact-preferences/', { method:'PUT', body:JSON.stringify(values) })); setMessage('Preferencias guardadas. Puedes retirar tu autorización en cualquier momento.'); }
     catch(err) { setError(err.message); } finally { setBusy(false); }
   }
-  return <section className="panel"><h2>Preferencias de comunicación</h2>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}{data && <form onSubmit={save}><label className="field">Teléfono internacional<input type="tel" required maxLength={12} value={data.phone} onChange={e => setData({ ...data, phone:e.target.value })} placeholder="+56912345678"/></label><label className="checkbox"><input type="checkbox" checked={data.whatsapp} onChange={e => setData({ ...data, whatsapp:e.target.checked })}/>Autorizo al equipo a contactarme por WhatsApp para coordinar voluntariados. Es opcional.</label><button className="button primary" disabled={busy}>Guardar preferencias</button></form>}</section>;
+  return <section className="panel"><h2>Preferencias de comunicación</h2>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}{data && <form onSubmit={save}><WhatsAppPhoneField value={data.phone} onChange={e => setData({ ...data, phone:e.target.value })}/><label className="checkbox"><input type="checkbox" required checked={data.whatsapp} onChange={e => setData({ ...data, whatsapp:e.target.checked })}/>Autorizo al equipo a contactarme por WhatsApp para coordinar mi participación. Esta autorización es obligatoria para guardar la configuración de coordinación.</label><button className="button primary" disabled={busy}>Guardar preferencias</button></form>}</section>;
 }

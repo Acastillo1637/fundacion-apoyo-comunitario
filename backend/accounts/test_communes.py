@@ -39,8 +39,11 @@ class ProfileRequiredDataTests(TestCase):
                 self.user.refresh_from_db()
                 self.assertEqual(self.user.first_name, original_name)
 
-    def test_commune_catalogue_requires_authentication(self):
-        self.assertEqual(self.client.get('/api/communes/').status_code, 403)
+    def test_commune_catalogue_is_public_for_registration(self):
+        public = self.client.get('/api/communes/')
+        self.assertEqual(public.status_code, 200)
+        self.assertEqual(set(public.json()), {'communes'})
+        self.assertEqual(len(public.json()['communes']), 346)
         self.client.force_login(self.user)
         response = self.client.get('/api/communes/')
         self.assertEqual(response.status_code, 200)

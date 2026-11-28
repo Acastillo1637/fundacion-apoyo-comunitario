@@ -1,4 +1,3 @@
-import re
 from datetime import timedelta
 from urllib.parse import urlencode
 
@@ -14,6 +13,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from accounts.models import AuditEvent, VolunteerProfile
+from accounts.phones import ChileanMobileField, chilean_mobile
 from accounts.portals import is_volunteer
 from volunteers.serializers import StrictSerializer
 from .models import ContactChange, ContactInvitation, Event, EventPosition, Participation
@@ -21,17 +21,7 @@ from .services import Conflict, require_operator
 
 
 def normalize_phone(value):
-    raw = str(value).strip()
-    if re.search(r'[^+0-9 ()-]', raw) or raw.count('+') > 1 or ('+' in raw and not raw.startswith('+')):
-        raise ValidationError('Usa un número internacional válido, por ejemplo +56 9 1234 5678.')
-    digits = re.sub(r'[^0-9]', '', raw)
-    if digits.startswith('00') and not raw.startswith('+'):
-        digits = digits[2:]
-    if len(digits) == 9 and digits[0] in '29' and not raw.startswith(('+','00')):
-        digits = '56'+digits
-    if not re.fullmatch(r'[1-9][0-9]{7,14}', digits):
-        raise ValidationError('El teléfono debe incluir código de país y entre 8 y 15 dígitos.')
-    return digits
+    return chilean_mobile(value)[1:]
 
 
 def whatsapp_link(profile, event=None):
@@ -49,14 +39,44 @@ def whatsapp_link(profile, event=None):
 
 
 class PreferenceSerializer(StrictSerializer):
-    phone = serializers.CharField(max_length=12)
+    phone = ChileanMobileField()
     whatsapp = serializers.BooleanField()
     revision = serializers.IntegerField(min_value=0)
+
+    def validate_whatsapp(self, value):
+        if not value:
+            raise ValidationError('Autoriza el contacto por WhatsApp para guardar la configuración de coordinación.')
+        return value
 
 
 def preference_data(profile):
     return {'phone':profile.phone, 'whatsapp':bool(profile.whatsapp_opt_in_at),
             'consent_at':profile.whatsapp_opt_in_at, 'revision':profile.user.management_revision}
+
+
+class WithdrawConsentSerializer(StrictSerializer):
+    revision = serializers.IntegerField(min_value=0)
+
+
+@api_view(['POST'])
+def withdraw_consent(request):
+    if not is_volunteer(request.user):
+        raise PermissionDenied('Solo puedes retirar tu propia autorización.')
+    serializer = WithdrawConsentSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    from accounts.models import User
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        profile = get_object_or_404(VolunteerProfile.objects.select_for_update(), user=user)
+        if user.management_revision != serializer.validated_data['revision']:
+            raise Conflict()
+        profile.whatsapp_opt_in_at = None
+        profile.save(update_fields=['whatsapp_opt_in_at'])
+        user.management_revision += 1
+        user.save(update_fields=['management_revision'])
+        profile.user = user
+        AuditEvent.objects.create(actor=user, action='profile.whatsapp_consent.withdrawn', resource=f'profile:{profile.pk}')
+    return Response(preference_data(profile))
 
 
 @api_view(['GET', 'PUT'])
@@ -69,11 +89,7 @@ def preferences(request):
     serializer = PreferenceSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
-    phone = '+'+normalize_phone(values['phone']) if values['phone'] else ''
-    if len(phone) > 12:
-        raise ValidationError({'phone': 'El teléfono debe tener como máximo 12 caracteres, incluido el signo +.'})
-    if values['whatsapp'] and not phone:
-        raise ValidationError('Indica un teléfono para autorizar WhatsApp.')
+    phone = values['phone']
     from accounts.models import User
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=request.user.pk)

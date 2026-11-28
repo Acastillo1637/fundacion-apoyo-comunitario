@@ -75,8 +75,12 @@ Actualización 15-11-2026: al desactivar “Mostrar solo candidatos elegibles”
 
 ## Datos de perfil y resguardo documental
 
-- `GET /api/communes/`: sesión requerida; devuelve `{communes: [...]}` desde el catálogo local.
-- `PATCH /api/profile/`: nombre, apellido, teléfono y comuna obligatorios. Teléfono hasta 12 caracteres incluido +, sin espacios; comuna normalizada contra el catálogo. La misma validación de comuna protege la ubicación manual y por domicilio.
+- `GET /api/communes/`: público, disponible antes del registro; devuelve `{communes: [...]}` desde el catálogo local.
+- `PATCH /api/profile/`: nombre, apellido, teléfono y comuna obligatorios. Celular chileno: acepta 9XXXXXXXX, 569XXXXXXXX o +569XXXXXXXX, y guarda +569XXXXXXXX; comuna normalizada contra el catálogo. La misma validación de comuna protege la ubicación manual y por domicilio.
 - `GET/PUT /api/volunteer/qualifications/`: incorpora `other_trade` (hasta 100 caracteres) y `without_university_degree` (booleano), usando la revisión existente. Otro oficio exige texto; sin carrera universitaria es incompatible con carreras profesionales y admite títulos técnicos.
 - Los catálogos de profesiones incluyen `kind`: `professional`, `technical` u `other`. Las dos primeras categorías conservan obligatoriamente el requisito de respaldo de título.
 - La respuesta documental incluye `requires_safeguarding_review`, `safeguarding_confirmed` y `reviewer_id`. Para aprobar un tipo de resguardo, `POST /api/documents/{id}/review/` exige `safeguarding_confirmed: true`, conclusión de al menos ocho caracteres y fecha futura de renovación. Las decisiones negativas mantienen la observación obligatoria. Se conservan los permisos y la prohibición de revisar documentos propios.
+
+El registro de voluntarios (`POST /api/register/`) exige teléfono y comuna con las mismas validaciones de Mi perfil; ambos quedan guardados al crear la cuenta. El catálogo público de comunas contiene únicamente nombres geográficos, sin datos de usuarios.
+
+La coordinación por WhatsApp requiere celular chileno y autorización explícita. El registro de voluntarios y la incorporación exigen confirmar esa autorización; no se activa para cuentas existentes de manera automática. Guardar preferencias exige autorización afirmativa. El retiro de consentimiento es una operación separada (`POST /api/volunteer/contact-preferences/withdraw/`, con `revision`), auditable, que bloquea nuevos contactos sin borrar la cuenta ni su teléfono. Puede solicitarse por el canal de privacidad.

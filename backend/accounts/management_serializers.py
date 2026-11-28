@@ -45,4 +45,6 @@ class OnboardingSerializer(StrictSerializer):
     def validate(self, attrs):
         if not attrs['adult'] or not attrs['privacy']:
             raise serializers.ValidationError('Debes confirmar mayoría de edad y tratamiento de tus datos.')
+        if not attrs['whatsapp']:
+            raise serializers.ValidationError({'whatsapp': 'Autoriza el contacto por WhatsApp para habilitar tu participación.'})
         return attrs

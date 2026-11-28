@@ -4,6 +4,7 @@ import { api, readSnapshot } from '../api';
 import Qualifications from './Qualifications';
 import Availability from './Availability';
 import CommuneField from './CommuneField';
+import WhatsAppPhoneField from './WhatsAppPhoneField';
 import Documents, { DocumentReviewQueue } from './Documents';
 import Operations from '../activities/Operations';
 import PublicEvents from '../activities/PublicEvents';
@@ -144,7 +145,7 @@ function Profile({ setUser }) {
     {!profile && !error && <p role="status">Cargando tu perfil…</p>}
     {profile && <form onSubmit={save}><fieldset disabled={busy} className="form-fieldset">
       <div className="form-row"><label className="field">Nombre<input name="first_name" required autoComplete="given-name" defaultValue={profile.first_name} maxLength={80}/></label><label className="field">Apellido<input name="last_name" required autoComplete="family-name" defaultValue={profile.last_name} maxLength={80}/></label></div>
-      <label className="field">Teléfono (obligatorio)<input name="phone" type="tel" required pattern="[+]?[0-9]{8,12}" autoComplete="tel" placeholder="+56912345678" defaultValue={profile.phone} maxLength={12}/><small>Máximo 12 caracteres, incluido el signo +.</small></label>
+      <WhatsAppPhoneField defaultValue={profile.phone}/>
       <CommuneField initialValue={profile.commune}/>
       <button className="button primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios'}<Check size={17}/></button>
     </fieldset></form>}

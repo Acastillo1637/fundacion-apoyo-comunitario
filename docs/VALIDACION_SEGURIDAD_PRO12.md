@@ -7,7 +7,7 @@ Esta guía resume el estado comprobado. Los informes de auditoría y cierre cons
 | Comprobación | Último resultado registrado |
 |---|---|
 | Backend, PostgreSQL 17 local aislado | 346 pruebas satisfactorias en PostgreSQL aislado; incluye concurrencia, permisos, matching y nuevas reglas de formación y resguardo. Comprobaciones adicionales del archivo DEMO y la validación de comunas pasaron por separado. |
-| Frontend Node | 63 pruebas satisfactorias: comunas, descripción de oficio, registro, reapertura de WhatsApp y confirmación manual. |
+| Frontend Node | 65 pruebas satisfactorias: comunas, registro con celular chileno obligatorio, autorización de WhatsApp, descripción de oficio y confirmación manual de envío. |
 | Compilación Vite | Correcta; mapas cargados por separado. |
 | Django y modelos | Check sin problemas; sin migraciones faltantes. |
 | Documentación y configuración | 21 Markdown sin enlaces locales rotos; plantillas comprobadas contra los nombres admitidos por sus lectores. |
@@ -59,3 +59,5 @@ La [Ley 19.628](https://www.bcn.cl/leychile/Navegar?dt=open&idLey=19628) es refe
 La Ley 21.459 se considera respecto de accesos no autorizados e integridad: los controles técnicos ayudan a prevenir abusos, pero no certifican cumplimiento. La [Ley 21.663](https://www.bcn.cl/leychile/Navegar?idNorma=1202434&idParte=10496176&idVersion=2025-01-01) vincula su aplicación a servicios esenciales y operadores calificados. Tener una web de voluntariado no basta para afirmar que esta fundación está sujeta a todas sus obligaciones; faltan antecedentes de actividades y calificación. Esta es una evaluación técnica preliminar, no un dictamen jurídico.
 
 OWASP Top 10 y API Security Top 10 orientan la revisión de permisos, validación, archivos y exposición de datos; no se obtuvo una certificación OWASP ni se afirma invulnerabilidad.
+
+Actualización del registro y coordinación: pasaron 109 pruebas enfocadas de backend y comprobaciones finales de normalización chilena, consentimiento, creación de cuenta e invitaciones. No requiere migraciones ni modifica las autorizaciones existentes.

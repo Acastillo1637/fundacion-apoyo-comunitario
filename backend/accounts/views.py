@@ -105,6 +105,7 @@ def register(request):
             now = timezone.now()
             if data['account_type'] == 'volunteer':
                 VolunteerProfile.objects.create(user=user, adult_confirmed_at=now, privacy_accepted_at=now,
+                                                phone=data['phone'], commune=data['commune'],
                                                 whatsapp_opt_in_at=now if data['whatsapp'] else None)
             else:
                 RequesterProfile.objects.create(user=user, requester_type=data['requester_type'],
