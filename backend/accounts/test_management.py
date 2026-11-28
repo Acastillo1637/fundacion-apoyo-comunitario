@@ -167,7 +167,7 @@ class AccountManagementTests(TestCase):
     def test_profile_edit_invalidates_management_revision(self):
         client = Client()
         client.force_login(self.target)
-        self.assertEqual(client.patch('/api/profile/', {'first_name': 'Nombre propio nuevo', 'last_name': 'Prueba', 'phone': '', 'commune': ''}, content_type='application/json').status_code, 200)
+        self.assertEqual(client.patch('/api/profile/', {'first_name': 'Nombre propio nuevo', 'last_name': 'Prueba', 'phone': '+56912345678', 'commune': 'Renca'}, content_type='application/json').status_code, 200)
         self.assertEqual(self.update(first_name='Dato obsoleto').status_code, 409)
 
     def test_account_creation_uses_invitation_and_does_not_forge_consent(self):

@@ -24,6 +24,7 @@ from .geography import ProviderUnavailable, SearchBusy, location_data, point
 from .models import AuditEvent, VolunteerProfile
 from .portals import is_volunteer
 from .views import limited
+from .communes import validate_commune
 
 SALT = 'private-address-choice-v1'
 
@@ -35,6 +36,9 @@ class AddressSerializer(StrictSerializer):
     consent = serializers.BooleanField()
     revision = serializers.IntegerField(min_value=0)
     choice = serializers.CharField(max_length=2000, required=False)
+
+    def validate_commune(self, value):
+        return validate_commune(value)
 
 
 def lookup(request, values, fingerprint):

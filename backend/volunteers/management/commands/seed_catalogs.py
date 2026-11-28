@@ -17,5 +17,5 @@ class Command(BaseCommand):
         profession, created = Profession.objects.get_or_create(name__iexact='Enfermería', defaults={'name': 'Enfermería'})
         if created:
             profession.required_documents.add(document)
-        Profession.objects.get_or_create(name__iexact='Otro oficio', defaults={'name': 'Otro oficio'})
+        Profession.objects.get_or_create(name__iexact='Otro oficio', defaults={'name': 'Otro oficio', 'kind': 'other'})
         self.stdout.write(self.style.SUCCESS('Ejemplos cargados. Son editables; la fundación debe definir los requisitos reales.'))

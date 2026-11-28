@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import LocationPicker from './LocationPicker';
+import CommuneField from '../volunteers/CommuneField';
 
 export default function LocationSettings() {
   const [data, setData] = useState(null), [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
@@ -23,7 +24,7 @@ export default function LocationSettings() {
   return <section className="panel"><h2>Mi ubicación de referencia</h2><p>Solo tú y coordinación autorizada pueden consultarla. Otros voluntarios no pueden verla.</p>
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}{!data && !error && <p role="status">Cargando…</p>}
     {data && <><form onSubmit={calculate}><fieldset disabled={busy} className="form-fieldset">
-      <div className="form-row"><label className="field">Comuna<input value={data.commune} required maxLength={80} onChange={e => { setData({ ...data, commune:e.target.value }); setChoices([]); }}/></label>
+      <div className="form-row"><CommuneField value={data.commune} onChange={commune => { setData({ ...data, commune }); setChoices([]); }}/>
       <label className="field">Sector aproximado<input value={data.sector} maxLength={80} onChange={e => setData({ ...data, sector:e.target.value })}/></label></div>
       <label className="field">Dirección: calle y número<input autoComplete="off" value={address} required minLength={5} maxLength={250} onChange={e => changeAddress(e.target.value)}/></label>
       <p className="help">Al guardar, Geoapify recibirá esta dirección para calcular la ubicación. Nuestra base guarda solo una referencia redondeada a 0,01 grados, no el domicilio completo. El proveedor procesa solicitudes en sus servidores y puede conservar registros técnicos temporalmente. <a href="https://www.geoapify.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacidad de Geoapify</a>.</p>

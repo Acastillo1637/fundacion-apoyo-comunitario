@@ -5,6 +5,7 @@ from . import requesters
 from . import workspaces
 from . import overview
 from . import geography
+from . import communes
 from . import address_geocoding
 from . import health
 from . import privacy
@@ -12,6 +13,7 @@ from . import account_security
 from activities import contacts, matching
 
 urlpatterns = [
+    path('communes/', communes.catalogue),
     path('security/', account_security.status),
     path('security/action/', account_security.action),
     path('privacy/requests/', privacy.requests),

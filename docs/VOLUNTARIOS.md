@@ -52,3 +52,9 @@ Las restricciones de base de datos impiden duplicados y duraciones inválidas. L
 La suite comprueba permisos, CSRF, perfiles ajenos, campos de acreditación inyectados, catálogos inactivos, requisitos, fechas, límites, rollback y revisión obsoleta. Incluye dos actualizaciones concurrentes en PostgreSQL: una debe obtener 200 y la otra 409. Esa prueba se omite en SQLite.
 
 Consultar [resultados y límites de revisión visual](VALIDACION_SEGURIDAD_PRO12.md). La compilación y una prueba puntual de navegador no certifican todos los dispositivos ni accesibilidad completa.
+
+## Datos obligatorios y formación
+
+Mi perfil exige nombre, apellido, teléfono de hasta 12 caracteres (incluido +, sin espacios) y comuna válida. El catálogo local de 346 comunas proviene de [DIPRES, SIGFE Global 2026](https://dipres.gob.cl/590/articles-393849_doc_pdf.pdf), páginas 13–24. La búsqueda filtra sin distinguir mayúsculas o tildes y el backend guarda el nombre del catálogo; rechaza nombres inventados. La comuna también se valida al actualizar la ubicación. Elegir comuna no calcula por sí solo coordenadas: se utiliza el flujo de ubicación existente.
+
+Todas las carreras profesionales y técnicas requieren respaldo de título automáticamente, incluidas las entradas nuevas. Quitar ese requisito desde el catálogo no lo elimina. Seleccionar una formación sigue siendo una declaración: no equivale a una acreditación documental. Otro oficio se muestra al final y exige descripción de hasta 100 caracteres. Sin carrera universitaria permite títulos técnicos y oficios, pero no declaraciones simultáneas de carreras universitarias. Ambos campos se guardan con la versión del perfil y son visibles para coordinación autorizada.

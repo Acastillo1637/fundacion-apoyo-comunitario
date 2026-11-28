@@ -6,8 +6,8 @@ Esta guía resume el estado comprobado. Los informes de auditoría y cierre cons
 
 | Comprobación | Último resultado registrado |
 |---|---|
-| Backend, PostgreSQL 17 local aislado | 336 pruebas satisfactorias tras la corrección WhatsApp del 25-11-2026; incluye concurrencia, permisos, diagnóstico, configuración y trazabilidad del envío. |
-| Frontend Node | 60 pruebas satisfactorias, incluidas reapertura, confirmación manual y recarga. |
+| Backend, PostgreSQL 17 local aislado | 346 pruebas satisfactorias en PostgreSQL aislado; incluye concurrencia, permisos, matching y nuevas reglas de formación y resguardo. Comprobaciones adicionales del archivo DEMO y la validación de comunas pasaron por separado. |
+| Frontend Node | 63 pruebas satisfactorias: comunas, descripción de oficio, registro, reapertura de WhatsApp y confirmación manual. |
 | Compilación Vite | Correcta; mapas cargados por separado. |
 | Django y modelos | Check sin problemas; sin migraciones faltantes. |
 | Documentación y configuración | 21 Markdown sin enlaces locales rotos; plantillas comprobadas contra los nombres admitidos por sus lectores. |

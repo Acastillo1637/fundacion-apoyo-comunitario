@@ -21,6 +21,7 @@ async function mount(answer) {
   const apiModule = await vite.ssrLoadModule('/src/api.js'); apiModule.clearPrivateData();
   globalThis.fetch = async (url, options) => {
     if (url === '/api/volunteer/location/address/') return answer(options);
+    if (url === '/api/communes/') return Response.json({communes:['Santiago']});
     if (url === '/api/session/') return Response.json({csrf_token:'test'});
     return Response.json(location);
   };

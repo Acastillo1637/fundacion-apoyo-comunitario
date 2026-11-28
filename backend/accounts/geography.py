@@ -23,6 +23,7 @@ from volunteers.serializers import StrictSerializer
 from .models import AuditEvent, VolunteerProfile
 from .portals import is_volunteer
 from .views import limited
+from .communes import validate_commune
 
 
 class ProviderUnavailable(APIException):
@@ -79,9 +80,12 @@ def location_data(profile):
 class LocationSerializer(StrictSerializer):
     latitude = serializers.FloatField(allow_null=True)
     longitude = serializers.FloatField(allow_null=True)
-    commune = serializers.CharField(max_length=80, allow_blank=True)
+    commune = serializers.CharField(max_length=80)
     sector = serializers.CharField(max_length=80, allow_blank=True)
     revision = serializers.IntegerField(min_value=0)
+
+    def validate_commune(self, value):
+        return validate_commune(value)
 
 
 @never_cache

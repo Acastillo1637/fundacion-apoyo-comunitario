@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
+from .communes import validate_commune
 
 
 class RegistrationSerializer(serializers.Serializer):
@@ -38,5 +39,9 @@ class RegistrationSerializer(serializers.Serializer):
 class ProfileSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=80)
     last_name = serializers.CharField(max_length=80)
-    phone = serializers.RegexField(r'^\+?[0-9 ()-]{7,20}$', allow_blank=True)
-    commune = serializers.CharField(max_length=80, allow_blank=True)
+    phone = serializers.RegexField(r'^\+?[0-9]{8,12}$', max_length=12,
+        error_messages={'invalid': 'Ingresa un teléfono válido sin espacios, por ejemplo +56912345678.'})
+    commune = serializers.CharField(max_length=80)
+
+    def validate_commune(self, value):
+        return validate_commune(value)

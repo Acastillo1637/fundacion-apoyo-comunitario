@@ -36,3 +36,9 @@ body{background:var(--surface)}h1,h2,h3{color:var(--ink)}h2{letter-spacing:-.6px
 .vacancy-summary{display:flex;align-items:center;justify-content:space-between;gap:20px;border-left:4px solid #0051d5}.vacancy-summary h3{margin:0 0 8px}.vacancy-summary p{margin:0 0 8px}.vacancy-summary small{font-size:11px;color:#647084;line-height:1.7}.vacancy-summary .button{flex-shrink:0}@media(max-width:760px){.vacancy-summary{flex-direction:column;align-items:flex-start}}
 
 .published-information-editor{margin-top:24px;background:#f8faff}.published-information-editor h3{font-size:18px}.published-information-editor>p{font-size:12px;max-width:750px}
+
+/* Keep account type radios independent of full-width text input rules. */
+.auth-form .account-type-picker label { display:grid; grid-template-columns:20px minmax(0,1fr); column-gap:12px; align-items:start; min-width:0; }
+.auth-form .account-type-picker input[type="radio"], .account-type-picker input[type="radio"] { position:static; width:18px; height:18px; min-width:18px; min-height:18px; padding:0; margin:3px 0 0; grid-column:1; grid-row:1 / span 2; flex:none; accent-color:var(--blue); }
+.auth-form .account-type-picker strong, .auth-form .account-type-picker small { grid-column:2; min-width:0; }
+@media(max-width:600px) { .auth-form .account-type-picker { grid-template-columns:minmax(0,1fr); } }

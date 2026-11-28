@@ -65,7 +65,7 @@ class VolunteerTests(TestCase):
     def test_catalog_includes_active_entries_and_document_requirements(self):
         data = self.client.get('/api/volunteer/catalogs/').json()
         self.assertEqual([item['id'] for item in data['skills']], [self.skill.pk])
-        self.assertEqual(data['professions'][0]['required_documents'][0]['id'], self.document.pk)
+        self.assertIn(self.document.pk, [item['id'] for item in data['professions'][0]['required_documents']])
 
     def test_selected_inactive_entry_remains_visible(self):
         VolunteerSkill.objects.create(profile=self.profile, skill=self.inactive_skill)

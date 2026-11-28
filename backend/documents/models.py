@@ -22,6 +22,7 @@ class VolunteerDocument(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    safeguarding_confirmed = models.BooleanField(default=False)
     reviewer = models.ForeignKey('accounts.User', on_delete=models.PROTECT, null=True, blank=True)
     observation = models.CharField(max_length=1000, blank=True)
     expires_on = models.DateField('válido hasta', null=True, blank=True)
@@ -36,6 +37,8 @@ class VolunteerDocument(models.Model):
 
     @property
     def effective_status(self):
+        if self.status == self.Status.VALIDATED and self.document_type.requires_safeguarding_review and not self.safeguarding_confirmed:
+            return 'pending'
         if self.status == self.Status.VALIDATED and self.expires_on and self.expires_on < timezone.localdate():
             return 'expired'
         return self.status

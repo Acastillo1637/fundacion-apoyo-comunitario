@@ -52,7 +52,7 @@ export default function PublicRequest({ navigate, requester }) {
         <label className="field">Observaciones (opcional)<textarea name="observations" maxLength={1500} rows={3}/></label>
         </section><section className="request-form-section"><h2><ShieldCheck size={21}/> Revisión y envío</h2><div className="honeypot" aria-hidden="true"><label>Deja este campo vacío<input name="website" tabIndex={-1} autoComplete="off"/></label></div>
         <label className="checkbox"><input name="privacy" type="checkbox" required/>Acepto que la fundación use estos datos para evaluar y coordinar mi solicitud.</label>
-        <p className="help">Versión de desarrollo: usa datos ficticios. El aviso institucional definitivo está pendiente.</p>
+        <p className="help">Puedes revisar cómo tratamos tus datos en el aviso de privacidad.</p>
         {!requester && options.console_email && <div className="notice"><p>En desarrollo, el enlace para confirmar el correo se imprime en la terminal donde ejecutas Django.</p></div>}
         <button className="button primary" disabled={busy}>{busy ? 'Enviando…' : 'Enviar solicitud'}<Send size={17}/></button>
       </section></fieldset></form>}

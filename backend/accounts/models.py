@@ -71,6 +71,8 @@ class VolunteerProfile(models.Model):
     notice_version = models.CharField(max_length=30, default='development-1')
     whatsapp_opt_in_at = models.DateTimeField(null=True, blank=True)
     qualifications_revision = models.PositiveIntegerField(default=0)
+    other_trade = models.CharField(max_length=100, blank=True, default='')
+    without_university_degree = models.BooleanField(default=False)
     availability_revision = models.PositiveIntegerField(default=0)
     is_restricted = models.BooleanField(default=False)
     restriction_reason = models.CharField(max_length=1000, blank=True)

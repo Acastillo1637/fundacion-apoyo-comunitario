@@ -23,12 +23,14 @@ def own_profile(request, lock=False):
 def catalog_rows(model, selected):
     return [
         {'id': item.pk, 'name': item.name, 'description': item.description,
+         **({'kind': item.kind} if isinstance(item, Profession) else {}),
          'is_active': item.is_active,
          'required_documents': [
              {'id': document.pk, 'name': document.name, 'is_active': document.is_active}
              for document in item.required_documents.all()
          ]}
-        for item in model.objects.filter(Q(is_active=True) | Q(pk__in=selected)).prefetch_related('required_documents')
+        for item in model.objects.filter(Q(is_active=True) | Q(pk__in=selected)).exclude(
+            is_active=False, name__istartswith='DEMO — ').prefetch_related('required_documents')
     ]
 
 
@@ -38,6 +40,8 @@ def qualification_data(profile):
         'skills': list(profile.declared_skills.order_by('skill_id').values_list('skill_id', flat=True)),
         'professions': list(profile.declared_professions.order_by('profession_id').values_list('profession_id', flat=True)),
         'status': 'declared',
+        'other_trade': profile.other_trade,
+        'without_university_degree': profile.without_university_degree,
     }
 
 
@@ -73,12 +77,23 @@ def qualifications(request):
         previous = qualification_data(profile)
         skills = selected_catalog(Skill, data['skills'], previous['skills'])
         professions = selected_catalog(Profession, data['professions'], previous['professions'])
+        other_trade = data.get('other_trade', profile.other_trade).strip()
+        without_degree = data.get('without_university_degree', profile.without_university_degree)
+        if any(item.kind == Profession.Kind.OTHER for item in professions):
+            if not other_trade:
+                raise ValidationError({'other_trade': 'Indica cuál es tu oficio.'})
+        else:
+            other_trade = ''
+        if without_degree and any(item.kind == Profession.Kind.PROFESSIONAL for item in professions):
+            raise ValidationError({'professions': 'Si declaras no tener carrera universitaria, selecciona solo títulos técnicos u Otro oficio.'})
         profile.declared_skills.exclude(skill_id__in=data['skills']).delete()
         profile.declared_professions.exclude(profession_id__in=data['professions']).delete()
         VolunteerSkill.objects.bulk_create([VolunteerSkill(profile=profile, skill=item) for item in skills if item.pk not in previous['skills']])
         VolunteerProfession.objects.bulk_create([VolunteerProfession(profile=profile, profession=item) for item in professions if item.pk not in previous['professions']])
         profile.qualifications_revision += 1
-        profile.save(update_fields=['qualifications_revision'])
+        profile.other_trade = other_trade
+        profile.without_university_degree = without_degree
+        profile.save(update_fields=['qualifications_revision', 'other_trade', 'without_university_degree'])
         AuditEvent.objects.create(actor=request.user, action='qualifications.updated', resource=f'profile:{profile.pk}')
         return Response(qualification_data(profile))
 

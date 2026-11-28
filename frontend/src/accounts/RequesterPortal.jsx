@@ -39,7 +39,7 @@ export default function RequesterPortal({ tab, user, setUser, navigate }) {
       <div className="form-row"><label className="field">Teléfono<input name="phone" defaultValue={profile?.phone || ''} maxLength={20} required/></label><label className="field">Comuna<input name="commune" defaultValue={profile?.commune || ''} maxLength={80}/></label></div>
       <label className="checkbox"><input name="adult" type="checkbox" required/>Confirmo que tengo 18 años o más.</label>
       <label className="checkbox"><input name="privacy" type="checkbox" required/>Acepto el tratamiento de mis datos para gestionar la cuenta y sus solicitudes.</label>
-      <p className="help">Entorno de desarrollo: usa datos ficticios. El aviso institucional definitivo está pendiente.</p>
+      <p className="help">Puedes revisar cómo tratamos tus datos en el aviso de privacidad.</p>
       {type !== 'person' && <label className="checkbox"><input name="authorized_representative" type="checkbox" required/>Estoy autorizado para representar a esta entidad.</label>}
       <button className="button primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar perfil de solicitante'}</button>
     </fieldset></form></section>;

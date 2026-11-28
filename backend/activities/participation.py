@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from accounts.models import AuditEvent, VolunteerProfile
 from accounts.portals import is_volunteer
 from volunteers.serializers import StrictSerializer
+from documents.models import VolunteerDocument
 from .models import Event, EventPosition, Notification, Participation
 from .services import Conflict, require_operator
 
@@ -38,7 +39,7 @@ def locked_profile(profile_id):
 def prepare_eligibility(profiles, positions):
     """Batch read-only matching data. Writes continue to use fresh locked queries."""
     prefetch_related_objects(positions, 'required_skills__required_documents', 'required_documents')
-    prefetch_related_objects(profiles, 'user__groups', 'declared_skills', 'documents',
+    prefetch_related_objects(profiles, 'user__groups', 'declared_skills', Prefetch('documents', queryset=VolunteerDocument.objects.select_related('document_type')),
                              'unavailable_dates', 'availability_slots',
                              Prefetch('participations', queryset=Participation.objects.filter(
                                  status='confirmed', assignment='primary', event__status='open').select_related('event'),
@@ -67,8 +68,7 @@ def eligibility(profile, position, prepared=False):
         documents.update(doc.pk for doc in skill.required_documents.all())
     latest_documents = {}
     if documents:
-        history = profile.documents.all() if prepared else profile.documents.filter(document_type_id__in=documents).only(
-            'document_type_id', 'version', 'status', 'expires_on', 'scan_status')
+        history = profile.documents.all() if prepared else profile.documents.filter(document_type_id__in=documents).select_related('document_type')
         for document in history:
             previous = latest_documents.get(document.document_type_id)
             if previous is None or previous.version < document.version:

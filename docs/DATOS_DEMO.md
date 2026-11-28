@@ -51,3 +51,7 @@ powershell -ExecutionPolicy Bypass -File scripts/manage-shared.ps1 seed_communit
 El comando exige DEBUG activo, comprueba colisiones de correos, usa una transacción y registra la procedencia del lote. En PostgreSQL serializa ejecuciones simultáneas con un bloqueo asesor. No modifica usuarios existentes ni reemplaza sus contraseñas. Los catálogos existentes se reutilizan y se agregan las categorías generales necesarias.
 
 La prueba aislada verifica repetición segura, conservación de cuentas, coherencia de requisitos/disponibilidad y límites de cupos. Después de cargar Supabase se comprobaron las cantidades y que no hubiera funciones con más titulares confirmados que su capacidad. Antes de utilizar la plataforma con datos operativos, retirar o separar este conjunto de demostración de forma controlada.
+
+## Retiro de elementos sintéticos de la entrega
+
+`./scripts/manage-shared.ps1 archive_demo_catalogs` muestra una vista previa. Con `--apply` desactiva las habilidades y tipos documentales con prefijo exacto DEMO — y cancela la convocatoria sintética identificada por UUID y por su lote de creación. La operación es repetible y auditable. Conserva todas las cuentas, archivos y relaciones históricas: no convierte certificados ficticios en acreditaciones reales. Las opciones DEMO archivadas no se ofrecen en el formulario de habilidades. El historial administrativo puede conservar sus nombres para trazabilidad. Los generadores y sus pruebas siguen disponibles solo para entornos de desarrollo.

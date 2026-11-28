@@ -11,6 +11,7 @@ class ReviewSerializer(StrictSerializer):
     decision = serializers.ChoiceField(choices=['validated', 'rejected'])
     observation = serializers.CharField(max_length=1000, allow_blank=True, default='')
     expires_on = serializers.DateField(allow_null=True, default=None)
+    safeguarding_confirmed = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         if attrs['decision'] == 'rejected' and not attrs['observation'].strip():

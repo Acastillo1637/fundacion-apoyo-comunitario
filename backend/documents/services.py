@@ -23,6 +23,9 @@ def document_data(document):
         'type_name': document.document_type.name, 'version': document.version,
         'status': document.effective_status, 'uploaded_at': document.uploaded_at,
         'reviewed_at': document.reviewed_at, 'observation': document.observation,
+        'reviewer_id': str(document.reviewer_id) if document.reviewer_id else None,
+        'requires_safeguarding_review': document.document_type.requires_safeguarding_review,
+        'safeguarding_confirmed': document.safeguarding_confirmed,
         'expires_on': document.expires_on, 'scan_status': document.scan_status,
         'size': document.size,
         'download_url': f'/api/documents/{document.pk}/download/',
@@ -38,19 +41,30 @@ def review_document(request, document_id, data):
     document = VolunteerDocument.objects.select_for_update().select_related('document_type').get(pk=document_id)
     if profile.user_id == request.user.pk:
         raise PermissionDenied('No puedes revisar tus propios documentos.')
-    if document.status != VolunteerDocument.Status.PENDING:
+    if document.status != VolunteerDocument.Status.PENDING and not (
+            document.status == VolunteerDocument.Status.VALIDATED and
+            document.document_type.requires_safeguarding_review and not document.safeguarding_confirmed):
         raise ValidationError('Esta versión ya fue revisada. La decisión no puede sobrescribirse.')
     if VolunteerDocument.objects.filter(profile=profile, document_type=document.document_type, version__gt=document.version).exists():
         raise ValidationError('Hay una versión más reciente. Revisa el archivo nuevo.')
     from django.conf import settings
     if not settings.DEBUG and document.scan_status != 'clean':
         raise ValidationError('Se requiere análisis antimalware antes de revisar este documento.')
+    safeguarding = document.document_type.requires_safeguarding_review
+    if safeguarding and data['decision'] == 'validated':
+        if not data.get('safeguarding_confirmed'):
+            raise ValidationError({'safeguarding_confirmed': 'Confirma la revisión de identidad, antecedentes e inhabilidades antes de aprobar.'})
+        if not data['expires_on'] or data['expires_on'] <= timezone.localdate():
+            raise ValidationError({'expires_on': 'Indica hasta qué fecha futura se deberá renovar esta revisión de resguardo.'})
+        if len(data['observation'].strip()) < 8:
+            raise ValidationError({'observation': 'Registra una conclusión de revisión sin detallar información penal sensible.'})
     document.status = data['decision']
     document.observation = data['observation']
     document.expires_on = data['expires_on']
     document.reviewer = request.user
     document.reviewed_at = timezone.now()
-    document.save(update_fields=['status', 'observation', 'expires_on', 'reviewer', 'reviewed_at'])
+    document.safeguarding_confirmed = safeguarding and data['decision'] == 'validated' and data.get('safeguarding_confirmed', False)
+    document.save(update_fields=['status', 'observation', 'expires_on', 'reviewer', 'reviewed_at', 'safeguarding_confirmed'])
     AuditEvent.objects.create(actor=request.user, action=f'document.{document.status}', resource=f'document:{document.pk}')
     from activities.models import Notification
     decision = 'aprobado' if document.status == VolunteerDocument.Status.VALIDATED else 'observado'

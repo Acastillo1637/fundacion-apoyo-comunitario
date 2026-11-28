@@ -130,7 +130,7 @@ def summary(request):
         if request.user.has_perm('documents.review_volunteerdocument'):
             from django.db.models import OuterRef, Exists
             newer = VolunteerDocument.objects.filter(profile_id=OuterRef('profile_id'), document_type_id=OuterRef('document_type_id'), version__gt=OuterRef('version'))
-            rows = list(VolunteerDocument.objects.filter(status='pending').exclude(profile__user=request.user).annotate(newer=Exists(newer)).filter(newer=False).select_related('profile__user', 'document_type').annotate(total=Window(Count('pk')))[:3])
+            rows = list(VolunteerDocument.objects.filter(Q(status='pending') | Q(status='validated', document_type__requires_safeguarding_review=True, safeguarding_confirmed=False)).exclude(profile__user=request.user).annotate(newer=Exists(newer)).filter(newer=False).select_related('profile__user', 'document_type').annotate(total=Window(Count('pk')))[:3])
             result['reviews'] = [{'id': str(row.pk), 'type_name': row.document_type.name, 'name': row.profile.user.get_full_name(), 'uploaded_at': row.uploaded_at} for row in rows]
             if portal == 'operations':
                 result['metrics'][-1]['value'] = rows[0].total if rows else 0
@@ -147,10 +147,12 @@ class CatalogSerializer(StrictSerializer):
     description = serializers.CharField(max_length=500, allow_blank=True, default='')
     is_active = serializers.BooleanField()
     required_documents = serializers.ListField(child=serializers.IntegerField(min_value=1), default=list, max_length=50)
+    kind = serializers.ChoiceField(choices=Profession.Kind.choices, required=False)
 
 
 def catalog_data(item):
     return {'id': item.pk, 'name': item.name, 'description': item.description, 'is_active': item.is_active,
+            **({'kind': item.kind} if isinstance(item, Profession) else {}),
             'required_documents': [document.pk for document in item.required_documents.all()] if hasattr(item, 'required_documents') else []}
 
 
@@ -174,6 +176,8 @@ def catalogs(request, kind):
     if (request.method == 'POST' and identifier is not None) or (request.method == 'PUT' and identifier is None):
         raise ValidationError('Envía un identificador solo al editar una entrada existente.')
     document_ids = values.pop('required_documents')
+    if kind != 'professions' and 'kind' in values:
+        raise ValidationError('Solo las profesiones tienen tipo de formación.')
     if kind == 'documents' and document_ids:
         raise ValidationError('Un tipo documental no admite requisitos.')
     if len(set(document_ids)) != len(document_ids) or DocumentType.objects.filter(pk__in=document_ids).count() != len(document_ids):
@@ -181,8 +185,23 @@ def catalogs(request, kind):
     try:
         with transaction.atomic():
             item = get_object_or_404(model.objects.select_for_update(), pk=identifier) if request.method == 'PUT' else model()
+            from volunteers.signals import DEGREE_NAME, SKILL_DOCUMENTS
+            protected_documents = {DEGREE_NAME.casefold()} | {
+                name.casefold() for entries in SKILL_DOCUMENTS.values() for name, _ in entries}
+            old_name = item.name.strip().casefold()
+            if kind == 'documents' and (old_name in protected_documents or values['name'].strip().casefold() in protected_documents):
+                if (identifier and old_name != values['name'].strip().casefold()) or not values['is_active']:
+                    raise ValidationError('Este documento pertenece a una regla obligatoria y no se puede renombrar ni desactivar.')
+            if kind == 'skills' and old_name in SKILL_DOCUMENTS and old_name != values['name'].strip().casefold():
+                raise ValidationError('Esta habilidad tiene una regla de resguardo. Desactívala si ya no se utiliza y crea otra entrada para una habilidad distinta.')
             for key, value in values.items():
                 setattr(item, key, value)
+            if kind == 'professions':
+                if item.name.strip().casefold() == 'otro oficio':
+                    item.name = 'Otro oficio'
+                    item.kind = Profession.Kind.OTHER
+                elif item.kind == Profession.Kind.OTHER:
+                    raise ValidationError('La opción Otro oficio no se puede convertir en una carrera. Crea una entrada nueva.')
             item.save()
             if kind != 'documents':
                 item.required_documents.set(document_ids)
@@ -261,6 +280,7 @@ def volunteer_detail(request, profile_id):
               'commune': profile.commune, **restriction_data(profile),
               'skills': list(profile.declared_skills.values_list('skill__name', flat=True)),
               'professions': list(profile.declared_professions.values_list('profession__name', flat=True)),
+              'other_trade': profile.other_trade, 'without_university_degree': profile.without_university_degree,
               'attended_events': attended.count(), 'recorded_hours': round(hours, 1),
               'availability': list(profile.availability_slots.values('weekday', 'start_time', 'end_time')),
               'participations': [{'title': item.event.title, 'position': item.position.name, 'status': item.status, 'assignment': item.assignment,

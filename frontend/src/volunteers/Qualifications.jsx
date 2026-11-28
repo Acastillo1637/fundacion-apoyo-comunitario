@@ -50,6 +50,8 @@ export default function Qualifications() {
           revision: selection.revision,
           skills: selection.skills,
           professions: selection.professions,
+          other_trade: selection.other_trade || '',
+          without_university_degree: !!selection.without_university_degree,
         }),
       });
       setSelection(result);
@@ -76,7 +78,10 @@ export default function Qualifications() {
     {selection && catalogs && <form onSubmit={save}>
       <fieldset disabled={busy} className="form-fieldset">
         <CatalogChoices title="Habilidades" icon={<Award size={19}/>} group="skills" entries={catalogs.skills} selected={selection.skills} onToggle={toggle}/>
-        <CatalogChoices title="Profesiones y oficios" icon={<BookOpen size={19}/>} group="professions" entries={catalogs.professions} selected={selection.professions} onToggle={toggle}/>
+        <label className="checkbox"><input type="checkbox" checked={!!selection.without_university_degree} onChange={event => { setMessage(''); setSelection({ ...selection, without_university_degree: event.target.checked }); }}/>Sin carrera universitaria</label>
+        <p className="help">Puedes aportar tus habilidades, un título técnico o un oficio. No necesitas una carrera universitaria para participar.</p>
+        <CatalogChoices title="Profesiones y oficios" icon={<BookOpen size={19}/>} group="professions" entries={[...catalogs.professions].sort((a, b) => Number(a.kind === 'other') - Number(b.kind === 'other') || a.name.localeCompare(b.name, 'es'))} selected={selection.professions} onToggle={toggle}/>
+        {catalogs.professions.some(entry => entry.kind === 'other' && selection.professions.includes(entry.id)) && <label className="field">¿Cuál es tu oficio?<input name="other_trade" value={selection.other_trade || ''} maxLength={100} required placeholder="Por ejemplo: carpintería o jardinería" onChange={event => setSelection({ ...selection, other_trade: event.target.value })}/></label>}
         <div className="form-actions"><span className="help">Guardar actualiza tu declaración, no su validación documental.</span><button className="button primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar selección'}<Check size={17}/></button></div>
       </fieldset>
     </form>}

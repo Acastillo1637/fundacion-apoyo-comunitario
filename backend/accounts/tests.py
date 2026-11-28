@@ -52,7 +52,7 @@ class AccountTests(TestCase):
     def test_only_own_profile_can_be_modified(self):
         other = User.objects.create_user('otro@example.org', 'Other-long-password-349!', first_name='Otro')
         self.client.force_login(self.user)
-        response = self.client.patch('/api/profile/', json.dumps({'first_name': 'Ana nueva', 'last_name': 'Pérez', 'phone': '+56 9 1234 5678', 'commune': 'Maipú'}), content_type='application/json')
+        response = self.client.patch('/api/profile/', json.dumps({'first_name': 'Ana nueva', 'last_name': 'Pérez', 'phone': '+56912345678', 'commune': 'Maipú'}), content_type='application/json')
         self.assertEqual(response.status_code, 200)
         other.refresh_from_db()
         self.assertEqual(other.first_name, 'Otro')

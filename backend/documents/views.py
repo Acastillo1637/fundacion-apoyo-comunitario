@@ -107,7 +107,8 @@ def review_queue(request):
         page = max(1, int(request.query_params.get('page', '1')))
     except ValueError:
         raise ValidationError('Página no válida.')
-    pending = VolunteerDocument.objects.filter(status='pending').exclude(profile__user=request.user).select_related('document_type', 'profile__user')
+    pending = VolunteerDocument.objects.filter(Q(status='pending') | Q(status='validated',
+        document_type__requires_safeguarding_review=True, safeguarding_confirmed=False)).exclude(profile__user=request.user).select_related('document_type', 'profile__user')
     # Una versión antigua no puede acreditar el archivo más reciente.
     from django.db.models import Exists, OuterRef
     newer = VolunteerDocument.objects.filter(profile_id=OuterRef('profile_id'), document_type_id=OuterRef('document_type_id'), version__gt=OuterRef('version'))

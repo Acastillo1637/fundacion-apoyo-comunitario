@@ -20,6 +20,7 @@ class CatalogEntry(models.Model):
 
 
 class DocumentType(CatalogEntry):
+    requires_safeguarding_review = models.BooleanField(default=False)
     class Meta(CatalogEntry.Meta):
         verbose_name = 'tipo documental'
         verbose_name_plural = 'tipos documentales'
@@ -34,11 +35,28 @@ class Skill(CatalogEntry):
 
 
 class Profession(CatalogEntry):
+    class Kind(models.TextChoices):
+        PROFESSIONAL = 'professional', 'Carrera profesional'
+        TECHNICAL = 'technical', 'Título técnico'
+        OTHER = 'other', 'Otro oficio declarado'
+
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.PROFESSIONAL)
     required_documents = models.ManyToManyField(DocumentType, blank=True, verbose_name='requisitos documentales')
+
+    def save(self, *args, **kwargs):
+        if self.name.strip().casefold() == 'otro oficio':
+            self.name = 'Otro oficio'
+            self.kind = self.Kind.OTHER
+        super().save(*args, **kwargs)
 
     class Meta(CatalogEntry.Meta):
         verbose_name = 'profesión u oficio'
         verbose_name_plural = 'profesiones y oficios'
+        constraints = CatalogEntry.Meta.constraints + [
+            models.CheckConstraint(condition=(models.Q(kind='other', name__iexact='Otro oficio') |
+                models.Q(kind__in=['professional', 'technical']) & ~models.Q(name__iexact='Otro oficio')),
+                name='profession_kind_consistent'),
+        ]
 
 
 class VolunteerSkill(models.Model):

@@ -72,3 +72,11 @@ Actualización 15-11-2026: al desactivar “Mostrar solo candidatos elegibles”
 ## Navegación y seguridad de cuenta
 
 `GET /api/security/` consulta exclusivamente el estado de la cuenta propia. `POST /api/security/action/` gestiona contraseña, solicitud/confirmación de correo, TOTP y recuperación con credenciales actuales y CSRF. No acepta un identificador de otro usuario; los detalles y acciones están en [Navegación y seguridad](NAVEGACION_SEGURIDAD.md). Las rutas React se sirven con fallback a `index.html`, manteniendo `/api`, `/accounts`, `/admin` y `/static` para Django/estáticos.
+
+## Datos de perfil y resguardo documental
+
+- `GET /api/communes/`: sesión requerida; devuelve `{communes: [...]}` desde el catálogo local.
+- `PATCH /api/profile/`: nombre, apellido, teléfono y comuna obligatorios. Teléfono hasta 12 caracteres incluido +, sin espacios; comuna normalizada contra el catálogo. La misma validación de comuna protege la ubicación manual y por domicilio.
+- `GET/PUT /api/volunteer/qualifications/`: incorpora `other_trade` (hasta 100 caracteres) y `without_university_degree` (booleano), usando la revisión existente. Otro oficio exige texto; sin carrera universitaria es incompatible con carreras profesionales y admite títulos técnicos.
+- Los catálogos de profesiones incluyen `kind`: `professional`, `technical` u `other`. Las dos primeras categorías conservan obligatoriamente el requisito de respaldo de título.
+- La respuesta documental incluye `requires_safeguarding_review`, `safeguarding_confirmed` y `reviewer_id`. Para aprobar un tipo de resguardo, `POST /api/documents/{id}/review/` exige `safeguarding_confirmed: true`, conclusión de al menos ocho caracteres y fecha futura de renovación. Las decisiones negativas mantienen la observación obligatoria. Se conservan los permisos y la prohibición de revisar documentos propios.

@@ -49,7 +49,7 @@ def whatsapp_link(profile, event=None):
 
 
 class PreferenceSerializer(StrictSerializer):
-    phone = serializers.CharField(max_length=20, allow_blank=True)
+    phone = serializers.CharField(max_length=12)
     whatsapp = serializers.BooleanField()
     revision = serializers.IntegerField(min_value=0)
 
@@ -70,6 +70,8 @@ def preferences(request):
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
     phone = '+'+normalize_phone(values['phone']) if values['phone'] else ''
+    if len(phone) > 12:
+        raise ValidationError({'phone': 'El teléfono debe tener como máximo 12 caracteres, incluido el signo +.'})
     if values['whatsapp'] and not phone:
         raise ValidationError('Indica un teléfono para autorizar WhatsApp.')
     from accounts.models import User

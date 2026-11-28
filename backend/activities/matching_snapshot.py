@@ -58,7 +58,8 @@ def candidates(position):
     slots = AvailabilitySlot.objects.filter(profile_id=OuterRef('pk'), weekday=start.weekday(), start_time__lte=start.time(), end_time__gte=end.time())
     history = VolunteerDocument.objects.filter(profile_id=OuterRef('pk'), document_type_id__in=document_ids)
     history = history.order_by('document_type_id', '-version').distinct('document_type_id').annotate(payload=JSONObject(
-        type='document_type_id', version='version', status='status', expires='expires_on', scan='scan_status')).values('payload')
+        type='document_type_id', version='version', status='status', expires='expires_on', scan='scan_status',
+        safeguarding='safeguarding_confirmed', needs_safeguarding='document_type__requires_safeguarding_review')).values('payload')
     profiles = list(VolunteerProfile.objects.filter(user__is_active=True, user__groups__name='Voluntario').select_related('user').annotate(
         relevant_experience=Coalesce(Subquery(experience), 0),
         matching_skills=ArraySubquery(VolunteerSkill.objects.filter(profile_id=OuterRef('pk')).order_by().values('skill_id')),
@@ -71,7 +72,8 @@ def candidates(position):
     for profile in profiles:
         # Membership follows the active-user + exact role filter above, not client input.
         profile.user._prefetched_objects_cache = {'groups': [Group(name='Voluntario')]}
-        docs = [VolunteerDocument(profile_id=profile.pk, document_type_id=row['type'], version=row['version'],
+        docs = [VolunteerDocument(profile_id=profile.pk, document_type=DocumentType(pk=row['type'],
+            requires_safeguarding_review=row['needs_safeguarding']), version=row['version'], safeguarding_confirmed=row['safeguarding'],
             status=row['status'], expires_on=date.fromisoformat(row['expires']) if row['expires'] else None,
             scan_status=row['scan']) for row in (profile.matching_docs or [])]
         profile._prefetched_objects_cache = {

@@ -14,6 +14,8 @@ class QualificationsSerializer(StrictSerializer):
     revision = serializers.IntegerField(min_value=0)
     skills = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=50)
     professions = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=20)
+    other_trade = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    without_university_degree = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
         for name in ['skills', 'professions']:

@@ -231,7 +231,8 @@ class DocumentTests(TestCase):
         profession = Profession.objects.create(name='Profesión de prueba')
         profession.required_documents.add(self.type)
         VolunteerProfession.objects.create(profile=self.profile, profession=profession)
-        self.assertEqual(self.client.get('/api/documents/').json()['required_type_ids'], [self.type.pk])
+        self.assertCountEqual(self.client.get('/api/documents/').json()['required_type_ids'],
+                              list(profession.required_documents.values_list('pk', flat=True)))
 
     @override_settings(DOCUMENT_USER_QUOTA_BYTES=1)
     def test_quota_rejection_leaves_no_stored_file(self):
