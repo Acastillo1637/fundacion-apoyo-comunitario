@@ -24,7 +24,7 @@ const user={id:'demo',first_name:'Persona',last_name:'Prueba',email:'demo@exampl
 async function renderMenu(props={}){
   if(root)await act(()=>root.unmount());
   root=createRoot(host);
-  await act(()=>root.render(React.createElement(AccountMenu,{user,role:'Voluntariado',...props})));
+  await act(()=>root.render(React.createElement(AccountMenu,{user,role:'Voluntario',...props})));
 }
 async function event(node,type,values={}){
   await act(()=>{

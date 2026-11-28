@@ -35,7 +35,7 @@ const tabs = [
   { id: 'participations', label: 'Mis participaciones', icon: Users },
 ];
 
-const portalNames = { administration: 'Administración general', operations: 'Secretaría y operaciones', volunteer: 'Voluntariado', requester: 'Solicitante de apoyo', account:'Cuenta' };
+const portalNames = { administration: 'Administración general', operations: 'Secretaría y operaciones', volunteer: 'Voluntario', requester: 'Solicitante de apoyo', account:'Cuenta' };
 
 export default function Dashboard({ user, setUser, initialPortal, initialTab, foundation = 'Fundación Apoyo Comunitario', onPublic, onSignOut, route, onRoute, confirmationToken, clearConfirmationURL }) {
   const portals = user.available_portals || [];
