@@ -76,3 +76,5 @@ La interfaz oculta el contenido privado mientras se ejecuta `POST /api/logout/`.
 Frontend: `App.jsx`, `main.jsx`, `routing.js`, `volunteers/Dashboard.jsx`, `accounts/AccountMenu.jsx`, `accounts/AccountSecurity.jsx`, `accounts/security.css`, `accounts/Workspace.jsx`, `api.js`, pruebas y locks de npm. Backend: `accounts/account_security.py`, `accounts/mfa_adapter.py`, `accounts/models.py`, `accounts/urls.py`, `accounts/views.py`, migración 0010, pruebas y `config/settings.py`/`config/urls.py`. Se mantiene el resto de módulos.
 
 Referencias primarias: [React Router 7](https://reactrouter.com/7.18.5/start/declarative/installation), [configuración MFA de allauth](https://docs.allauth.org/en/latest/mfa/configuration.html) y código de allauth 65.21.1 instalado en el entorno. No se usa una API MFA o proveedor de identidad diferente.
+
+Las tarjetas de Ayuda y coordinación son enlaces de navegación completos, operables con teclado y con una URL real. En el espacio de voluntario llevan a Mis participaciones, Mis documentos y Seguridad de cuenta. Para los demás perfiles solo se ofrecen destinos admitidos por sus permisos.

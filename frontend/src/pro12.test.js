@@ -43,7 +43,7 @@ test('el aviso no inventa conservación y explica la bandeja para todos los admi
 });
 test('la bandeja propia no muestra controles de revisión administrativa ni eliminación automática', () => {
   const html = render(PrivacyRequests, {admin:false});
-  assert.match(html, /Descargar mis datos/);
+  assert.doesNotMatch(html, /Descargar mis datos|privacy\/export/);
   assert.match(html, /no borra automáticamente/);
   assert.doesNotMatch(html, /Rechazar con motivo/);
 });

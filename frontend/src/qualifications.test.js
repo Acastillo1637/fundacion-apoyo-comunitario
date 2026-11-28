@@ -6,7 +6,7 @@ import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 import { readFile } from 'node:fs/promises';
 
-let vite, dom, root, Qualifications, Auth, Preferences, originalFetch;
+let vite, dom, root, Qualifications, Auth, Preferences, PhoneField, originalFetch;
 before(async () => {
   dom = new JSDOM('<div id="root"></div>');
   globalThis.window = dom.window; globalThis.document = dom.window.document;
@@ -16,6 +16,7 @@ before(async () => {
   Qualifications = (await vite.ssrLoadModule('/src/volunteers/Qualifications.jsx')).default;
   Auth = (await vite.ssrLoadModule('/src/design/Auth.jsx')).default;
   Preferences = (await vite.ssrLoadModule('/src/activities/Contacts.jsx')).CommunicationPreferences;
+  PhoneField = (await vite.ssrLoadModule('/src/volunteers/WhatsAppPhoneField.jsx')).default;
 });
 after(async () => { if (root) await act(() => root.unmount()); globalThis.fetch = originalFetch; await vite?.close(); dom?.window.close(); });
 test('Otro oficio queda al final, exige descripción y conserva Sin carrera universitaria al guardar', async () => {
@@ -84,4 +85,36 @@ test('comunicación muestra el celular chileno sin prefijo y exige autorización
   assert.equal(consent.required, true); assert.equal(consent.checked, false);
   assert.equal(consent.checkValidity(), false);
   assert.doesNotMatch(document.querySelector('#root').textContent, /Teléfono internacional|Es opcional/);
+});
+
+test('celular elimina letras y símbolos al escribir o pegar y limita a nueve dígitos', async () => {
+  await act(() => root.unmount());
+  root = createRoot(document.querySelector('#root'));
+  await act(async () => root.render(React.createElement(PhoneField)));
+  const input = document.querySelector('input[name="phone"]');
+  await act(async () => {
+    input.value = '9a1+2-3';
+    input.dispatchEvent(new dom.window.Event('input', {bubbles:true}));
+  });
+  assert.equal(input.value, '9123');
+  input.select();
+  const paste = new dom.window.Event('paste', {bubbles:true,cancelable:true});
+  Object.defineProperty(paste, 'clipboardData', {value:{getData:()=>'a9 123-456.789!'}});
+  await act(async () => input.dispatchEvent(paste));
+  assert.equal(input.value, '912345678');
+  assert.equal(paste.defaultPrevented, true);
+});
+
+
+test('celular mantiene el estado controlado limpio al escribir y pegar', async()=>{
+  await act(()=>root.unmount());root=createRoot(document.querySelector('#root'));
+  function Controlled(){const [phone,setPhone]=React.useState('');return React.createElement(PhoneField,{value:phone,onChange:event=>setPhone(event.target.value)});}
+  await act(()=>root.render(React.createElement(Controlled)));
+  const input=document.querySelector('input[name="phone"]');
+  await act(()=>{input.value='9a1!2';input.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});
+  assert.equal(input.value,'912');
+  input.select();const paste=new dom.window.Event('paste',{bubbles:true,cancelable:true});
+  Object.defineProperty(paste,'clipboardData',{value:{getData:()=>'+9 abc 12345678'}});
+  await act(()=>input.dispatchEvent(paste));
+  assert.equal(input.value,'912345678');
 });

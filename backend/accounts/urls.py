@@ -18,7 +18,7 @@ urlpatterns = [
     path('security/action/', account_security.action),
     path('privacy/requests/', privacy.requests),
     path('privacy/requests/<int:request_id>/review/', privacy.review),
-    path('privacy/export/', privacy.export_own),
+    path('management/volunteers/export/', privacy.export_volunteers),
     path('health/live/', health.live),
     path('health/ready/', health.ready),
     path('volunteer/location/', geography.own_location),

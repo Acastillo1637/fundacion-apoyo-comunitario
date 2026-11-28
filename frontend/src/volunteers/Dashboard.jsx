@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, Building2, CircleHelp, LogOut, Menu, Network, Search, ArrowRight, Award, CalendarDays, Check, ChevronRight, Clock3, FileCheck2, HeartHandshake, LayoutDashboard, MapPin, Settings2, UserRound, Users } from 'lucide-react';
 import { api, readSnapshot } from '../api';
+import { sectionURL } from '../routing';
 import Qualifications from './Qualifications';
 import Availability from './Availability';
 import CommuneField from './CommuneField';
@@ -89,7 +90,7 @@ export default function Dashboard({ user, setUser, initialPortal, initialTab, fo
   </aside><header className="workspace-topbar"><button className="icon-btn workspace-menu" aria-label="Abrir menú del espacio" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}><Menu size={22}/></button><span className="foundation-chip"><Building2 size={17}/>{foundation}</span><form className="workspace-search" onSubmit={event => { event.preventDefault(); const match = navigation.find(item => item.label.toLocaleLowerCase('es').includes(sectionQuery.toLocaleLowerCase('es'))); if (match) { navigate(match.id); setSectionQuery(''); } }}><Search size={16}/><input aria-label="Buscar sección" list="workspace-sections" placeholder="Ir a una sección…" value={sectionQuery} onChange={event => setSectionQuery(event.target.value)}/><datalist id="workspace-sections">{navigation.map(item => <option key={item.id} value={item.label}/>)}</datalist><button aria-label="Ir a la sección" type="submit"><ArrowRight size={15}/></button></form><div className="workspace-top-actions"><button className="icon-btn notification-button" aria-label={`Notificaciones: ${unread} sin leer`} onClick={() => navigate('notifications')}><Bell size={20}/>{unread > 0 && <span>{unread > 99 ? '99+' : unread}</span>}</button><button className="icon-btn" aria-label="Ayuda" onClick={() => navigate('help')}><CircleHelp size={20}/></button><AccountMenu user={user} role={portalNames[portal]} onProfile={() => navigate(portal === 'volunteer' ? (user.has_volunteer_profile ? 'profile' : 'onboarding') : portal === 'requester' ? 'requester-profile' : 'staff-profile')} onSecurity={()=>navigate('security')} onSignOut={onSignOut}/></div></header><section className="dashboard">
     {!['staff-overview', 'overview'].includes(tab) && <PageHeading eyebrow={portalNames[portal]} title={tab==='security'?'Seguridad de cuenta':navigation.find(item => item.id === tab)?.label || 'Mi espacio'} description={tab === 'matching' ? 'Encuentra personas con las habilidades, documentos y disponibilidad que necesita cada actividad.' : undefined}/>}
     {tab==='security'&&<AccountSecurity onUserChanged={setUser} confirmationToken={confirmationToken} clearConfirmationURL={clearConfirmationURL}/>}
-    {tab === 'help' && <section className="panel"><h2>Tu equipo y tu comunidad, en un mismo lugar</h2><p>Usa el menú lateral para revisar tus tareas. Si tienes varios roles, cambia de espacio para acceder a sus funciones.</p><div className="stitch-help-grid"><article><CalendarDays/><h3>Actividades e invitaciones</h3><p>Consulta fechas y requisitos. Un cupo queda confirmado cuando tu participación cambia a Confirmado.</p></article><article><FileCheck2/><h3>Documentos privados</h3><p>Carga tus antecedentes y consulta las observaciones del equipo autorizado.</p></article><article><Settings2/><h3>Acceso a tu cuenta</h3><p>Puedes recuperar tu contraseña desde Iniciar sesión y configurar un segundo factor en Seguridad de cuenta.</p></article></div></section>}
+    {tab === 'help' && <HelpNavigation user={user} portal={portal} navigate={navigate}/>}
     {portal === 'requester' && !['notifications', 'help','privacy-requests','security'].includes(tab) && <RequesterPortal key={portal} tab={tab} user={user} setUser={setUser} navigate={navigate}/>}
     {tab === 'staff-overview' && <OperationalOverview portal={portal} navigate={navigate} user={user}/>}
     {tab === 'staff-profile' && <StaffProfile user={user} setUser={setUser}/>}
@@ -153,3 +154,23 @@ function Profile({ setUser }) {
 }
 
 function ShieldIcon() { return <Check size={13}/>; }
+
+export function HelpNavigation({ user, portal, navigate }) {
+  const cards = [];
+  if (portal === 'volunteer' && user.has_volunteer_profile) {
+    cards.push({ tab:'participations', title:'Actividades e invitaciones', text:'Consulta fechas, requisitos y el estado de tus participaciones.', Icon:CalendarDays });
+    cards.push({ tab:'documents', title:'Documentos privados', text:'Carga tus antecedentes y consulta las observaciones del equipo autorizado.', Icon:FileCheck2 });
+  } else if (portal === 'volunteer') {
+    cards.push({ tab:'onboarding', title:'Completa tu incorporación', text:'Confirma tus datos para habilitar tu perfil de voluntario.', Icon:UserRound });
+  } else if (portal === 'requester' && user.has_requester_profile) {
+    cards.push({ tab:'my-requests', title:'Mis solicitudes', text:'Consulta el estado de tus solicitudes de apoyo.', Icon:CalendarDays });
+  } else if (portal === 'operations') {
+    if (user.can_manage_activities) cards.push({ tab:'participants', title:'Actividades e invitaciones', text:'Gestiona participantes, invitaciones y asistencia.', Icon:CalendarDays });
+    if (user.can_review_documents) cards.push({ tab:'document-review', title:'Revisión documental', text:'Revisa los documentos pendientes y registra tu decisión.', Icon:FileCheck2 });
+  } else if (portal === 'administration') {
+    if (user.can_manage_users) cards.push({ tab:'users', title:'Administrar usuarios', text:'Gestiona cuentas, perfiles y permisos.', Icon:Users });
+    if (user.can_manage_catalogs) cards.push({ tab:'catalogs', title:'Catálogos y documentos', text:'Consulta los tipos documentales y requisitos de la fundación.', Icon:FileCheck2 });
+  }
+  cards.push({ tab:'security', title:'Acceso a tu cuenta', text:'Administra tu contraseña y la seguridad de tu cuenta.', Icon:Settings2 });
+  return <section className="panel"><h2>Tu equipo y tu comunidad, en un mismo lugar</h2><p>Selecciona una tarjeta para ir a la sección correspondiente.</p><div className="stitch-help-grid">{cards.map(({ tab, title, text, Icon }) => <a key={tab} className="help-card" href={sectionURL(tab, portal)} onClick={event => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(tab); } }}><Icon/><h3>{title}</h3><p>{text}</p><span className="text-button">Ir a la sección <ArrowRight size={15}/></span></a>)}</div></section>;
+}

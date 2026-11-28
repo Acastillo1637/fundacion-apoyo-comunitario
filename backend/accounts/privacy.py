@@ -1,5 +1,7 @@
 from django.db import transaction
-from django.http import JsonResponse
+import csv
+
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import never_cache
 from rest_framework import serializers
@@ -10,7 +12,7 @@ from rest_framework.response import Response
 from activities.models import Notification
 from activities.services import Conflict
 from volunteers.serializers import StrictSerializer
-from .models import AuditEvent, PrivacyRequest, PrivacyRequestChange, RequesterProfile, User, VolunteerProfile
+from .models import AuditEvent, PrivacyRequest, PrivacyRequestChange, User, VolunteerProfile
 from .security import portal_authenticated
 from .views import limited
 
@@ -88,30 +90,24 @@ def review(request, request_id):
 
 @never_cache
 @api_view(['GET'])
-def export_own(request):
-    from documents.services import document_data
-    from activities.participation import data as participation_data
-    user=request.user
-    result={'account':{'email':user.email,'first_name':user.first_name,'last_name':user.last_name,'is_active':user.is_active,
-                       'created_at':user.date_joined},'volunteer':None,'requester':None}
-    profile=VolunteerProfile.objects.filter(user=user).first()
-    if profile:
-        result['volunteer']={'phone':profile.phone,'commune':profile.commune,'sector':profile.sector,
-            'reference_latitude':profile.reference_latitude,'reference_longitude':profile.reference_longitude,
-            'privacy_accepted_at':profile.privacy_accepted_at,'whatsapp_opt_in_at':profile.whatsapp_opt_in_at,
-            'skills':list(profile.declared_skills.values_list('skill__name',flat=True)),
-            'professions':list(profile.declared_professions.values_list('profession__name',flat=True)),
-            'availability':list(profile.availability_slots.values('weekday','start_time','end_time')),
-            'unavailable_dates':list(profile.unavailable_dates.values_list('date',flat=True)),
-            'documents':[document_data(doc) for doc in profile.documents.select_related('document_type')],
-            'participations':[participation_data(row) for row in profile.participations.select_related('event','position')]}
-    requester=RequesterProfile.objects.filter(user=user).first()
-    if requester:
-        result['requester']={'type':requester.requester_type,'organization':requester.organization,'phone':requester.phone,
-            'commune':requester.commune,'privacy_accepted_at':requester.privacy_accepted_at,
-            'requests':list(requester.requests.values('id','status','description','starts_at','ends_at','commune','created_at'))}
-    AuditEvent.objects.create(actor=user,action='privacy.export.downloaded',resource=f'user:{user.pk}')
-    response=JsonResponse(result,json_dumps_params={'ensure_ascii':False})
-    response['Content-Disposition']='attachment; filename="mis-datos-fundacion.json"'
-    response['Cache-Control']='private, no-store'
+def export_volunteers(request):
+    require_manager(request)
+    if limited(request, 'volunteers-export', 5, identity=str(request.user.pk)):
+        return Response({'detail': 'Demasiadas exportaciones. Intenta más tarde.'}, status=429)
+    response = HttpResponse('\ufeff', content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="voluntarios.csv"'
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['Nombre', 'Apellido', 'Correo', 'Celular', 'Comuna', 'Cuenta activa', 'WhatsApp autorizado', 'Fecha de registro'])
+    def safe_cell(value):
+        text = str(value or '')
+        return "'" + text if text.lstrip().startswith(('=', '+', '-', '@')) or text.startswith(('\t', '\r', '\n')) else text
+    rows = VolunteerProfile.objects.filter(user__groups__name='Voluntario').select_related('user').order_by('pk')
+    for profile in rows.iterator(chunk_size=1000):
+        user = profile.user
+        writer.writerow([safe_cell(value) for value in [user.first_name, user.last_name, user.email,
+            profile.phone, profile.commune, 'Sí' if user.is_active else 'No',
+            'Sí' if profile.whatsapp_opt_in_at else 'No', user.date_joined.isoformat()]])
+    AuditEvent.objects.create(actor=request.user, action='privacy.volunteers.exported', resource='volunteers:csv')
     return response

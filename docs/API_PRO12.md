@@ -21,7 +21,7 @@ WhatsApp, 25-11-2026: contactos y candidatos autorizados incluyen `delivery`: `o
 | POST `operations/volunteers/{id}/whatsapp/` | Coordinación; contacto general consentido, sin actividad; solo intento. |
 | GET/POST `privacy/requests/` | Titular; `scope=mine` por defecto. `scope=all` solo administración. |
 | POST `privacy/requests/{id}/review/` | Administración; respuesta y transición con revisión. |
-| GET `privacy/export/` | Descarga JSON del titular; sin contraseñas ni secretos MFA. |
+| GET `management/volunteers/export/` | Administración de cuentas con sesión vigente: base de voluntarios en CSV para Excel, sin contraseñas, archivos ni coordenadas. Auditoría y límite de exportaciones. |
 | GET/HEAD `health/live/` | Público; proceso disponible, sin consulta de base. |
 | GET/HEAD `health/ready/` | Público; consulta mínima de base, 503 genérico si falla. |
 

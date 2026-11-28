@@ -5,7 +5,7 @@ from activities.models import Notification, MatchingPolicy
 from activities.test_participation import authenticate_operator
 from volunteers.tests import make_profile
 from .checks import production_readiness
-from .models import PrivacyRequest, PrivacyRequestChange, User
+from .models import AuditEvent, PrivacyRequest, PrivacyRequestChange, User
 
 
 class PrivacyTests(TestCase):
@@ -50,13 +50,38 @@ class PrivacyTests(TestCase):
         self.assertTrue(PrivacyRequestChange.objects.filter(request_id=item['id'],actor=self.admins[0]).exists())
         self.assertTrue(Notification.objects.filter(user=self.owner.user,target='privacy-requests').exists())
 
-    def test_own_export_ignores_other_user_id_and_never_includes_password(self):
-        response=self.client.get(f'/api/privacy/export/?user_id={self.other.user_id}')
-        self.assertEqual(response.status_code,200,response.content)
-        self.assertEqual(response.json()['account']['email'],self.owner.user.email)
-        self.assertNotContains(response,self.other.user.email)
-        self.assertNotIn('password',response.content.decode())
-        self.assertIn('no-store',response['Cache-Control'])
+    def test_only_administration_can_export_volunteers(self):
+        url = '/api/management/volunteers/export/'
+        self.assertEqual(self.client.get('/api/privacy/export/').status_code, 404)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(Client().get(url).status_code, 403)
+        response = self.staff.get(url)
+        self.assertEqual(response.status_code, 200)
+        text = response.content.decode('utf-8-sig')
+        self.assertIn(self.owner.user.email, text)
+        self.assertIn(self.other.user.email, text)
+        self.assertNotIn('password', text)
+        self.assertNotIn('storage_key', text)
+        self.assertNotIn('reference_latitude', text)
+        self.assertTrue(response['Content-Type'].startswith('text/csv'))
+        self.assertIn('voluntarios.csv', response['Content-Disposition'])
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertTrue(AuditEvent.objects.filter(actor=self.admins[0], action='privacy.volunteers.exported').exists())
+
+    def test_export_is_permission_checked_and_protects_spreadsheet_cells(self):
+        unauthenticated_admin = Client()
+        unauthenticated_admin.force_login(self.admins[0])
+        self.assertEqual(unauthenticated_admin.get('/api/management/volunteers/export/').status_code, 403)
+        self.owner.user.user_permissions.add(Permission.objects.get(codename='manage_operations'))
+        self.assertEqual(self.client.get('/api/management/volunteers/export/').status_code, 403)
+        self.owner.user.first_name = '=HYPERLINK("https://example.org")'
+        self.owner.user.save(update_fields=['first_name'])
+        response = self.staff.get('/api/management/volunteers/export/')
+        import csv
+        from io import StringIO
+        rows = list(csv.reader(StringIO(response.content.decode('utf-8-sig')), delimiter=';'))
+        self.assertTrue(any(row[0].startswith("'=HYPERLINK") for row in rows[1:]))
+        self.assertTrue(AuditEvent.objects.filter(actor=self.admins[0], action='privacy.volunteers.exported').exists())
 
     def test_privacy_submission_requires_csrf_and_rejects_forged_owner(self):
         strict=Client(enforce_csrf_checks=True);strict.force_login(self.owner.user)

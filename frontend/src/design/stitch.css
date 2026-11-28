@@ -47,3 +47,6 @@ body{background:var(--surface)}h1,h2,h3{color:var(--ink)}h2{letter-spacing:-.6px
 .field.whatsapp-phone-field .chilean-phone-prefix{display:flex;align-items:center;flex-shrink:0;padding:0 12px;border-right:1px solid var(--line);color:var(--navy);font-size:13px}
 .field.whatsapp-phone-field .chilean-phone-control input{flex:1;min-width:0;width:0;margin:0;border-radius:0;box-shadow:none}
 .field.whatsapp-phone-field .chilean-phone-control:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+
+.stitch-help-grid .help-card{display:flex;flex-direction:column;align-items:flex-start;min-width:0;padding:20px;background:var(--surface-low);border:1px solid transparent;border-radius:10px;color:inherit;text-decoration:none;transition:border-color .15s,background .15s}
+.stitch-help-grid .help-card>svg{color:var(--blue);margin-bottom:15px}.stitch-help-grid .help-card:hover{border-color:var(--blue);background:#e6eeff}.stitch-help-grid .help-card:focus-visible{outline:3px solid var(--blue);outline-offset:3px}.stitch-help-grid .help-card>.text-button{margin-top:auto;display:flex;align-items:center;gap:8px}

@@ -68,3 +68,9 @@ Cobertura: permisos, MFA, CSRF, filtros, campos prohibidos, roles, autorrestricc
 Una prueba con PostgreSQL enfrenta dos administradores que intentan retirarse mutuamente: una operación obtiene 200 y la otra 403, conservando un administrador activo. Cada worker cierra su propia conexión antes de limpiar la base de pruebas.
 
 La revisión visual puntual y la cobertura vigente figuran en [validación](VALIDACION_SEGURIDAD_PRO12.md). No se ha comprobado SMTP real ni todos los dispositivos.
+
+## Exportación administrativa de voluntarios
+
+Desde Administrar usuarios, el personal con permiso de administración de cuentas y sesión vigente puede usar Exportar voluntarios (CSV). El archivo usa UTF-8 con BOM y separador punto y coma para abrirlo en Excel. Incluye nombre, apellido, correo, celular, comuna, estado de cuenta, autorización de WhatsApp y fecha de registro. No exporta contraseñas, secretos de autenticación, coordenadas, observaciones sensibles ni archivos privados. Cada descarga queda auditada y hay un límite de cinco exportaciones por administrador cada quince minutos. Las celdas potencialmente interpretables como fórmulas se neutralizan.
+
+El voluntario conserva Solicitudes de privacidad para pedir acceso, rectificación o eliminación, pero no tiene un botón de descarga directa. La antigua ruta de exportación JSON propia ya no está disponible.

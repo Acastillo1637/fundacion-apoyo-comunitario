@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 
-let vite,AccountMenu,App,SessionScreen,dom,host,root;
+let vite,AccountMenu,App,SessionScreen,HelpNavigation,dom,host,root;
 before(async()=>{
   dom=new JSDOM('<div id="test-root"></div>',{url:'http://localhost/notificaciones',pretendToBeVisual:true});
   globalThis.window=dom.window;globalThis.document=dom.window.document;
@@ -16,6 +16,7 @@ before(async()=>{
   globalThis.IS_REACT_ACT_ENVIRONMENT=true;
   vite=await createServer({server:{middlewareMode:true,hmr:{port:24681}},appType:'custom'});
   AccountMenu=(await vite.ssrLoadModule('/src/accounts/AccountMenu.jsx')).default;
+  HelpNavigation=(await vite.ssrLoadModule('/src/volunteers/Dashboard.jsx')).HelpNavigation;
   const app=await vite.ssrLoadModule('/src/App.jsx');App=app.default;SessionScreen=app.SessionScreen;
   host=document.querySelector('#test-root');
 });
@@ -100,4 +101,26 @@ test('la caché de navegación no conserva el DOM privado y revalida la sesión 
     assert.match(host.textContent,/¡Hola de nuevo!/);
     assert.doesNotMatch(host.textContent,/Estado de seguridad/);
   }finally{await act(()=>root.unmount());root=null;globalThis.fetch=original;}
+});
+
+
+test('las tarjetas de ayuda del voluntario enlazan a participaciones, documentos y seguridad', async()=>{
+  if(root)await act(()=>root.unmount());
+  root=createRoot(host);
+  const targets=[];
+  await act(()=>root.render(React.createElement(HelpNavigation,{user,portal:'volunteer',navigate:tab=>targets.push(tab)})));
+  const links=[...host.querySelectorAll('a.help-card')];
+  assert.deepEqual(links.map(link=>link.getAttribute('href')),['/mis-participaciones','/documentos','/seguridad?espacio=volunteer']);
+  for(const link of links)await act(()=>link.click());
+  assert.deepEqual(targets,['participations','documents','security']);
+  await act(()=>root.unmount());root=null;
+});
+
+test('ayuda ofrece solo secciones disponibles para el perfil actual',()=>{
+  const html=renderToStaticMarkup(React.createElement(HelpNavigation,{user:{can_manage_activities:true},portal:'operations',navigate:()=>{}}));
+  assert.match(html,/href="\/participantes"/);
+  assert.doesNotMatch(html,/href="\/documentos"|href="\/revision-documental"/);
+  const pending=renderToStaticMarkup(React.createElement(HelpNavigation,{user:{has_volunteer_profile:false},portal:'volunteer',navigate:()=>{}}));
+  assert.match(pending,/href="\/incorporacion"/);
+  assert.doesNotMatch(pending,/href="\/mis-participaciones"/);
 });
