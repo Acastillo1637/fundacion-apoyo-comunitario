@@ -60,7 +60,8 @@ test('el registro de voluntarios exige teléfono y comuna y carga la misma lista
   await act(async () => root.render(React.createElement(Auth,{mode:'register',brand:'Fundación',navigate:()=>{},onLogin:()=>{}})));
   const phone = document.querySelector('input[name="phone"]');
   const commune = document.querySelector('input[name="commune"]');
-  assert.equal(phone.required, true); assert.equal(phone.maxLength, 12);
+  assert.equal(phone.required, true); assert.equal(phone.maxLength, 9);
+  assert.equal(phone.closest('label').querySelector('.chilean-phone-prefix').textContent, '+56');
   assert.equal(document.querySelector('input[name="whatsapp"]').required, true);
   assert.equal(commune.required, true);
   assert.equal(phone.checkValidity(), false); assert.equal(commune.checkValidity(), false);

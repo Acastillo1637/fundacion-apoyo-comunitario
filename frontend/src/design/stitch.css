@@ -42,3 +42,8 @@ body{background:var(--surface)}h1,h2,h3{color:var(--ink)}h2{letter-spacing:-.6px
 .auth-form .account-type-picker input[type="radio"], .account-type-picker input[type="radio"] { position:static; width:18px; height:18px; min-width:18px; min-height:18px; padding:0; margin:3px 0 0; grid-column:1; grid-row:1 / span 2; flex:none; accent-color:var(--blue); }
 .auth-form .account-type-picker strong, .auth-form .account-type-picker small { grid-column:2; min-width:0; }
 @media(max-width:600px) { .auth-form .account-type-picker { grid-template-columns:minmax(0,1fr); } }
+
+.field.whatsapp-phone-field .chilean-phone-control{display:flex;align-items:stretch;min-width:0;background:var(--surface-low,#f0f4ff);border-radius:8px;overflow:hidden}
+.field.whatsapp-phone-field .chilean-phone-prefix{display:flex;align-items:center;flex-shrink:0;padding:0 12px;border-right:1px solid var(--line);color:var(--navy);font-size:13px}
+.field.whatsapp-phone-field .chilean-phone-control input{flex:1;min-width:0;width:0;margin:0;border-radius:0;box-shadow:none}
+.field.whatsapp-phone-field .chilean-phone-control:focus-within{outline:2px solid var(--blue);outline-offset:2px}
